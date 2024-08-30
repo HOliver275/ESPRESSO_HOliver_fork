@@ -1,12 +1,19 @@
-#from solid.solid_api import SolidAPI
-#from solid_client_credentials import SolidClientCredentialsAuth, DpopTokenProvider
-
+# requests: https://pypi.org/project/requests/
 import requests
+# os: https://docs.python.org/3/library/os.html
+# json: https://docs.python.org/3/library/json.html
 import os, json
-from Automation.CSSAccess import CSSaccess
+# handles the client credentials for Community Solid Server
+# HO 15/08/2024 BEGIN *********************
+import sys
+sys.path.append('../CSSAccess')
+import CSSaccess
+#from Automation.CSSAccess import CSSaccess
+#import ..Automation
+#from .Automation.CSSAccess import CSSaccess
+# HO 15/08/2024 END *********************
+# tqdm: https://tqdm.github.io/
 import tqdm
-
-#from solid.auth import Auth
 
 def putdirCSS (directory,pod,IDP,USERNAME,PASSWORD,indexfile=''):
     CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
@@ -83,22 +90,51 @@ def uploadllistwithbar (filetuplelist,podaddress,CSSA):
             pbar.update(1)
     pbar.close()
 
+"""
+Upload the file tuple list to a pod, while replacing designated text, and displaying a progress bar.
+
+param: filetuplelist, the list of file tuples to upload
+param: replacetemplate, the template for replacing part of the text
+param: podaddress, address of the pod to upload to
+param: CSSA, the CSSaccess object with the client credentials
+"""
 def uploadllistreplacewithbar(filetuplelist,replacetemplate,podaddress,CSSA):
+   #print('inside uploadlistreplacewithbar')
+    # set up the progress bar
     pbar=tqdm.tqdm(total=len(filetuplelist),desc=podaddress)
+    # initialize a list to hold the files that fail to upload
     faillist=[]
+    # now for every file tuple in the list
     for f,targetUrl,filetype,substring in filetuplelist:
+            # open the file for reading
             file = open(f, "r")
+            # get the text of the file
             filetext=file.read()
+            # close the file
             file.close()
+            # if there's any replacement text
             if len(substring)>0:
+                # replace the designated file text as specified
                 filetext=filetext.replace(replacetemplate,substring)
+            # PUT the filetext to the target file
+            # HO 17/08/2024 BEGIN ****************
+            if(str(filetype) == '0'):
+                filetype='text/plain'
+            # HO 17/08/2024 END ****************
             res=CSSA.put_url(targetUrl, filetext, filetype)
+            # if it didn't work
             if not res.ok:
+                # add this to the list of failed uploads
                 faillist.append((targetUrl,res))
+                # move on to the next file
                 continue
+            # update the progress bar
             pbar.update(1)
+    # close the progress bar
     pbar.close()
+    # notify how many of the uploads failed
     print('failed',len(faillist),'out of',len(filetuplelist))
+    # display the list of failed uploads
     print(faillist)
 
 

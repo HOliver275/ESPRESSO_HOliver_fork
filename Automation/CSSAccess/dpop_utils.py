@@ -1,57 +1,44 @@
+# datetime: https://docs.python.org/3/library/datetime.html
 import datetime
+# math: https://docs.python.org/3/library/math.html
 import math
+# typing.Optional: https://docs.python.org/3/library/typing.html#typing.Optional
 from typing import Optional
+# uuid.uuid4: https://docs.python.org/3/library/uuid.html#uuid.uuid4
 from uuid import uuid4
 
+# jwt: https://pyjwt.readthedocs.io/en/latest/
 import jwt
+# requests: https://pypi.org/project/requests/
 import requests
+# jwcrypto.jwk: https://jwcrypto.readthedocs.io/en/latest/jwk.html
 from jwcrypto import jwk
 
-#from solid_client_credentials.access_token import AccessToken
-
+# signing algorithm for the JSON Web Token
 SIGNING_ALG = "ES256"
 
-
 def generate_dpop_key_pair() -> jwk.JWK:
+    """
+    Generates the DPOP key pair.
+    
+    return: a JSON Web Key.
+    """
+    # generate a P-256 EC key pair 
     key = jwk.JWK.generate(kty="EC", crv="P-256")
+    # return the P-256 EC key pair
     return key
 
+"""
+Creates the DPOP authorization header.
 
-# def refresh_access_token(
-#     token_endpoint: str,
-#     current_token: AccessToken | None,
-#     client_id: str,
-#     client_secret: str,
-#     dpop_key: jwk.JWK,
-#     refresh_before_expiration_seconds: int,
-# ) -> AccessToken:
-#     if current_token is None or current_token.expires_within(
-#         refresh_before_expiration_seconds
-#     ):
-#         return request_access_token(token_endpoint, client_id, client_secret, dpop_key)
-#     return current_token
-
-
-# def request_access_token(
-#     token_endpoint: str, client_id: str, client_secret: str, dpop_key: jwk.JWK
-# ) -> AccessToken:
-#     res = requests.post(
-#         token_endpoint,
-#         auth=(client_id, client_secret),
-#         headers={
-#             "DPoP": create_dpop_header(token_endpoint, "POST", dpop_key),
-#         },
-#         data={"grant_type": "client_credentials", "scope": "webid"},
-#         timeout=5000,
-#     )
-#     access_token = res.json()["access_token"]
-#     token_payload = jwt_decode_without_verification(access_token)
-#     expiration = datetime.datetime.fromtimestamp(token_payload["exp"])
-
-#     return AccessToken(access_token, expiration=expiration)
-
-
+param: url, a string
+param: method, a string
+param: key, a JSON Web Key
+return: a string representing the encoded JSON Web Token
+"""
 def create_dpop_header(url: str, method: str, key: jwk.JWK) -> str:
+    # construct the DPOP header payload from the given URL
+    # construct the DPOP headers, exporting the public key in the standard JSON format
     payload = {
         "htu": url,
         "htm": method.upper(),
@@ -62,17 +49,30 @@ def create_dpop_header(url: str, method: str, key: jwk.JWK) -> str:
         "typ": "dpop+jwt",
         "jwk": key.export_public(as_dict=True),
     }
+    # encode the payload, headers and key as a JSON Web Token
     token = jwt_encode(payload, key, headers=headers)
+    # return the encoded JSON Web Token
     return token
 
+"""
+Encodes a JSON Web Token.
 
+param: payload, a dictionary
+param: key, a JSON Web Key
+param: headers, optional, a dictionary
+return: a string representing an encoded JSON Web Token
+"""
 def jwt_encode(payload: dict, key: jwk.JWK, headers: Optional[dict]) -> str:
-    #instance = jwt.JWT()
+    # if there are no headers, create an empty header dictionary
     headers = headers or {}
+    # export keys to a data buffer that can be stored as a PEM file
     key_pem = key.export_to_pem(private_key=True, password=None).decode("utf-8")
+    # encodes the payload and headers, the serialized bytes buffer containing the PEM formatted key,
+    # according to the specified signing algorithm
     encoded_jwt = jwt.encode(
         payload, key=key_pem, algorithm=SIGNING_ALG, headers=headers
     )
+    # return the encoded JSON Web Token
     return encoded_jwt
 
 
