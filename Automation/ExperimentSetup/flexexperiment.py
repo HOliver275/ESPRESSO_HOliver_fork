@@ -1825,6 +1825,7 @@ class ESPRESSOexperiment:
                 keywords_dict = dict()
                 shortwebidwords_dict = dict()
                 podwords_dict = dict()
+                servindex = dict()
                 # HO 28/08/2024 END **************
             
                 # for each pod on this server
@@ -1887,18 +1888,41 @@ class ESPRESSOexperiment:
                     #print('about to call aclindextupleswebidnewdirs')
                     # HO 28/08/2024 BEGIN ***************
                     #index=PodIndexer.aclindextupleswebidnewdirs(d)
+                    index=dict()
+                    servindex=dict()
                     servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podaddress, keywords_dict, shortwebidwords_dict, podwords_dict)
-                    if ((servtuples is not None) and (len(servtuples) >= 1)):
-                        index = servtuples[0]
+                    if (servtuples is not None):
+                        if (len(servtuples) >= 1):
+                            index = servtuples[0]
+                        if (len(servtuples) >= 2):
+                            keywords_dict = servtuples[1]
                     # HO 28/08/2024 END ***************
                     # HO 21/08/2024 BEGIN ******************
-                    print('Gonna try displaying the index now: ')
-                    print(index)
+                    #print('Gonna try displaying the index now: ')
+                    #print(index)
                     # HO 21/08/2024 END ******************
+
                     # submit the task with the inverted index for this file
                     #print('indexaddress = ' + indexaddress)
                     #print('CSSA = ' + str(CSSA))
                     """executor.submit(PodIndexer.uploadaclindexwithbar, index, indexaddress, CSSA)"""
+                # HO 30/08/2024 BEGIN *************
+                #print('keywords_dict:')
+                #print(keywords_dict)
+                for (key, wwddict) in keywords_dict.items():
+                    # if this word isn't already being counted, add it
+                    if key not in servindex.keys():
+                        servindex[key]=''
+                    for (widword, widdict) in wwddict.items():
+                        for(wid, poddict) in widdict.items():
+                            for(paddr, piddict) in poddict.items():
+                                for(pid, freq) in piddict.items():
+                                    servindex[key]=servindex[key]+wid+','+pid+','+str(freq)+'\r\n'
+                
+                print('Server-level index: ')
+                print(servindex)
+                            
+                # HO 30/08/2024 END ***************
 
     """
     Create and/or update the ACL metaindexes in the server-level ESPRESSO pods.

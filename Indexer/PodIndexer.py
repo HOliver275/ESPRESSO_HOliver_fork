@@ -656,8 +656,8 @@ class LdpIndex:
                     #serverlevel_keyworddict[termword] = webdict
                 # {keyword : {webidword : {widword : {podaddress : {podword : keywordcount}}}}}
                 serverlevel_keyworddict[termword] = webidworddict
-                print('serverlevel_keyworddict[' + termword + '] = ')
-                print(serverlevel_keyworddict[termword])
+                #print('serverlevel_keyworddict[' + termword + '] = ')
+                #print(serverlevel_keyworddict[termword])
         
         # updating the index dictionary entry 'index.sum'
         # with a running total of the number of files
@@ -776,6 +776,8 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podaddress, serverlevel_k
     #print('about to construct ldpindex')
     # construct an inverted index
     ldpindex=LdpIndex()
+    # test index for building up the server-level index
+    testservindex=LdpIndex()
     # set up the progress bar
     pbar=tqdm.tqdm(total=len(filetuples))
     # for each file
