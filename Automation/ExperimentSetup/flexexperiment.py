@@ -1800,7 +1800,6 @@ class ESPRESSOexperiment:
     param: self
     """
     def aclindexwebidnewthreaded(self):
-        #print('self: ' + str(self))
         # execute these calls asynchronously
         with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
         # submit tasks
@@ -1811,21 +1810,20 @@ class ESPRESSOexperiment:
                 # initialize a string to write the metaindex data
                 metaindexdata=''
                 # HO 28/08/2024 BEGIN ************
-                # and we need the metaindexaddress
-                # and we initialize the counter for the podword (short handles
-                # mapped to addresses of sequentially numbered pods on this server,
-                # which save space in the index)
-                p=0
-                # and we initialize the counter for the shortwebidword (short handles
-                # mapped to WebIDs that have been cleansed so they can be turned
-                # into filenames for the .webidfiles, but by creating these short
-                # handles, we save the space that would be taken up by repeating
-                # longer strings of characters in the index)
-                w=0
-                keywords_dict = dict()
-                shortwebidwords_dict = dict()
-                podwords_dict = dict()
-                servindex = dict()
+                # count the pods on thhis server
+                serverlevel_pod_counter=0
+                # count the WebIDs that have access to any of the pods on this server
+                serverlevel_webid_counter=0
+                # server-level nested dictionary mapping of index keywords 
+                serverlevel_keywords_dict = dict()
+                # lookup of all the webidword:widword mappings on this server
+                serverlevel_widword_lookup = dict()
+                # lookup of all the podaddress:pid mappings on this server
+                serverlevel_podword_lookup = dict()
+                # the server-level index to be written to the ESPRESSO pod metaindex
+                serverlevel_index = dict()
+                # dictionary from which to create the .webid files to be added to serverlevel_index
+                serverlevel_webidwords_dict = dict()
                 # HO 28/08/2024 END **************
             
                 # for each pod on this server
@@ -1833,17 +1831,13 @@ class ESPRESSOexperiment:
                     # get the pod details
                     podaddress=str(self.image.value(pnode,self.namespace.Address))
                     # HO 28/08/2024 BEGIN ************
-                    # here we need to create a podword for this pod
-                    # is the pod already in the dictionary, so already has a word?
-                    if podaddress not in podwords_dict:
-                        podword = 'p' + str(p)
-                        # advance the podword counter
-                        p = p+1
-                        #print('podword = ' + podword)
-                        #print('podaddress = ' + podaddress)
-                        podwords_dict[podaddress] = podword
-                        #print('podwords_dict = ')
-                        #print(podwords_dict)
+                    # here we need to create a podword for this pod relative to the server
+                    if podaddress not in serverlevel_podword_lookup:
+                        podword = 'p' + str(serverlevel_pod_counter)
+                        # advance the pod counter
+                        serverlevel_pod_counter = serverlevel_pod_counter+1
+                        # map the podword to this podaddress
+                        serverlevel_podword_lookup[podaddress] = podword
                     # HO 28/08/2024 END **************
                     podname=str(self.image.value(pnode,self.namespace.Name))
                     USERNAME=str(self.image.value(pnode,self.namespace.Email))
@@ -1853,75 +1847,99 @@ class ESPRESSOexperiment:
                     CSSA.create_authstring()
                     CSSA.create_authtoken()
                     # gets a list of file tuples containing [relative path, text of the file, WebID list]
-                    # (TODO are we expecting more than one?)
-                    #print('About to call aclcrawlwebidnew')
-                    #print('podaddress = ' + podaddress)
-                    #print('CSSA = ' + str(CSSA))
-                    #print('CSSA authstring = ' + CSSA.authstring)
-                    #print('CSSA authtoken = ' + CSSA.authtoken)
                     d=PodIndexer.aclcrawlwebidnew(podaddress,podaddress, CSSA)
                     # get the address of this pod index
                     indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
-                    # display the list of webids we just got back
-                    #print(d[0])
-                    #print('webids are: ')
-                    #print(d[0][2])
                     # sequentially number the webids that have access to resources on this server
                     for (id,text,webidlist) in d:
-                        #webidwordlist=[]
                         # the asterisk means open access
                         for webid in webidlist:
                             if webid=="*":
+                                # HO 02/09/2024 BEGIN **********
+                                widword=webid
+                                # HO 02/09/2024 END ************
                                 webidword='openaccess.webid'
-                                shortwebidwords_dict[webidword]=webid
-                                #print('webidword ' + webidword + ' has handle ' + shortwebidwords_dict[webidword])
+                                if webidword not in serverlevel_widword_lookup.keys():
+                                    # add this webidword:widword mapping to the lookup
+                                    serverlevel_widword_lookup[webidword]=widword
+                                    # add this widword : {podaddress : podword} mapping to the dictionary
+                                    # TODO repeated code
+                                    if webidword not in serverlevel_webidwords_dict.keys(): # it shouldn't be
+                                        piddict = {podaddress : serverlevel_podword_lookup[podaddress]}
+                                        widdict = {widword : piddict}
+                                        serverlevel_webidwords_dict[webidword] = widdict
                             else: # remove the punctuation from the WebID so it doesn't gum up the works
                                 webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
-                            # if this WebID isn't already an index key, add it
-                            if webidword not in shortwebidwords_dict.keys():
-                                shortwebidwords_dict[webidword]='w' + str(w)
+                            
+                            # if this webidword isn't already mapped to a widword, map it
+                            if webidword not in serverlevel_widword_lookup.keys():
+                                # HO 02/09/2024 BEGIN **********
+                                widword='w' + str(serverlevel_webid_counter)
                                 # advance the webid counter every time we add a new mapping
-                                w = w+1
-                        print('shortwebidwords_dict: ') 
-                        print(shortwebidwords_dict)                        
+                                serverlevel_webid_counter = serverlevel_webid_counter+1
+                                serverlevel_widword_lookup[webidword]=widword
+                                # add this widword : {podaddress : podword} mapping to the dictionary
+                                # TODO repeated code
+                                if webidword not in serverlevel_webidwords_dict.keys(): # it shouldn't be
+                                    piddict = {podaddress : serverlevel_podword_lookup[podaddress]}
+                                    widdict = {widword : piddict}
+                                    serverlevel_webidwords_dict[webidword] = widdict
+                            
+                            # if it's not in the dictionary by now something is wrong
+                            widword = serverlevel_widword_lookup[webidword] if webidword in serverlevel_widword_lookup else ''
+                            if (len(widword) > 0):
+                                widdict = serverlevel_webidwords_dict[webidword] if webidword in serverlevel_webidwords_dict else dict()
+                                poddict = widdict[widword] if widword in widdict else dict()
+                                # if this pod isn't already listed against this widword
+                                if podaddress not in poddict.keys():
+                                    # add the podword mapping
+                                    poddict[podaddress] = serverlevel_podword_lookup[podaddress]
+                                    # update the podname mapping
+                                    widdict[widword] = poddict
+                                    # update the widword mapping
+                                    serverlevel_webidwords_dict[webidword] = widdict  
+
+                        # HO 02/09/2024 END ************        
+                        #print('serverlevel_widword_lookup: ') 
+                        #print(serverlevel_widword_lookup)                        
                     # get the inverted index for this file
                     #print('about to call aclindextupleswebidnewdirs')
                     # HO 28/08/2024 BEGIN ***************
                     #index=PodIndexer.aclindextupleswebidnewdirs(d)
-                    index=dict()
-                    servindex=dict()
-                    servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podaddress, keywords_dict, shortwebidwords_dict, podwords_dict)
+                    """podlevel_index=dict()
+                    servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podaddress, serverlevel_keywords_dict, serverlevel_widword_lookup, serverlevel_podword_lookup)
                     if (servtuples is not None):
                         if (len(servtuples) >= 1):
-                            index = servtuples[0]
+                            podlevel_index = servtuples[0]
                         if (len(servtuples) >= 2):
-                            keywords_dict = servtuples[1]
+                            serverlevel_keywords_dict = servtuples[1]
                     # HO 28/08/2024 END ***************
                     # HO 21/08/2024 BEGIN ******************
-                    #print('Gonna try displaying the index now: ')
-                    #print(index)
+                    #print('Gonna try displaying the podlevel_index now: ')
+                    #print(podlevel_index)
                     # HO 21/08/2024 END ******************
 
-                    # submit the task with the inverted index for this file
+                    # submit the task with the inverted podlevel_index for this file
                     #print('indexaddress = ' + indexaddress)
                     #print('CSSA = ' + str(CSSA))
-                    """executor.submit(PodIndexer.uploadaclindexwithbar, index, indexaddress, CSSA)"""
+                    executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
                 # HO 30/08/2024 BEGIN *************
-                #print('keywords_dict:')
-                #print(keywords_dict)
-                for (key, wwddict) in keywords_dict.items():
+                #print('serverlevel_keywords_dict:')
+                #print(serverlevel_keywords_dict)
+                for (key, wworddict) in serverlevel_keywords_dict.items():
                     # if this word isn't already being counted, add it
-                    if key not in servindex.keys():
-                        servindex[key]=''
-                    for (widword, widdict) in wwddict.items():
-                        for(wid, poddict) in widdict.items():
-                            for(paddr, piddict) in poddict.items():
-                                for(pid, freq) in piddict.items():
-                                    servindex[key]=servindex[key]+wid+','+pid+','+str(freq)+'\r\n'
+                    if key not in serverlevel_index.keys():
+                        serverlevel_index[key]=dict()
+                    for (wwordkey, widdict) in wworddict.items():
+                        for(widkey, poddict) in widdict.items():
+                            for(paddrkey, piddict) in poddict.items():
+                                for(pidkey, freq) in piddict.items():
+                                    serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
                 
                 print('Server-level index: ')
-                print(servindex)
-                            
+                print(serverlevel_index)"""
+                print('serverlevel_webidwords_dict: ')
+                print(serverlevel_webidwords_dict)
                 # HO 30/08/2024 END ***************
 
     """
