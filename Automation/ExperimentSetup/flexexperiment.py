@@ -1824,6 +1824,8 @@ class ESPRESSOexperiment:
                 serverlevel_index = dict()
                 # dictionary from which to create the .webid files to be added to serverlevel_index
                 serverlevel_webidwords_dict = dict()
+                # running sum of all the files held on the server
+                serverlevel_indexsum=0
                 # HO 28/08/2024 END **************
             
                 # for each pod on this server
@@ -1911,6 +1913,9 @@ class ESPRESSOexperiment:
                     if (servtuples is not None):
                         if (len(servtuples) >= 1):
                             podlevel_index = servtuples[0]
+                            if 'index.sum' in podlevel_index.keys():
+                                runningsum = podlevel_index['index.sum']
+                                serverlevel_indexsum=serverlevel_indexsum+int(runningsum)
                         if (len(servtuples) >= 2):
                             serverlevel_keywords_dict = servtuples[1]
                     # HO 28/08/2024 END ***************
@@ -1946,9 +1951,10 @@ class ESPRESSOexperiment:
                             for(paddrkey, piddict) in poddict.items():
                                 for(pidkey, freq) in piddict.items():
                                     serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
+                                    
+                serverlevel_index['index.sum']=str(serverlevel_indexsum)
                 
-                print('Server-level index: ')
-                print(serverlevel_index)
+                #print('Server-level index.sum = ' + serverlevel_index['index.sum'])
                 # HO 30/08/2024 END ***************
 
     """
