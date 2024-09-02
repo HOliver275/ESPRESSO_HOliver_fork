@@ -1927,7 +1927,7 @@ class ESPRESSOexperiment:
                     # submit the task with the inverted podlevel_index for this file
                     #print('indexaddress = ' + indexaddress)
                     #print('CSSA = ' + str(CSSA))
-                    """executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)"""
+                    executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
                 # HO 30/08/2024 BEGIN *************
                 #print('serverlevel_keywords_dict:')
                 #print(serverlevel_keywords_dict)
