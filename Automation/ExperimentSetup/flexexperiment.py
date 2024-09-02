@@ -1900,13 +1900,13 @@ class ESPRESSOexperiment:
                                     serverlevel_webidwords_dict[webidword] = widdict  
 
                         # HO 02/09/2024 END ************        
-                        #print('serverlevel_widword_lookup: ') 
-                        #print(serverlevel_widword_lookup)                        
+                    
                     # get the inverted index for this file
                     #print('about to call aclindextupleswebidnewdirs')
                     # HO 28/08/2024 BEGIN ***************
                     #index=PodIndexer.aclindextupleswebidnewdirs(d)
-                    """podlevel_index=dict()
+                    
+                    podlevel_index=dict()
                     servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podaddress, serverlevel_keywords_dict, serverlevel_widword_lookup, serverlevel_podword_lookup)
                     if (servtuples is not None):
                         if (len(servtuples) >= 1):
@@ -1922,14 +1922,25 @@ class ESPRESSOexperiment:
                     # submit the task with the inverted podlevel_index for this file
                     #print('indexaddress = ' + indexaddress)
                     #print('CSSA = ' + str(CSSA))
-                    executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
+                    """executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)"""
                 # HO 30/08/2024 BEGIN *************
                 #print('serverlevel_keywords_dict:')
                 #print(serverlevel_keywords_dict)
+                # HO 02/09/2024 BEGIN ***********
+                # webid files first
+                for (webidfile, widdict) in serverlevel_webidwords_dict.items():
+                    if webidfile not in serverlevel_index.keys():
+                        serverlevel_index[webidfile] = ''
+                    for(wid, poddict) in widdict.items():
+                        for(paddr, pid) in poddict.items():
+                            serverlevel_index[webidfile]=serverlevel_index[webidfile]+wid+','+pid+','+paddr+'\r\n'
+                #print('Server-level index: ')
+                #print(serverlevel_index)
+                # HO 02/09/2024 END *********************
                 for (key, wworddict) in serverlevel_keywords_dict.items():
                     # if this word isn't already being counted, add it
                     if key not in serverlevel_index.keys():
-                        serverlevel_index[key]=dict()
+                        serverlevel_index[key]=''
                     for (wwordkey, widdict) in wworddict.items():
                         for(widkey, poddict) in widdict.items():
                             for(paddrkey, piddict) in poddict.items():
@@ -1937,9 +1948,7 @@ class ESPRESSOexperiment:
                                     serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
                 
                 print('Server-level index: ')
-                print(serverlevel_index)"""
-                print('serverlevel_webidwords_dict: ')
-                print(serverlevel_webidwords_dict)
+                print(serverlevel_index)
                 # HO 30/08/2024 END ***************
 
     """
