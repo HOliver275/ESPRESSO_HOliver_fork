@@ -1953,7 +1953,13 @@ class ESPRESSOexperiment:
                                     serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
                                     
                 serverlevel_index['index.sum']=str(serverlevel_indexsum)
-                
+                metaindexfolder=IDP+self.espressopodname+'/'
+                podname=self.espressopodname
+                # construct the client credentials
+                CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                CSSA.create_authstring()
+                CSSA.create_authtoken()
+                executor.submit(PodIndexer.uploadaclindexwithbar, serverlevel_index, metaindexfolder, CSSA)
                 #print('Server-level index.sum = ' + serverlevel_index['index.sum'])
                 # HO 30/08/2024 END ***************
 
