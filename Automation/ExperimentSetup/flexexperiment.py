@@ -180,6 +180,7 @@ class ESPRESSOexperiment:
     param: self
     param: espressopodname, the name of the server-level ESPRESSO pod, default: 'ESPRESSO'
     param: espressoemail, the email of the server-level ESPRESSO pod, default: 'espresso@example.com'
+    param: espressoindexdir, the current server-level metaindex directory, default: 'metaindex/'
     param: podname, the current base podname, default: 'pod' (currently set to 'ardfhealth')
     param: podemail, the current pod email, default: '@example.org'
     param: podindexdir, the current pod index directory, default: 'espressoindex/'
@@ -189,78 +190,82 @@ class ESPRESSOexperiment:
     def __init__(self, 
         espressopodname='ESPRESSO',
         espressoemail='espresso@example.com',
+        # HO 04/09/2024 BEGIN *************
+        espressoindexdir='metaindex/',
+        # HO 04/09/2024 END *************
         podname='pod',
         podemail='@example.org',
         podindexdir='espressoindex/',
         password='12345'):
 
-        #print('Inside ESPRESSOexperiment constructor')
-        #print('self = None')
-        #print('espressopodname = ' + espressopodname)
-        #print('espressoemail = ' + espressoemail)
-        #print('podname = ' + podname)
-        #print('podemail = ' + podemail)
-        #print('podindexdir = ' + podindexdir)
-        #print('password = ' + password)
-        # server names are sequentially numbered from a zero base
+        # server names are sequentially numbered per experiment, from a zero base
         self.servernum=0
-        #print('self.servernum = ' + str(self.servernum))
+        #print('self.servernum= ' + str(self.servernum))
         # filepool is an empty dictionary
         self.filepool=dict()
-        #print('self.filepool = ' + str(self.filepool))
         # the 'red' server-level ESPRESSO pod name
         # default value: 'ESPRESSO', example value: 'ESPRESSO'
         self.espressopodname=espressopodname
-        #print('self.espressopodname = ' + self.espressopodname)
+        #print('self.espressopodname= '+self.espressopodname)
         # email of the 'red' server-level ESPRESSO pod, set to 'espresso@example.com' 
         # default value: 'espresso@example.com', example value: 'espresso@example.com'
         self.espressoemail=espressoemail
-        #print('self.espressoemail = ' + self.espressoemail)
+        #print('self.espressoemail= '+self.espressoemail)
+        # HO 04/09/2024 BEGIN *************
+        self.espressoindexdir=espressoindexdir
+        #print('self.espressoindexdir= '+self.espressoindexdir)
         # server-level MetaIndex that is stored in the 'red' server-level ESPRESSO pod
         # example value: 'ardfhealthmetaindex.csv'
+        #self.espressoindexfile=podname+'metaindex.csv'
         self.espressoindexfile=podname+'metaindex.csv'
-        #print('self.espressoindexfile = ' + self.espressoindexfile)
+        #print('self.espressoindexfile= '+self.espressoindexfile)
+        # HO 04/09/2024 END *************
+        # general base name for the pods in these experiments,
         # default value: 'pod', example value: 'ardfhealth'
         self.podname=podname
-        #print('self.podname = ' + self.podname)
+        #print('self.podname= '+self.podname)
         # directory where the pod index is stored
         # default value: 'espressoindex/', example value: 'espressoindex/'
         self.podindexdir=podindexdir
-        #print('self.podindexdir = ' + self.podindexdir)
-        # account email for a pod
+        #print('self.podindexdir= '+self.podindexdir)
+        # domain base for a pod's account email for this experiment
         # default value: '@example.org', example value: '@example.org' 
         self.podemail=podemail
-        #print('self.podemail = ' + self.podemail)
-        # account password for a pod
+        #print('self.podemail= '+self.podemail)
+        # account password for a pod in this experiment
         # default value: '12345', example value: '12345'
         self.password=password
-        #print('self.password = ' + self.password)
+        #print('self.password= '+self.password)
         # sequential pod number, starting from a zero base
+        # HO 03/09/2024: it looks like this was meant to sequentially
+        # number each pod in an experiment, just like the servers are
+        # numbered, but it doesn't appear to ever be used
         # initial value: 0
         self.podnum=0
-        #print('self.podnum = ' + str(self.podnum))
-        # sequential file number, starting from a zero base
+        #print('self.podnum= '+str(self.podnum))
+        # sequential file number, starting from a zero base, 
+        # seemingly counting through the whole experiment
         # initial value: 0
         self.filenum=0
-        #print('self.filenum = ' + str(self.filenum))
-        # forbidden: does not seem to be used, example value: 
+        #print('self.filenum= '+str(self.filenum))
+        # forbidden: does not seem to be used 
         # looks like it's related to this issue:
         # https://forum.solidproject.org/t/automatic-setup-of-solid-css/6846
         self.forbidden=["setup"]
-        #[print(f) for f in self.forbidden]
+        #print('self.forbidden: ')
+        #print(self.forbidden)
         # template for replacement text
         # example value: 'espressosrv/podname/'
         self.replacetemplate='espressosrv/podname/'
-        #print('self.replacetemplate = ' + self.replacetemplate)
+        #print('self.replacetemplate= '+self.replacetemplate)
         # instantiate experiment namespace
         # example value: 'http://example.org/SOLIDindex/'
         self.namespace=Namespace("http://example.org/SOLIDindex/")
-        #print('self.namespace = ' + self.namespace)
+        #print('self.namespace= '+self.namespace)
         # instantiate image graph
         # example value: [a rdfg:Graph;rdflib:storage [a rdflib:Store;rdfs:label 'Memory']].
         self.image=Graph()
-        #print('self.image = ' + str(self.image))
-        #print('self = ' + str(self))
+        #print('self.image= '+str(self.image))
         
     def __repr__(self):
         """
@@ -394,10 +399,19 @@ class ESPRESSOexperiment:
             # add the ESPRESSO pod name to the image
             self.image.add((enode,self.namespace.Name,Literal(self.espressopodname)))
             # construct the MetaIndex address within the ESPRESSO pod
-            metaindexaddress=esppod+self.espressoindexfile
+            # HO 04/09/2024 BEGIN **************
+            # Note that as of now the MetaindexAddress points to a directory, not a .csv file
+            # in conformity to IndexDir
+            #metaindexaddress=esppod+self.espressoindexfile
+            metaindexaddress=esppod+self.espressoindexdir
             #print('metaindexaddress = ' + metaindexaddress)
             # add the MetaIndex address to the image
             self.image.add((enode,self.namespace.MetaindexAddress,Literal(metaindexaddress)))
+            # TODO to compensate we add another attribute, MetaindexFile
+            metaindexfile=metaindexaddress+self.espressoindexfile
+            #print('metaindexfile = ' + metaindexfile)
+            self.image.add((enode,self.namespace.MetaindexFile,Literal(metaindexfile)))
+            # HO 04/09/2024 END **************
             #print('self.image: ' + str(self.image))
         #print('self: ' + str(self))
         
@@ -999,10 +1013,7 @@ class ESPRESSOexperiment:
        #print('self = ' + str(self))
 
     """
-    Initialize agents (WebID) list.
-
-    TODO? The function initanodelist() is where we can re-formulate the webid format 
-    instead of email format mailto:agent0@example.org. 
+    Initialize agents (WebID) list. 
 
     _:A0 ns1:Type ns1:Agent ; 
 
@@ -1925,8 +1936,8 @@ class ESPRESSOexperiment:
                     # HO 21/08/2024 END ******************
 
                     # submit the task with the inverted podlevel_index for this file
-                    #print('indexaddress = ' + indexaddress)
-                    #print('CSSA = ' + str(CSSA))
+                    print('indexaddress = ' + indexaddress)
+                    print('CSSA = ' + str(CSSA))
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
                 # HO 30/08/2024 BEGIN *************
                 #print('serverlevel_keywords_dict:')
@@ -1953,13 +1964,55 @@ class ESPRESSOexperiment:
                                     serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
                                     
                 serverlevel_index['index.sum']=str(serverlevel_indexsum)
-                metaindexfolder=IDP+self.espressopodname+'/'
-                podname=self.espressopodname
+                enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
+                metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
                 # construct the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
                 CSSA.create_authstring()
                 CSSA.create_authtoken()
-                executor.submit(PodIndexer.uploadaclindexwithbar, serverlevel_index, metaindexfolder, CSSA)
+                executor.submit(PodIndexer.uploadaclindexwithbar, serverlevel_index, metaindexaddress, CSSA)
+        # HO 05/09/2024 BEGIN ********
+        # test
+        # construct the client credentials
+        CSSA=CSSaccess.CSSaccess('http://localhost:3000/', self.espressoemail, self.password)
+        CSSA.create_authstring()
+        CSSA.create_authtoken()
+        res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
+        print('Contents of http://localhost:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
+        print('---------------')
+        res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
+        print('Contents of http://localhost:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
+        print('---------------')
+        res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/index.sum')
+        print('Contents of http://localhost:3000/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
+        print('===============')
+        CSSA=CSSaccess.CSSaccess('http://localhost:3001/', self.espressoemail, self.password)
+        CSSA.create_authstring()
+        CSSA.create_authtoken()
+        res = CSSA.get_file('http://localhost:3001/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
+        print('Contents of http://localhost:3001/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
+        print('---------------')
+        res = CSSA.get_file('http://localhost:3001/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
+        print('Contents of http://localhost:3001/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
+        print('---------------')
+        res = CSSA.get_file('http://localhost:3001/ESPRESSO/ardfhealthmetaindex/index.sum')
+        print('Contents of http://localhost:3001/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
+        print('===============')
+        CSSA=CSSaccess.CSSaccess('http://localhost:3002/', self.espressoemail, self.password)
+        CSSA.create_authstring()
+        CSSA.create_authtoken()
+        res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
+        print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
+        print('---------------')
+        res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
+        print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
+        print('---------------')
+        res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/index.sum')
+        print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
+        print('===============')
+            # HO 05/09/2024 END **********
+            #print('back from CSSaccess.get_file')
+            #print('res = ' + res.text)
                 #print('Server-level index.sum = ' + serverlevel_index['index.sum'])
                 # HO 30/08/2024 END ***************
 
@@ -1969,11 +2022,11 @@ class ESPRESSOexperiment:
     param: self
     """ 
     def aclmetaindex(self): 
-       #print('Inside aclmetaindex')
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
+            print('IDP=' + IDP)
             # initialize an output string for the metaindex data
             metaindexdata=''
             
@@ -1994,8 +2047,12 @@ class ESPRESSOexperiment:
             CSSAe.create_authtoken()
             # PUT the new metaindex data out to the server-level ESPRESSO pod metaindex,
             # and display the identity provider and the server response to the PUT request
-            print('metaindexdata = ' + metaindexdata)
-            print(IDP,CSSAe.put_file(self.espressopodname, self.espressoindexfile, metaindexdata, 'text/csv'))
+            # HO 04/09/2024 BEGIN **************
+            enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
+            targurl = str(self.image.value(enode,self.namespace.MetaindexFile))
+            #print(IDP,CSSAe.put_file(self.espressopodname, self.espressoindexfile, metaindexdata, 'text/csv'))
+            print(IDP,CSSAe.put_url(targurl, metaindexdata, 'text/csv'))
+            # HO 04/09/2024 END **************
         #print('self = ' + str(self))
            
     """
@@ -2086,7 +2143,7 @@ class ESPRESSOexperiment:
     param: self   
     """
     def indexpub(self):
-       #print('inside indexpub')
+        #print('inside indexpub')
         # for every server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
@@ -2097,7 +2154,7 @@ class ESPRESSOexperiment:
             for pnode in self.image.objects(snode,self.namespace.Contains):
                 # get the pod index address
                 podindexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
-                
+                #print('podindexaddress=' + podindexaddress)
                 # get the pod account username (email)
                 USERNAME=str(self.image.value(pnode,self.namespace.Email))
                 # get the pod account password
@@ -2111,11 +2168,12 @@ class ESPRESSOexperiment:
                 
                 # construct the target URL for an .acl file for the pod index address
                 targetUrl=podindexaddress+'.acl'
+                #print('targetURL=' + targetUrl)
                 # construct the authorization headers for a turtle file
                 headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+CSSA.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", CSSA.dpopKey)}
                 # do a PUT request with the acldefopen query
                 # which makes c.me the owner of the .acl file
-                # and makes the .acl file open access [TODO if I'm not mistaken]
+                # and makes the .acl file open access 
                 res= requests.put(targetUrl,headers=headers,data=acldefopen)
                 # display the .acl file URL and the server response to the PUT request
                 print(targetUrl,res)
@@ -2138,13 +2196,14 @@ class ESPRESSOexperiment:
     param: self
     """
     def metaindexpub(self):
-       #print('inside metaindexpub')
+        print('inside metaindexpub')
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+            print('opening metaindex for ' + snode)
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             # display progress message
-            print('Opening the metaindex for '+IDP)
+            #print('Opening the metaindex for '+IDP)
             # create a CSSaccess object for this identity provider, the ESPRESSO
             # pod email, and the ESPRESSO pod password
             CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
@@ -2153,7 +2212,15 @@ class ESPRESSOexperiment:
             # get the ESPRESSO pod auth token from the client credentials
             t=CSSA.create_authtoken()
             # make the ESPRESSO index file accessible
-            res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexfile)
+            #print('CSSA created, about to call makefileaccessible')
+            #print('passing self.espressopodname=' + self.espressopodname)
+            #print('passing self.espressoindexfile=' + self.espressoindexfile)
+            # HO 04/09/2024 BEGIN ******************
+            # we do need to make the whole metaindex folder accessible to the experiment
+            # not just the metaindex file
+            #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexfile)
+            res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+            # HO 04/09/2024 BEGIN ******************
             # display the server response
             print(res)
        #print('self = ' + str(self))

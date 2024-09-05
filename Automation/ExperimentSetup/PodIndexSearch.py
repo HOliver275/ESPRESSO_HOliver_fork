@@ -58,7 +58,8 @@ def askindex(podindexaddress, keyword, webid):
     return ans
 
 
-
+# HO 04/09/2024 TODO: namespace.MetaindexAddress now points to a directory
+# and the file in question is represented in namespace.MetaindexFile
 def coffeefilterthreaded(metaindexaddress,keyword,webid):
     res=CSSaccess.get_file(metaindexaddress)
     #print(res.text)
@@ -83,6 +84,8 @@ def coffeefilterthreaded(metaindexaddress,keyword,webid):
     
     return ans
 
+# HO 04/09/2024 TODO: namespace.MetaindexAddress now points to a directory
+# and the file in question is represented in namespace.MetaindexFile
 def coffeefilterunthreaded(metaindexaddress,keyword,webid):
     res=CSSaccess.get_file(metaindexaddress)
     #print(res.text)
@@ -101,6 +104,8 @@ def coffeefilterunthreaded(metaindexaddress,keyword,webid):
     
     return ans
 
+# HO 04/09/2024 TODO: namespace.MetaindexAddress now points to a directory
+# and the file in question is represented in namespace.MetaindexFile
 def searchapp(metaindexaddress,word,webid):
     #metaindexaddress='https://srv03918.soton.ac.uk:3000/ESPRESSO/Exp4dirsmetaindex.csv'
     #word='job'
@@ -151,4 +156,6 @@ metaindexaddress=argv[1]
 word=argv[2]
 webid=argv[3]
 
+# HO 04/09/2024 TODO: namespace.MetaindexAddress now points to a directory
+# and the file in question is represented in namespace.MetaindexFile
 searchapp(metaindexaddress,word,webid)

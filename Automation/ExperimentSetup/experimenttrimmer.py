@@ -64,29 +64,39 @@ serverlistglobal=['https://srv03812.soton.ac.uk:3000/',
                     'https://srv03955.soton.ac.uk:3000/'
                     ]
 
+# HO 04/09/2024 BEGIN ********************
+# TODO not sure if this is used in its current form, but the metaindex.csv file is now
+# in a subfolder in the ESPRESSO pod
+# suggested updates have been inserted as comments, to be applied where appropriate
+# and MetaindexAddress now points to a directory, like IndexAddress does
+# and a new attribute MetaindexFile points to the metaindex.csv now
 def experimenttrimmer(podname,newmetaindexname,firstserver,lastserver,trimto,espressopodname='ESPRESSO/',espressoemail='espresso@example.com',password='12345'):
+#def experimenttrimmer(podname,newmetaindexname,firstserver,lastserver,trimto,espressopodname='ESPRESSO/',espressoemail='espresso@example.com',espressoindexdir='metaindex/', password='12345'):
     #serverlist=serverlistglobal[firstserver:lastserver]
     serverlist=['https://srv03955.soton.ac.uk:3000/']
     
     for IDP in serverlist:
         metaindexaddress=IDP+espressopodname+podname+'metaindex.csv'
+        #metaindexfile=IDP+espressopodname+espressoindexdir+podname+'metaindex.csv'
         print(metaindexaddress)
+        #print(metaindexfile)
         res=CSSaccess.get_file(metaindexaddress)
+        #res=CSSaccess.get_file(metaindexfile)
         print(res.text)
         podindexlist=res.text.rsplit('\r\n')[:-1]
         samplemeta=random.sample(podindexlist, trimto)
         metaindexdata='\r\n'.join(samplemeta)+'\r\n'
         print(metaindexdata)
-        #for indexaddress in samplemeta:
-        #        addstring=indexaddress+'\r\n'
-        #        metaindexdata+=addstring    
                 
         CSSAe=CSSaccess.CSSaccess(IDP, espressoemail, password)
         a=CSSAe.create_authstring()
         t=CSSAe.create_authtoken()
         #print(t)
         targeturl=IDP+espressopodname+newmetaindexname
+        #targeturl=IDP+espressopodname+espressoindexdir+newmetaindexname
         print(metaindexaddress)
+        #print(metaindexfile)
+        # HO 04/09/2024 END ********************
 
         print(targeturl)
         print(CSSAe.put_url(targeturl, metaindexdata, 'text/csv'))

@@ -61,7 +61,7 @@ def deployexperiment(experiment):
     experiment.metaindexpub()
     # display progress message
     #print('metaindexes opened')
-    #print('-------------------') 
+    #print('-------------------')""" 
 
 """
 Step 3. 
@@ -198,8 +198,10 @@ def createexperiment(podname):
     # Initializing the experiment
     #print('About to initialize the experiment')
 
-    experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
-
+    # HO 04/09/2024 BEGIN ***************
+    #experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
+    experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
+    # HO 04/09/2024 END ***************
     #print('Constructed ESPRESSOexperiment.')
     #print('--------------------------------')
 
@@ -373,6 +375,9 @@ podname='ardfhealth'
 # name for the metaindex file.
 # example espressoindexfile value: 'ardfhealthmetaindex.csv'
 espressoindexfile=podname+'metaindex.csv'
+# HO 04/09/2024 BEGIN ****************************
+espressoindexdir=podname+'metaindex/'
+# HO 04/09/2024 END ****************************
 #print('expeerimenttemplate.espressoindexfile = ' + espressoindexfile)
 
 # creating the logical view and saving it
@@ -408,5 +413,5 @@ uploadexperiment(experiment)
 
 #Indexing of the experiment
 #print('expeerimenttemplate: about to index experiment')
-indexexperiment(experiment) 
-#print('===================================')
+indexexperiment(experiment)
+#print('===================================')"""

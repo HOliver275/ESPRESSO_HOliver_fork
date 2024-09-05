@@ -140,6 +140,7 @@ class CSSaccess:
     def put_file(self,podname,filename,filetext,filetype):
         # construct a full path to the target file
         targetUrl=self.idp+podname+'/'+filename
+        #print('targetUrl=' + targetUrl)
         # create authorization headers
         headers={ 'content-type': filetype, 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
         # PUT the new text to the file
@@ -148,6 +149,7 @@ class CSSaccess:
             data=filetext
         )
         # return the response
+        #print(res.text)
         return res 
 
     """
@@ -172,6 +174,7 @@ class CSSaccess:
         )
         
         # return server response
+        #print('put_url ' + targetUrl + ' returned: ' + res.text)
         return res 
     
     """
@@ -257,7 +260,7 @@ acl:mode acl:Read.
             #print('Added '+webidstring+' to '+targetUrl,end='\r')
 
     """
-    Makes a file accessible through its .acl file.
+    Makes a file accessible to the experiment through its .acl file.
     
     param: self
     param: podname, the pod where the file is located
