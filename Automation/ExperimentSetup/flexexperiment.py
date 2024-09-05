@@ -1821,7 +1821,7 @@ class ESPRESSOexperiment:
                 # initialize a string to write the metaindex data
                 metaindexdata=''
                 # HO 28/08/2024 BEGIN ************
-                # count the pods on thhis server
+                # count the pods on this server
                 serverlevel_pod_counter=0
                 # count the WebIDs that have access to any of the pods on this server
                 serverlevel_webid_counter=0
@@ -1911,14 +1911,11 @@ class ESPRESSOexperiment:
                                     widdict[widword] = poddict
                                     # update the widword mapping
                                     serverlevel_webidwords_dict[webidword] = widdict  
-
                         # HO 02/09/2024 END ************        
                     
                     # get the inverted index for this file
-                    #print('about to call aclindextupleswebidnewdirs')
                     # HO 28/08/2024 BEGIN ***************
                     #index=PodIndexer.aclindextupleswebidnewdirs(d)
-                    
                     podlevel_index=dict()
                     servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podaddress, serverlevel_keywords_dict, serverlevel_widword_lookup, serverlevel_podword_lookup)
                     if (servtuples is not None):
@@ -1929,20 +1926,13 @@ class ESPRESSOexperiment:
                                 serverlevel_indexsum=serverlevel_indexsum+int(runningsum)
                         if (len(servtuples) >= 2):
                             serverlevel_keywords_dict = servtuples[1]
-                    # HO 28/08/2024 END ***************
-                    # HO 21/08/2024 BEGIN ******************
-                    #print('Gonna try displaying the podlevel_index now: ')
-                    #print(podlevel_index)
                     # HO 21/08/2024 END ******************
 
                     # submit the task with the inverted podlevel_index for this file
                     print('indexaddress = ' + indexaddress)
                     print('CSSA = ' + str(CSSA))
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
-                # HO 30/08/2024 BEGIN *************
-                #print('serverlevel_keywords_dict:')
-                #print(serverlevel_keywords_dict)
-                # HO 02/09/2024 BEGIN ***********
+                # HO 02/09/2024 BEGIN *************
                 # webid files first
                 for (webidfile, widdict) in serverlevel_webidwords_dict.items():
                     if webidfile not in serverlevel_index.keys():
@@ -1950,9 +1940,6 @@ class ESPRESSOexperiment:
                     for(wid, poddict) in widdict.items():
                         for(paddr, pid) in poddict.items():
                             serverlevel_index[webidfile]=serverlevel_index[webidfile]+wid+','+pid+','+paddr+'\r\n'
-                #print('Server-level index: ')
-                #print(serverlevel_index)
-                # HO 02/09/2024 END *********************
                 for (key, wworddict) in serverlevel_keywords_dict.items():
                     # if this word isn't already being counted, add it
                     if key not in serverlevel_index.keys():
@@ -1962,6 +1949,7 @@ class ESPRESSOexperiment:
                             for(paddrkey, piddict) in poddict.items():
                                 for(pidkey, freq) in piddict.items():
                                     serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
+                # HO 02/09/2024 END *********************
                                     
                 serverlevel_index['index.sum']=str(serverlevel_indexsum)
                 enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
@@ -2388,6 +2376,223 @@ class ESPRESSOexperiment:
                 pbar.close()
                 # close the pod index zip file
                 podindexzip.close()
+
+    # HO 05/09/2024 BEGIN *********************                
+    """
+    Zip the indexes and store locally. For experiments that are too big to index on the fly.
+    
+    param: self
+    param: zipdir, the directory
+    """        
+    def serverlevel_storelocalindexzipdirs(self,zipdir):
+        print('inside serverlevel_storelocalindexzipdirs')
+        # for each server
+        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+            # name the current zip directory after the current server
+            serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
+            # HO 05/09/2024 BEGIN ************
+            # count the pods on this server
+            serverlevel_pod_counter=0
+            # count the WebIDs that have access to any of the pods on this server
+            serverlevel_webid_counter=0
+            # server-level nested dictionary mapping of index keywords 
+            serverlevel_keywords_dict = dict()
+            # lookup of all the webidword:widword mappings on this server
+            serverlevel_widword_lookup = dict()
+            # lookup of all the podaddress:pid mappings on this server
+            serverlevel_podword_lookup = dict()
+            # the server-level index to be written to the ESPRESSO pod metaindex
+            serverlevel_index = dict()
+            # dictionary from which to create the .webid files to be added to serverlevel_index
+            serverlevel_webidwords_dict = dict()
+            # running sum of all the files held on the server
+            serverlevel_indexsum=0
+            # HO 05/09/2024 END **************
+            # create directories recursively, no need to raise error if any already exist
+            print('make directory ' + serdir)
+            # HO 17/08/2024 BEGIN *********
+            #os.makedirs(serdir,exist_ok=True)
+            os.makedirs(serdir,mode=0o777,exist_ok=True)
+            # HO 17/08/2024 END *********
+            print('made directory ' + serdir)
+            # HO 05/09/2024 BEGIN ***********
+            # name the server level zip metaindex file
+            enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
+            #serzipindexfile=serdir +'/' +str(self.image.value(enode,self.namespace.Name))+'metaindex.zip'
+            serzipindexfile=serdir +'/' +self.podname+'metaindex.zip'
+            # HO 05/09/2024 END *************
+            # for every pod in this server
+            for pnode in self.image.objects(snode,self.namespace.Contains):
+                # name the pod zip index file
+                podzipindexfile=serdir +'/'+str(self.image.value(pnode,self.namespace.Name))+'index.zip'
+                # get the pod address
+                podaddress=str(self.image.value(pnode,self.namespace.Address))
+                # HO 05/09/2024 BEGIN ************
+                # here we need to create a podword for this pod relative to the server
+                if podaddress not in serverlevel_podword_lookup:
+                    podword = 'p' + str(serverlevel_pod_counter)
+                    # advance the pod counter
+                    serverlevel_pod_counter = serverlevel_pod_counter+1
+                    # map the podword to this podaddress
+                    serverlevel_podword_lookup[podaddress] = podword
+                # HO 05/09/2024 END **************
+                # create an empty list for the file tuples
+                filetuples=[]
+                # for each file in the pod
+                for fnode in self.image.objects(pnode,self.namespace.Contains):
+                        # get the file details
+                        targetUrl=str(self.image.value(fnode,self.namespace.Address))
+                        filetype=str(self.image.value(fnode,self.namespace.Filetype))
+                        filename=str(self.image.value(fnode,self.namespace.Filename))
+                        f=str(self.image.value(fnode,self.namespace.LocalAddress))
+                        # open the file for reading
+                        file = open(f, "r")
+                        filetext=file.read()
+                        file.close()
+                        # create a list to hold the WebIDs that have access to this file
+                        webidlist=[]
+                        # and add each WebID to the list
+                        for anode in self.image.objects(fnode,self.namespace.AccessibleBy):
+                            webid=str(self.image.value(anode,self.namespace.WebID))
+                            webidlist.append(webid)
+                        # if a given file is open access, represent that in the list with an asterisk
+                        if fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile):
+                            webidlist.append('*')
+                        # cut the pod address off the target URL
+                        ftrunc=targetUrl[len(podaddress):]
+                        # add the truncated pod address, file text, web ID list to the file tuples
+                        filetuples.append((ftrunc,filetext,webidlist))
+                        # HO 05/09/2024 BEGIN ***************
+                        # TODO repeated code
+                        # the asterisk means open access
+                        for webid in webidlist:
+                            if webid=="*":
+                                widword=webid
+                                webidword='openaccess.webid'
+                                if webidword not in serverlevel_widword_lookup.keys():
+                                    # add this webidword:widword mapping to the lookup
+                                    serverlevel_widword_lookup[webidword]=widword
+                                    # add this widword : {podaddress : podword} mapping to the dictionary
+                                    # TODO repeated code
+                                    if webidword not in serverlevel_webidwords_dict.keys(): # it shouldn't be
+                                        piddict = {podaddress : serverlevel_podword_lookup[podaddress]}
+                                        widdict = {widword : piddict}
+                                        serverlevel_webidwords_dict[webidword] = widdict
+                            else: # remove the punctuation from the WebID so it doesn't gum up the works
+                                webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
+                            
+                            # if this webidword isn't already mapped to a widword, map it
+                            if webidword not in serverlevel_widword_lookup.keys():
+                                widword='w' + str(serverlevel_webid_counter)
+                                # advance the webid counter every time we add a new mapping
+                                serverlevel_webid_counter = serverlevel_webid_counter+1
+                                serverlevel_widword_lookup[webidword]=widword
+                                # add this widword : {podaddress : podword} mapping to the dictionary
+                                # TODO repeated code
+                                if webidword not in serverlevel_webidwords_dict.keys(): # it shouldn't be
+                                    piddict = {podaddress : serverlevel_podword_lookup[podaddress]}
+                                    widdict = {widword : piddict}
+                                    serverlevel_webidwords_dict[webidword] = widdict
+                            
+                            # if it's not in the dictionary by now something is wrong
+                            widword = serverlevel_widword_lookup[webidword] if webidword in serverlevel_widword_lookup else ''
+                            if (len(widword) > 0):
+                                widdict = serverlevel_webidwords_dict[webidword] if webidword in serverlevel_webidwords_dict else dict()
+                                poddict = widdict[widword] if widword in widdict else dict()
+                                # if this pod isn't already listed against this widword
+                                if podaddress not in poddict.keys():
+                                    # add the podword mapping
+                                    poddict[podaddress] = serverlevel_podword_lookup[podaddress]
+                                    # update the podname mapping
+                                    widdict[widword] = poddict
+                                    # update the widword mapping
+                                    serverlevel_webidwords_dict[webidword] = widdict  
+                        # HO 05/09/2024 END *****************
+                # construct an inverted index from the file tuples
+                print('constructing inverted index')
+                # HO 05/09/2024 BEGIN ***************
+                #index=PodIndexer.aclindextupleswebidnewdirs(filetuples)
+                podlevel_index=dict()
+                servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podaddress, serverlevel_keywords_dict, serverlevel_widword_lookup, serverlevel_podword_lookup)
+                if (servtuples is not None):
+                    if (len(servtuples) >= 1):
+                        podlevel_index = servtuples[0]
+                        if 'index.sum' in podlevel_index.keys():
+                            runningsum = podlevel_index['index.sum']
+                            serverlevel_indexsum=serverlevel_indexsum+int(runningsum)
+                    if (len(servtuples) >= 2):
+                        serverlevel_keywords_dict = servtuples[1]
+                
+                # work out how many .ndx files there are?
+                #n=len(index.keys())
+                n=len(podlevel_index.keys())
+                print('About to write podlevel_index')
+                # HO 05/09/2024 END ***************
+                # set up a progress bar
+                pbar = tqdm.tqdm(total=n,desc=podzipindexfile)
+                # open the pod index zip file for writing
+                podindexzip=ZipFile(podzipindexfile, 'w')
+                # HO 05/09/2024 BEGIN ***************
+                # for each item in the index dictionary
+                #for (name,body) in index.items():
+                for (name,body) in podlevel_index.items():
+                # HO 05/09/2024 END ***************
+                    # write them to the zip file (name/key is archive name)
+                    podindexzip.writestr(name,body)
+                    # gets info about this item
+                    # TODO metadata?
+                    info = podindexzip.getinfo(name)
+                    print('about to give full access')
+                    # give full access to this file/item
+                    info.external_attr = 0o777 << 16
+                    # update the progress bar
+                    pbar.update(1)
+                # close the progress bar
+                pbar.close()
+                # close the pod index zip file
+                podindexzip.close()
+            # HO 02/09/2024 BEGIN *************
+            # webid files first
+            for (webidfile, widdict) in serverlevel_webidwords_dict.items():
+                if webidfile not in serverlevel_index.keys():
+                    serverlevel_index[webidfile] = ''
+                for(wid, poddict) in widdict.items():
+                    for(paddr, pid) in poddict.items():
+                        serverlevel_index[webidfile]=serverlevel_index[webidfile]+wid+','+pid+','+paddr+'\r\n'
+            for (key, wworddict) in serverlevel_keywords_dict.items():
+                # if this word isn't already being counted, add it
+                if key not in serverlevel_index.keys():
+                    serverlevel_index[key]=''
+                for (wwordkey, widdict) in wworddict.items():
+                    for(widkey, poddict) in widdict.items():
+                        for(paddrkey, piddict) in poddict.items():
+                            for(pidkey, freq) in piddict.items():
+                                serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
+                # HO 02/09/2024 END *********************
+            # HO 05/09/2024 BEGIN *************************************
+            serverlevel_index['index.sum']=str(serverlevel_indexsum)
+            n=len(serverlevel_index.keys())
+            print('About to write serverlevel_index:')
+            # set up a progress bar
+            pbar = tqdm.tqdm(total=n,desc=serzipindexfile)
+            # open the server index zip file for writing
+            serindexzip=ZipFile(serzipindexfile, 'w')
+            # for each item in the index dictionary
+            for (name,body) in serverlevel_index.items():
+                # write them to the zip file (name/key is archive name)
+                serindexzip.writestr(name,body)
+                # gets info about this item
+                info = serindexzip.getinfo(name)
+                print('about to give full access')
+                # give full access to this file/item
+                info.external_attr = 0o777 << 16
+                # update the progress bar
+                pbar.update(1)
+            # close the progress bar
+            pbar.close()
+            # close the server index zip file
+            serindexzip.close()
+            # HO 05/09/2024 END ********************* 
 
     """
     Distribute the zip files around the servers using ssh

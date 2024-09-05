@@ -94,11 +94,11 @@ def indexexperiment(experiment):
     
     ########################
     # Option A step 1, for smaller experiments: index the pods on the fly 
-    experiment.aclindexwebidnewthreaded()
+    #experiment.aclindexwebidnewthreaded()
     #print('pods indexed')
     
     # Option A step 2, for smaller experiments: check the indexes 
-    """experiment.indexfixerwebidnew()
+    #experiment.indexfixerwebidnew()
     #print('indexes checked')
     ########################
     
@@ -108,10 +108,11 @@ def indexexperiment(experiment):
     # And distribute them to the corresponding servers using ssh.
     
     # Option B, step 1, zip the indexes and store locally 
-    experiment.storelocalindexzipdirs('zipdir')""" 
+    #experiment.storelocalindexzipdirs('zipdir')
+    experiment.serverlevel_storelocalindexzipdirs('zipdir')
     
     # Option B, step 2: distribute zips(using SSH username and password) 
-    #experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')
+    """experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
     ########################
 # Serverlists
 # HO 16/08/2024 BEGIN *********
