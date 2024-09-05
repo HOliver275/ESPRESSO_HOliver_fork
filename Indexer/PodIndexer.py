@@ -585,7 +585,8 @@ class LdpIndex:
         filelevel_webidwordlist=[]
         
         # TODO we've already translated these before adding them
-        # to the server-level serverlevel_webidworddict, shame to do it all again
+        # to the server-level serverlevel_webidworddict, find a way to remove the redundancy
+        # HO 02/09/2024 BOOKMARK 
         for webid in webidlist:
             # signify open access with an asterisk
             if webid=="*":

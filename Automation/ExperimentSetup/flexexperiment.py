@@ -1934,7 +1934,7 @@ class ESPRESSOexperiment:
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
                 # HO 02/09/2024 BEGIN *************
                 # webid files first
-                for (webidfile, widdict) in serverlevel_webidwords_dict.items():
+                """for (webidfile, widdict) in serverlevel_webidwords_dict.items():
                     if webidfile not in serverlevel_index.keys():
                         serverlevel_index[webidfile] = ''
                     for(wid, poddict) in widdict.items():
@@ -1951,7 +1951,8 @@ class ESPRESSOexperiment:
                                     serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
                 # HO 02/09/2024 END *********************
                                     
-                serverlevel_index['index.sum']=str(serverlevel_indexsum)
+                serverlevel_index['index.sum']=str(serverlevel_indexsum)"""
+                serverlevel_index=buildservermetaindex(serverlevel_webidwords_dict, serverlevel_keywords_dict, serverlevel_indexsum)
                 enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
                 metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
                 # construct the client credentials
@@ -2553,24 +2554,36 @@ class ESPRESSOexperiment:
                 podindexzip.close()
             # HO 02/09/2024 BEGIN *************
             # webid files first
-            for (webidfile, widdict) in serverlevel_webidwords_dict.items():
+            """for (webidfile, widdict) in serverlevel_webidwords_dict.items():
                 if webidfile not in serverlevel_index.keys():
                     serverlevel_index[webidfile] = ''
                 for(wid, poddict) in widdict.items():
                     for(paddr, pid) in poddict.items():
                         serverlevel_index[webidfile]=serverlevel_index[webidfile]+wid+','+pid+','+paddr+'\r\n'
             for (key, wworddict) in serverlevel_keywords_dict.items():
+                # HO 05/09/2024 BEGIN *************
                 # if this word isn't already being counted, add it
-                if key not in serverlevel_index.keys():
-                    serverlevel_index[key]=''
+                #if key not in serverlevel_index.keys():
+                    #serverlevel_index[key]=''
+                # HO 05/09/2024 END ***************
                 for (wwordkey, widdict) in wworddict.items():
                     for(widkey, poddict) in widdict.items():
+                        # HO 05/09/2024 BEGIN *************
+                        servkey=widkey + '/' + key
+                        if servkey not in serverlevel_index.keys():
+                            serverlevel_index[servkey]=''
+                        # HO 05/09/2024 END *************
                         for(paddrkey, piddict) in poddict.items():
                             for(pidkey, freq) in piddict.items():
-                                serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
+                                # HO 05/09/2024 BEGIN *************
+                                #serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
+                                serverlevel_index[servkey]=serverlevel_index[servkey]+pidkey+','+str(freq)+'\r\n'
+                                # HO 05/09/2024 END *************
                 # HO 02/09/2024 END *********************
             # HO 05/09/2024 BEGIN *************************************
-            serverlevel_index['index.sum']=str(serverlevel_indexsum)
+            serverlevel_index['index.sum']=str(serverlevel_indexsum)"""
+            serverlevel_index=buildservermetaindex(serverlevel_webidwords_dict, serverlevel_keywords_dict, serverlevel_indexsum)
+            
             n=len(serverlevel_index.keys())
             print('About to write serverlevel_index:')
             # set up a progress bar
@@ -2593,7 +2606,7 @@ class ESPRESSOexperiment:
             # close the server index zip file
             serindexzip.close()
             # HO 05/09/2024 END ********************* 
-
+            
     """
     Distribute the zip files around the servers using ssh
     
@@ -2639,6 +2652,39 @@ class ESPRESSOexperiment:
                 pbar.update(1)
             # close the progress bar
             pbar.close()
+            
+# HO 05/09/2024 BEGIN ****************************
+def buildservermetaindex(servwiddict, servkeydict, servidxsum):
+    servidx = dict()
+    # webid files first
+    for (webidfile, widdict) in servwiddict.items():
+        if webidfile not in servidx.keys():
+            servidx[webidfile] = ''
+        for(wid, poddict) in widdict.items():
+            for(paddr, pid) in poddict.items():
+                if(wid=='*'):
+                    servidx[webidfile]=servidx[webidfile]+'openaccess,'+pid+','+paddr+'\r\n'
+                else:
+                    servidx[webidfile]=servidx[webidfile]+wid+','+pid+','+paddr+'\r\n'
+                        
+    for (key, wworddict) in servkeydict.items():
+        for (wwordkey, widdict) in wworddict.items():
+            for(widkey, poddict) in widdict.items():
+                if(widkey=='*'):
+                    servkey='openaccess/' + key
+                else:
+                    servkey=widkey + '/' + key
+                        
+                if servkey not in servidx.keys():
+                    servidx[servkey]=''
+                        
+                for(paddrkey, piddict) in poddict.items():
+                    for(pidkey, freq) in piddict.items():
+                        servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
+                            
+    servidx['index.sum']=str(servidxsum)
+    return servidx
+# HO 05/09/2024 END ******************************
 
 # possibly used by keywordfinder
 def loadexp(filename):
