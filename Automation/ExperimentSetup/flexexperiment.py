@@ -2148,38 +2148,18 @@ class ESPRESSOexperiment:
             # name the current zip directory after the current server
             serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
             # HO 11/09/2024 BEGIN ************
-            # count the pods on this server
-            """serverlevel_pod_counter=0
-            # count the WebIDs that have access to any of the pods on this server
-            serverlevel_webid_counter=0
-            # server-level nested dictionary mapping of index keywords 
-            serverlevel_keywords_dict = dict()
-            # lookup of all the webidword:widword mappings on this server
-            serverlevel_widword_lookup = dict()
-            # lookup of all the podaddress:pid mappings on this server
-            serverlevel_podword_lookup = dict()
-            # the server-level index to be written to the ESPRESSO pod metaindex
-            serverlevel_index = dict()
-            # dictionary from which to create the .webid files to be added to serverlevel_index
-            serverlevel_webidwords_dict = dict()
-            # running sum of all the files held on the server
-            serverlevel_indexsum=0"""
             # server-level index (test)
             testservindex=ServerIndex()
             # HO 11/09/2024 END **************
             # create directories recursively, no need to raise error if any already exist
             print('make directory ' + serdir)
-            # HO 17/08/2024 BEGIN *********
-            #os.makedirs(serdir,exist_ok=True)
             os.makedirs(serdir,mode=0o777,exist_ok=True)
-            # HO 17/08/2024 END *********
             print('made directory ' + serdir)
-            # HO 05/09/2024 BEGIN ***********
+            
             # name the server level zip metaindex file
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
-            #serzipindexfile=serdir +'/' +str(self.image.value(enode,self.namespace.Name))+'metaindex.zip'
             serzipindexfile=serdir +'/' +self.podname+'metaindex.zip'
-            # HO 05/09/2024 END *************
+            
             # for every pod in this server
             for pnode in self.image.objects(snode,self.namespace.Contains):
                 # name the pod zip index file
@@ -2190,7 +2170,7 @@ class ESPRESSOexperiment:
                 # here we need to create a podword for this pod relative to the server
                 podname=str(self.image.value(pnode,self.namespace.Name))
                 podpath=podname+'/'+self.podindexdir
-                #if podaddress not in serverlevel_podword_lookup:
+                """#if podaddress not in serverlevel_podword_lookup:
                 if podpath not in testservindex.podword_lookup:
                     #podword = 'p' + str(serverlevel_pod_counter)
                     podword = 'p' + str(testservindex.pod_counter)
@@ -2198,10 +2178,10 @@ class ESPRESSOexperiment:
                     testservindex.pod_counter = testservindex.pod_counter+1
                     # map the podword to this podaddress
                     #serverlevel_podword_lookup[podaddress] = podword
-                    testservindex.podword_lookup[podpath] = podword
-                """testservindex.addpod(podpath)"""
-                print('testservindex.podword_lookup: ')
-                print(testservindex.podword_lookup)
+                    testservindex.podword_lookup[podpath] = podword"""
+                testservindex.addpod(podpath)
+                #print('testservindex.podword_lookup: ')
+                #print(testservindex.podword_lookup)
                 # HO 11/09/2024 END **************
                 # create an empty list for the file tuples
                 filetuples=[]

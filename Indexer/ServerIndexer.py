@@ -57,12 +57,11 @@ class ServerIndex:
     param: podpath, the relative path to the pod index on the server 
     """
     def addpod(self, podpath):
-        # here we need to create a podword for this pod relative to the server
         if podpath not in self.podword_lookup:
             podword = 'p' + str(self.pod_counter)
             # advance the pod counter
             self.pod_counter = self.pod_counter+1
-            # map the podword to this podpath
+            # map the podword to this podaddress
             self.podword_lookup[podpath] = podword
             
     """
