@@ -2170,15 +2170,6 @@ class ESPRESSOexperiment:
                 # here we need to create a podword for this pod relative to the server
                 podname=str(self.image.value(pnode,self.namespace.Name))
                 podpath=podname+'/'+self.podindexdir
-                """#if podaddress not in serverlevel_podword_lookup:
-                if podpath not in testservindex.podword_lookup:
-                    #podword = 'p' + str(serverlevel_pod_counter)
-                    podword = 'p' + str(testservindex.pod_counter)
-                    # advance the pod counter
-                    testservindex.pod_counter = testservindex.pod_counter+1
-                    # map the podword to this podaddress
-                    #serverlevel_podword_lookup[podaddress] = podword
-                    testservindex.podword_lookup[podpath] = podword"""
                 testservindex.addpod(podpath)
                 #print('testservindex.podword_lookup: ')
                 #print(testservindex.podword_lookup)
@@ -2220,7 +2211,8 @@ class ESPRESSOexperiment:
                         #if webid=="*":
                         if webid==config.OPENACCESS_SYMBOL:
                         # HO 11/09/2024 END ************
-                            widword=webid
+                            #widword=webid
+                            widword=config.OPENACCESS_WEBIDWORD
                             #webidword='openaccess.webid'
                             webidword=config.OPENACCESS_FILENAME
                             # HO 11/09/2024 END ************
