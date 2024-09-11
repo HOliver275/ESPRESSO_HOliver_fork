@@ -2,9 +2,7 @@
 import flexexperiment
 # https://github.com/RDFLib/rdflib
 from rdflib import URIRef
-# HO 17/08/2024 BEGIN ***********
 from math import floor
-# HO 17/08/2024 END *************
 
 """
 Step 2. Actual deployment of the experiment.
@@ -25,43 +23,35 @@ This is the actual work of creating everything:
 param: experiment, a flexexperiment.ESPRESSOexperiment
 """
 def deployexperiment(experiment):
-    #print('about to call flexexperiment.ESPRESSOcreate')
     # Create the ESPRESSO pods, if they haven't already been created.
     experiment.ESPRESSOcreate()
     # display progress message
-    #print('ESPRESSO checked')
-    #print('-------------------')
+    print('ESPRESSO checked')
     
     # Create the normal pods, unless they're already there in which case, wipe the contents
-    #print('about to call flexexperiment.podcreate')
     experiment.podcreate()
-    #print('Pods created')
-    #print('-------------------')
+    print('Pods created')
     
     # Insert the triples into the pods.
-    #print('about to call flexexperiment.inserttriples')
     experiment.inserttriples()
     # display progress message
-    #print('Triples inserted')
-    #print('-------------------')
+    print('Triples inserted')
     
     # Create the server-level metaindexes.
     experiment.aclmetaindex()
     # display progress message
-    #print('metaindexes created')
-    #print('-------------------')
+    print('metaindexes created')
     
     # Make all the pod indexes open access.
     experiment.indexpub()
     # display progress message
-    #print('indexes opened')
-    #print('-------------------')
+    print('indexes opened')
     
     # Make the metaindexes open access.
+    # HO 06/09/2024 - MR documented this as opening access, but they're only accessible to the experiment
     experiment.metaindexpub()
     # display progress message
-    #print('metaindexes opened')
-    #print('-------------------')""" 
+    print('metaindexes made accessible to the experiment')
 
 """
 Step 3. 
@@ -74,14 +64,12 @@ def uploadexperiment(experiment):
     # upload the files to populate the pods
     experiment.uploadfiles()
     # display progress message
-    #print('Pods populated')
-    #print('-----------------')
+    print('Pods populated')
     
     # upload the ACL files
     experiment.uploadacls()
     # display progress message
-    #print('Acls populated')
-    #print('-----------------')
+    print('Acls populated')
     
 """
 Step 4. We can do this if the experiment is not too big, otherwise we have to call zip(experiment,zipdir,SSHuser,SSHPassword) 
@@ -90,14 +78,14 @@ Indexes the experiment.
 param: experiment, a flexexperiment.ESPRESSOexperiment 
 """
 def indexexperiment(experiment):
-    #print('inside indexexperiment')
     
     ########################
     # Option A step 1, for smaller experiments: index the pods on the fly 
-    experiment.aclindexwebidnewthreaded()
+    #experiment.aclindexwebidnewthreaded()
     #print('pods indexed')
     
     # Option A step 2, for smaller experiments: check the indexes 
+    # note: we're not doing this for the metaindex even for small experiments
     #experiment.indexfixerwebidnew()
     #print('indexes checked')
     ########################
@@ -109,39 +97,32 @@ def indexexperiment(experiment):
     
     # Option B, step 1, zip the indexes and store locally 
     #experiment.storelocalindexzipdirs('zipdir')
-    """experiment.serverlevel_storelocalindexzipdirs('zipdir')
+    experiment.serverlevel_storelocalindexzipdirs('zipdir')
     
     # Option B, step 2: distribute zips(using SSH username and password) 
-    experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
+    """experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
     ########################
-# Serverlists
-# HO 16/08/2024 BEGIN *********
+# Server labels
 servlab1 = 'Serverlabel1'
 servlab2 = 'Serverlabel2'
 servlab3 = 'Serverlabel3'
+# file labels
 filelab1 = 'Filelabel1'
 filelab2 = 'Filelabel2'
 filelab3 = 'Filelabel3'
-
+# pod labels
 podlab1 = 'pod1'
-#podlab1 = 'compod'
 podlab2 = 'pod2'
-#podlab2 = 'goodpod'
 podlab3 = 'pod3'
-# serverlist1=[]
+# server lists
 serverlist1=['http://localhost:3000/']
-#serverlist2=[]
 serverlist2=['http://localhost:3001/']
 serverlist3=['http://localhost:3002/']
 # source directories for data
-#sourcedir1=''
-#sourcedir2=''
-#sourcedir3=''
 sourcedir1='../DatasetSplitter/sourcedir1/'
 sourcedir2='../DatasetSplitter/sourcedir2/'
 sourcedir3='../DatasetSplitter/sourcedir3/'
 numfiles = 10
-# HO 16/08/2024 END ***********
 
 # Name of the ESPRESSO pod. ESPRESSO is default.
 espressopodname='ESPRESSO'
@@ -195,224 +176,120 @@ param: podname, example value: 'ardfhealth'
 return: experiment, an object of type flexexperiment.ESPRESSOexperiment
 """
 def createexperiment(podname):
-    #print('Entered expeerimenttemplate.createexperiment')
     # Initializing the experiment
-    #print('About to initialize the experiment')
 
     # HO 04/09/2024 BEGIN ***************
     #experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
     experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
     # HO 04/09/2024 END ***************
-    #print('Constructed ESPRESSOexperiment.')
-    #print('--------------------------------')
-
-    # Server list loading
-
-    # HO 16/08/2024 BEGIN *************
-    # experiment.loadserverlist(serverlist1,'Serverlabel1')
-    experiment.loadserverlist(serverlist1, servlab1)
-    # HO 16/08/2024 END *************
-
-    # HO 16/08/2024 BEGIN **************
-    #experiment.loadserverlist(serverlist2,'Serverlabel2')
-    experiment.loadserverlist(serverlist2, servlab2)
-    # HO 16/08/2024 END **************
+    print("Constructed experiment")
     
-    # HO 20/08/2024 BEGIN **************
+    # Server list loading
+    experiment.loadserverlist(serverlist1, servlab1)
+
+    experiment.loadserverlist(serverlist2, servlab2)
+
     experiment.loadserverlist(serverlist3, servlab3)
-    # HO 20/08/2024 END **************
 
     # user message
-    #print('serverlist loaded')
-    #print('---------------------------')
+    print('serverlist loaded')
     
     # Creating connected pod pairs 
-    #print('Creating connected pod pairs')
-
-    
-# HO 16/08/2024 BEGIN *********
-    #experiment.createlogicalpairedpods(numberofpods=10,serverdisp=0,serverlabel1='server1',serverlabel2='server2',podlabel1='pod1',podlabel2='pod2',conpred=URIRef('http://espresso.org/haspersonalWebID'))
     experiment.createlogicalpairedpods(numberofpods=numpods,serverdisp=0,serverlabel1=servlab1,serverlabel2=servlab2,podlabel1=podlab1,podlabel2=podlab2,conpred=URIRef('http://espresso.org/haspersonalWebID'))
-    #print('logical paired pods created ')
-    #print('---------------------------')
-    # HO 20/08/2024 BEGIN **************
+    print('logical paired pods created ')
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab3,podlabel=podlab3)
-    #print('logical pods created ')
-    #print('---------------------------')
-    # HO 20/08/2024 END **************
-    #experiment.createlogicalpods(9,0,servlab1,podlab1)
-    #experiment.createlogicalpods(1,0,servlab1,podlab2)
+    print('logical pods created ')
 
-    #experiment.createlogicalpods(9,0,servlab2,podlab1)
-    #experiment.createlogicalpods(1,0,servlab2,podlab2)
-    
-# HO 16/08/2024 END ********* 
-    # loading files into the file pool
-    # HO 16/08/2024 BEGIN ********* 
-    # experiment.loaddirtopool(sourcedir1,'Filelabel1')
-    #print('About to load dirs to pools')
     experiment.loaddirtopool(sourcedir1, filelab1)
-    # HO 16/08/2024 END ********* 
 
-    # HO 16/08/2024 BEGIN *********
-    #experiment.loaddirtopool(sourcedir2,'Filelabel2')
     experiment.loaddirtopool(sourcedir2, filelab2)
-    # HO 16/08/2024 END *********
-    #print('---------------------------')
-    # HO 20/08/2024 BEGIN **************
+
     experiment.loaddirtopool(sourcedir3, filelab3)
-    #print('---------------------------')
-    # HO 20/08/2024 END **************
-    
-    #print('About to call flexexperiment.logicaldistfilestopodsfrompool')
-    # HO 16/08/2024 BEGIN ************
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=100,filedisp=0,filetype=0,filelabel='Filelabel1',podlabel='pod1',subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
+    print('loaded source dirs to pool')
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab1,podlabel=podlab1,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #print('Back from logicaldistfilestopodsfrompool ' + filelab1)
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles-1,filedisp=0,filetype=0,filelabel=filelab1,podlabel=podlab1,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles-9,filedisp=0,filetype=0,filelabel=filelab1,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #print('---------------------------')
-    # HO 16/08/2024 END ************
-    
-    #HO 16/08/2024 BEGIN ************
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=100,filedisp=0,filetype=0,filelabel='Filelabel2',podlabel='pod2',subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab3,podlabel=podlab3,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
     
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles-1,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab1,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles-9,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=10,filedisp=0,filetype=0,filelabel=filelab3,podlabel=podlab3,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-#HO 16/08/2024 END ************
-    experiment.distributebundles(numberofbundles=10,bundlesource=sourcedir3,filetype='text/turtle',filelabel=filelab3,subdir='file',podlabel=podlab3,predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),hashliststring='')
-    # HO 16/08/2024 END *********
+    # the purpose of this appears to be distributing batches of files, it has no discernibly different effect if you run it straight after logicaldistfilestopodsfrompool
+    #TODO will probably need to use this when deploying to the VMs
+#experiment.distributebundles(numberofbundles=10,bundlesource=sourcedir3,filetype='text/turtle',filelabel=filelab3,subdir='file',podlabel=podlab3,predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),hashliststring='')
     #print('Back from flexexperiment.distributebundles')
-    #print('---------------------------')
-    # user progress message
-    #print('files loaded')
+
+    print('files distributed')
     
-    # acl creation
-    # HO 16/08/2024 BEGIN **********
-    #print('about to call initanodelist')
+    # agent nodes
     #experiment.initanodelist(numberofwebids=20)
     experiment.initanodelist(numberofwebids=numwebids)
-    #print('back from initanodelist')
-    #print('---------------------------')
+    
+    print('agent nodes initialized')
     
     #print('about to call initsanodelist')
     experiment.initsanodelist(percs)
-    #print('back from initsanodelist ')
-    #print('---------------------------')
-    #experiment.imagineaclnormal(openperc=100,numofwebids=20,mean=10, disp=0,filelabel='Filelabel1')
-    #print('About to call flexexperiment.imagineaclnormal')
+    
+    print('special agent nodes initialized')
+
     #experiment.imagineaclnormal(openperc=100,numofwebids=20,mean=10, disp=0,filelabel=filelab1)
     experiment.imagineaclnormal(openperc=100,mean=(floor(numwebids/2)), disp=0,filelabel=filelab1)
-    #print('Back from flexexperiment.imagineaclnormal')
-    #print('---------------------------')
-    # HO 16/08/2024 END **********
 
-    # HO 16/08/2024 BEGIN **********
-    #experiment.imagineaclnormal(openperc=50,numofwebids=20,mean=10, disp=0,filelabel='Filelabel2')
-    #print('About to call flexexperiment.imagineaclnormal')
     experiment.imagineaclnormal(openperc=50,mean=(floor(numwebids/2)), disp=0,filelabel=filelab2)
-    #print('Back from flexexperiment.imagineaclnormal')
-    #print('---------------------------')
-    # HO 16/08/2024 END **********
 
-    # HO 16/08/2024 BEGIN *************
-    #experiment.imagineaclnormal(openperc=10,numofwebids=20,mean=10, disp=0,filelabel='Filelabel3')
-    #print('About to call flexexperiment.imagineaclnormal')
     experiment.imagineaclnormal(openperc=10,mean=floor(numwebids/2), disp=0,filelabel=filelab3)
-    #print('Back from flexexperiment.imagineaclnormal')
-    # HO 16/08/2024 END *************
-
-    # HO 16/08/2024 BEGIN *********
-    #experiment.imagineaclspecial(percs,'Filelabel1')
-    #print('About to call flexexperiment.imagineaclspecial')
-    #experiment.imagineaclspecial(percs,filelab1)
-    experiment.imagineaclspecial(filelab1)
-    #print('Back from flexexperiment.imagineaclspecial')
-    #print('---------------------------')
-    # HO 16/08/2024 END *********
-
-    # HO 16/08/2024 BEGIN *******
-    # experiment.imagineaclspecial(percs,'Filelabel2')
-    #print('About to call flexexperiment.imagineaclspecial')
-    #experiment.imagineaclspecial(percs, filelab2)
-    experiment.imagineaclspecial(filelab2)
-    #print('Back from flexexperiment.imagineaclspecial')
-    #print('---------------------------')
-    # HO 16/08/2024 END *********
-
-    # HO 16/08/2024 BEGIN ***********
-    #experiment.imagineaclspecial(percs,'Filelabel3')
-    ##print('About to call flexexperiment.imagineaclspecial')
-    #experiment.imagineaclspecial(percs, filelab3)
-    experiment.imagineaclspecial(filelab3)
-    #print('Back from flexexperiment.imagineaclspecial')
-    # HO 16/08/2024 ENDs ***********
     
-    # user progress message
-    #print('files acl imagined')
+    print('Normal ACLs distributed')
+
+    experiment.imagineaclspecial(filelab1)
+
+    experiment.imagineaclspecial(filelab2)
+
+    experiment.imagineaclspecial(filelab3)
+    
+    print('Special agent ACLs distributed')
     
     # saves the experiment as a .ttl file named after the podname plus 'exp'
-    #print('About to call flexexperiment.saveexp')
     experiment.saveexp(podname+'exp.ttl')
 
     # user progress message
-    #print('experiment saved') 
-    #print('===================')
+    print('experiment saved') 
+    print('===================')
     # return the flexexperiment.ESPRESSOexperiment object
     return experiment
 
 # Pod name template and experiment name
 # example podname value: 'ardfhealth'
 podname='ardfhealth'
-#print('BEGIN *************************************')
-#print('Preparing for step 0')
-#print('expeerimenttemplate.podname = ' + podname)
 
 # name for the metaindex file.
 # example espressoindexfile value: 'ardfhealthmetaindex.csv'
 espressoindexfile=podname+'metaindex.csv'
 # HO 04/09/2024 BEGIN ****************************
+# name for the metaindex directory.
+# example espressoindexdir value: 'ardfhealthmetaindex/'
 espressoindexdir=podname+'metaindex/'
 # HO 04/09/2024 END ****************************
-#print('expeerimenttemplate.espressoindexfile = ' + espressoindexfile)
 
-# creating the logical view and saving it
-#print('expeerimenttemplate: about to create experiment')
-#print('method: expeerimenttemplate.createexperiment')
-#print('param: podname = ' + podname)
+# create and save the logical view of the experiment
 # example podname value: 'ardfhealth'
 experiment=createexperiment(podname)
-#print('created experiment, one step done')
-#print('===================================')
 
 # Loading the experiment. Step 1.
-#print('expeerimenttemplate: about to call flexexperiment.loadexp for ' + podname+'exp.ttl')
 experiment=flexexperiment.loadexp(podname+'exp.ttl')
 # display progress message
-#print('Experiment loaded')
-#print('another step done')
-#print('===================================')
+print('Experiment loaded')
+print('===================')
 
 # Creating the experiment infrastructure - pods, metaindexes, triples
 # and making the indexes and metaindexes open access
-#print('expeerimenttemplate: about to deploy experiment')
 deployexperiment(experiment)
-#print('Experiment deployed')
-#print('another step done')
-#print('===================================')
+print('Experiment deployed')
+print('===================')
 
-#Uploading of the files and corresponding acls
-#print('expeerimenttemplate: about to upload experiment')
+
+# Uploading of the files and corresponding acls
 uploadexperiment(experiment)
-#print('another step done')
-#print('===================================')
+print('Experiment uploaded')
+print('===================')
 
 #Indexing of the experiment
-#print('expeerimenttemplate: about to index experiment')
 indexexperiment(experiment)
-#print('===================================')"""
+"""print('Experiment indexed')
+print('===================')"""

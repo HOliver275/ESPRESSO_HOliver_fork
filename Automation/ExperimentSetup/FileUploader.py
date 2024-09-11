@@ -99,7 +99,6 @@ param: podaddress, address of the pod to upload to
 param: CSSA, the CSSaccess object with the client credentials
 """
 def uploadllistreplacewithbar(filetuplelist,replacetemplate,podaddress,CSSA):
-   #print('inside uploadlistreplacewithbar')
     # set up the progress bar
     pbar=tqdm.tqdm(total=len(filetuplelist),desc=podaddress)
     # initialize a list to hold the files that fail to upload
@@ -117,10 +116,8 @@ def uploadllistreplacewithbar(filetuplelist,replacetemplate,podaddress,CSSA):
                 # replace the designated file text as specified
                 filetext=filetext.replace(replacetemplate,substring)
             # PUT the filetext to the target file
-            # HO 17/08/2024 BEGIN ****************
             if(str(filetype) == '0'):
                 filetype='text/plain'
-            # HO 17/08/2024 END ****************
             res=CSSA.put_url(targetUrl, filetext, filetype)
             # if it didn't work
             if not res.ok:

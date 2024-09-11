@@ -14,11 +14,6 @@ param: zipf, TODO work out what this parameter does
 return: res, a list of lists of files to be distributed in each place
 """
 def distribute(files,places,zipf):
-   #print('In FileDistributor.distribute')
-   #print('files follow: ')
-   #print(files)
-   #print('places: ' + str(places))
-   #print('zipf: ' + str(zipf))
     # running sum
     total=0
     # if we are doing a zipf distribution
@@ -28,7 +23,6 @@ def distribute(files,places,zipf):
         # less than the number of files to be distributed,
         # and you initialize the numbers list to that length
         numbers=[math.floor(len(files)/places)]*places
-       #print('numbers = ' + str(numbers))
     else:
         # for each place where files are to be distributed, divide 1 by the array index times zipf
         # (where the denominator represents the word rank in the zipf equation)
@@ -74,8 +68,6 @@ def distribute(files,places,zipf):
         # and move the position ticker to the next lot of files
         pos=pos+numbers[i]
     # return the list of lists of files to be distributed in each place
-   #print('res follows: ')
-   #print(res)
     return (res)
 
 def distributenum(n,places,zipf):
@@ -163,11 +155,6 @@ param: disp, the standard deviation. Example value: 0
 return: res, a list of lists of files to distribute in each place. Example value: [[(rdflib.term.BNode('Ppod10'), ..., rdflib.term.BNode('Ppod29'))]]
 """
 def normaldistribute(files,places,disp):
-    #print('Inside normaldistribute.')
-    #print('input: files:')
-    #print(files)
-    #print('input: places: ' + str(places))
-    #print('input: disp: ' + str(disp))
     # if the standard deviation is 0,
     # multiply the number of files per place (rounded down) by the number of places to get (a number less than or equal to) the length of the numbers list
     if disp==0:
@@ -182,8 +169,7 @@ def normaldistribute(files,places,disp):
         # running sum
         total=0
         # for each place where files are to be distributed
-        for i in range(places):
-            # switch negative numbers to positive 1 [TODO ?]
+        for i in range(places): # replace negative numbers with 1
             if ran[i]<0:
                 ran[i]=1
             # add to the running sum
@@ -210,7 +196,7 @@ def normaldistribute(files,places,disp):
     print(numbers)
     # initialize a new empty list
     res=[]
-    # place tracker
+    # place counter
     pos=0
     # for every place
     for i in range(places):
@@ -219,8 +205,6 @@ def normaldistribute(files,places,disp):
         # and move the position along
         pos=pos+numbers[i]
     # return the list of allocated files
-    #print('res follows: ')
-    #print(res)
     return (res)
     
 """

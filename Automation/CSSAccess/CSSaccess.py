@@ -21,31 +21,22 @@ class CSSaccess:
     param: PASSWORD, the password
     """
     def __init__(self, IDP,USERNAME,PASSWORD):
-        #print('Constructing CSSaccess object')
         # set the identity provider
         self.idp = IDP
-        #print('IDP = ' + IDP)
         # set the username
         self.username = USERNAME
-        #print('self.username = ' + self.username)
         # set the password
         self.password = PASSWORD
-        #print('self.password = ' + self.password)
         # set the URL for the credentials with the identity provider
         self.cred_url = IDP+'idp/credentials/'
-        #print('self.cred_url = ' + self.cred_url)
         # set the URL for the OIDC token
         self.token_url = IDP+'.oidc/token'
-        #print('self.token_url = ' + self.token_url)
         # initialize an empty auth string
         self.authstring =''
-        #print('self.authstring = ' + self.authstring)
         # initialize an empty auth token
         self.authtoken = ''
-        #print('self.authtoken = ' + self.authtoken)
         # gets a (P-256 EC) JSON Web Key pair
         self.dpopKey = dpop_utils.generate_dpop_key_pair()
-        #print('self.dpopKey = ' + str(self.dpopKey))
         
     def __repr__(self):
         """
@@ -60,19 +51,16 @@ class CSSaccess:
     return: authstring, the auth string consisting of the id and secret
     """    
     def create_authstring(self):
-        #print('inside create_authstring')
         # create the structure to access the pod data
         data ={ 'email': self.username, 'password': self.password, 'name': 'my-token' }
         # dump the data at that pod
         datajson=json.dumps(data)
-        #print(datajson)
         # post the dumped data using the IDP credentials URL
         res = requests.post(self.cred_url, headers={ 'content-type': 'application/json' }, data=str(datajson))
         # JSONify the result
         res=res.json()
         # parse the id and secret to get the authstring
         self.authstring=urllib.parse.quote(res['id'])+':'+urllib.parse.quote(res['secret'])
-        #print('self.authstring = ' + self.authstring)
         # return the authstring consisting of the id and secret
         return self.authstring
 
@@ -162,11 +150,9 @@ class CSSaccess:
     return: res, the server response
     """
     def put_url(self,targetUrl,filetext,filetype):
-       #print('inside put_url')
         # create request headers
         headers={ 'content-type': filetype, 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
-       #print('headers: ')
-       #print(headers)
+
         # PUT the new filetext
         res= requests.put(targetUrl,
             headers=headers,
@@ -174,7 +160,6 @@ class CSSaccess:
         )
         
         # return server response
-        #print('put_url ' + targetUrl + ' returned: ' + res.text)
         return res 
     
     """
@@ -185,10 +170,6 @@ class CSSaccess:
     return: the response text
     """        
     def get_file(self,targetUrl):
-        #print('inside get_file')
-        #print('self = ' + str(self))
-        #print('self.authtoken = ' + self.authtoken)
-        #print('self.dpopKey = ' + str(self.dpopKey))
         # create the DPOP authorization headers
         # passes: the auth token, and a string representing the encoded JSON Web Token
         headers={  'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "GET", self.dpopKey)}
@@ -196,7 +177,7 @@ class CSSaccess:
         res= requests.get(targetUrl,
            headers=headers
         )
-        #print('res = ' + res.text)
+
         # return response text
         return res.text
 
@@ -349,7 +330,6 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
     return: res, the server response
     """
     def makeurlaccessiblelist(self, url, podaddress,webid, webidlist,openbool=False):
-       #print('inside makeurlaccessiblelist')
         # get the URL of the target file's .acl file
         targetUrl=url+'.acl'
         
@@ -405,13 +385,11 @@ param: targetUrl, the target URL
 return: res, the server response
 """
 def get_file(targetUrl):
-    #print('Am I in the other get_file?')
-    #print('targetUrl = ' + targetUrl)
+
     res= requests.get(targetUrl,
            #headers=headers
     )
     # return server response
-    #print('res = ' + res.text)
     return res
 
 """ 
