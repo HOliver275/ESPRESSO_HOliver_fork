@@ -2206,7 +2206,7 @@ class ESPRESSOexperiment:
                     # HO 11/09/2024 BEGIN ***************
                     # TODO repeated code
                     # the asterisk means open access
-                    for webid in webidlist:
+                    """for webid in webidlist:
                         # HO 11/09/2024 BEGIN ************
                         #if webid=="*":
                         if webid==config.OPENACCESS_SYMBOL:
@@ -2273,9 +2273,9 @@ class ESPRESSOexperiment:
                                 widdict[widword] = poddict
                                 # update the widword mapping
                                 #serverlevel_webidwords_dict[webidword] = widdict
-                                testservindex.webidwords_dict[webidword] = widdict
+                                testservindex.webidwords_dict[webidword] = widdict"""
                     # Sequentially number the WebIDs            
-                    """testservindex.addwebids(podpath, filetuples) """
+                    testservindex.addwebids(podpath, webidlist) 
                 # construct an inverted index from the file tuples
                 print('constructing inverted index')
                 # HO 05/09/2024 BEGIN ***************

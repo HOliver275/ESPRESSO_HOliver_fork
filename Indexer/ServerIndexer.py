@@ -69,53 +69,50 @@ class ServerIndex:
     
     param: self
     param: podpath, the relative path to the pod index on the server 
-    param: filetuples, a list of tuples containing details of files to be indexed, including the relevant WebIDs
+    param: webidlist, a list of webids to convert
     """
-    def addwebids(self, podpath, filetuples):
-        for (id,text,webidlist) in filetuples:
-            # the asterisk means open access, but you can't turn it into a filename
-            for webid in webidlist:
-                if webid==config.OPENACCESS_SYMBOL:
-                    widword=webid
-                    webidword=config.OPENACCESS_FILENAME
-                    if webidword not in self.widword_lookup.keys():
-                        # add this webidword:widword mapping to the lookup
-                        self.widword_lookup[webidword]=widword
-                        # add this widword : {podpath : podword} mapping to the dictionary
-                        # TODO repeated code
-                        if webidword not in self.webidwords_dict.keys(): # it shouldn't be
-                            piddict = {podpath : self.podword_lookup[podpath]}
-                            widdict = {widword : piddict}
-                            self.webidwords_dict[webidword] = widdict
-                else: # remove the punctuation from the WebID so it doesn't gum up the works
-                    webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
-                            
-                # if this webidword isn't already mapped to a widword, map it
+    def addwebids(self, podpath, webidlist):
+        for webid in webidlist:
+            if webid==config.OPENACCESS_SYMBOL:
+                widword=config.OPENACCESS_WEBIDWORD
+                webidword=config.OPENACCESS_FILENAME
+
                 if webidword not in self.widword_lookup.keys():
-                    widword=config.WIDWORD_PREFIX + str(self.webid_counter)
-                    # advance the webid counter every time we add a new mapping
-                    self.webid_counter = self.webid_counter+1
+                    # add this webidword:widword mapping to the lookup
                     self.widword_lookup[webidword]=widword
                     # add this widword : {podpath : podword} mapping to the dictionary
-                    # TODO repeated code
                     if webidword not in self.webidwords_dict.keys(): # it shouldn't be
                         piddict = {podpath : self.podword_lookup[podpath]}
                         widdict = {widword : piddict}
                         self.webidwords_dict[webidword] = widdict
+            else: # remove the punctuation from the WebID so it doesn't gum up the works
+                webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
                             
-                # if it's not in the dictionary by now something is wrong
-                widword = self.widword_lookup[webidword] if webidword in self.widword_lookup else ''
-                if (len(widword) > 0):
-                    widdict = self.webidwords_dict[webidword] if webidword in self.webidwords_dict else dict()
-                    poddict = widdict[widword] if widword in widdict else dict()
-                    # if this pod isn't already listed against this widword
-                    if podpath not in poddict.keys():
-                        # add the podword mapping
-                        poddict[podpath] = self.podword_lookup[podpath]
-                        # update the podname mapping
-                        widdict[widword] = poddict
-                        # update the widword mapping
-                        self.webidwords_dict[webidword] = widdict  
+            # if this webidword isn't already mapped to a widword, map it
+            if webidword not in self.widword_lookup.keys():
+                widword=config.WIDWORD_PREFIX + str(self.webid_counter)
+                # advance the webid counter every time we add a new mapping
+                self.webid_counter = self.webid_counter+1
+                self.widword_lookup[webidword]=widword
+                # add this widword : {podpath : podword} mapping to the dictionary
+                if webidword not in self.webidwords_dict.keys(): # it shouldn't be
+                    piddict = {podpath : self.podword_lookup[podpath]}
+                    widdict = {widword : piddict}
+                    self.webidwords_dict[webidword] = widdict
+                            
+            # if it's not in the dictionary by now something is wrong
+            widword = self.widword_lookup[webidword] if webidword in self.widword_lookup else ''
+            if (len(widword) > 0):
+                widdict = self.webidwords_dict[webidword] if webidword in self.webidwords_dict else dict()
+                poddict = widdict[widword] if widword in widdict else dict()
+                # if this pod isn't already listed against this widword
+                if podpath not in poddict.keys():
+                    # add the podword mapping
+                    poddict[podpath] = self.podword_lookup[podpath]
+                    # update the podname mapping
+                    widdict[widword] = poddict
+                    # update the widword mapping
+                    self.webidwords_dict[webidword] = widdict 
 
     """
     Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
@@ -188,7 +185,7 @@ class ServerIndex:
                             servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
     
         # finally, write the index.sum file
-        servidx[config.INDEX_FILECOUNT_FILENAME]=str(testservindex.indexsum)
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum)
         # now set the server-level index's writable index to be the one we just created
         self.index = servidx
 
