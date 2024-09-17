@@ -114,68 +114,31 @@ class ServerIndex:
                     # update the widword mapping
                     self.webidwords_dict[webidword] = widdict 
 
+    # HO 13/09/2024 BEGIN ****************************
     """
-    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, creating a separate index for each WebID by placing the short webid handle at the top of the directory structure
 
     """
-    def buildservermetaindex_allwebidsinonefile(self):
+    def buildservermetaindex_groupbywebid(self):
         servidx = dict()
         # webid files first
         for (webidfile, widdict) in self.webidwords_dict.items():
             if webidfile not in servidx.keys():
                 servidx[webidfile] = ''
             for(wid, poddict) in widdict.items():
-                for(paddr, pid) in poddict.items():
-                    if(wid==config.OPENACCESS_SYMBOL):
-                        servidx[webidfile]=servidx[webidfile]+config.OPENACCESS_WEBIDWORD+','+pid+','+paddr+'\r\n'
-                    else:
-                        servidx[webidfile]=servidx[webidfile]+wid+','+pid+','+paddr+'\r\n'
-                        
-        # now the list of .ndx files
-        for (key, wworddict) in self.keywords_dict.items():
-            if key not in servidx.keys():
-                servidx[key] = ''
-        for (wwordkey, widdict) in wworddict.items():
-            for(widkey, poddict) in widdict.items():
-                if(widkey==config.OPENACCESS_SYMBOL):
-                    widtowrite=config.OPENACCESS_WEBIDWORD
-                else:
-                    widtowrite=widkey
-                        
-                for(paddrkey, piddict) in poddict.items():
-                    for(pidkey, freq) in piddict.items():
-                        servidx[key]=servidx[key]+widtowrite+','+pidkey+','+str(freq)+'\r\n'
-                            
-        # and finally the index.sum
-        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum)
-        self.index=servidx
-        print('self.index: ')
-        print(self.index)
-        
-    # HO 11/09/2024 BEGIN **************************
-    #def buildservermetaindex_webidlast(servwiddict, servkeydict, servidxsum):
-    def buildservermetaindex_webidlast(self):
-        servidx = dict()
-        # set up the .webid files
-        for (webidfile, widdict) in self.webidwords_dict.items():
-            if webidfile not in servidx.keys():
-                servidx[webidfile] = ''
-            for(wid, poddict) in widdict.items():
                 for(ppath, pid) in poddict.items():
                     if(wid==config.OPENACCESS_SYMBOL):
-                        servidx[webidfile]=servidx[webidfile]+config.OPENACCESS_WEBIDWORD+','+pid+','+ppath+'\r\n'
+                        servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
                     else:
-                        servidx[webidfile]=servidx[webidfile]+wid+','+pid+','+ppath+'\r\n'
-    
-        # set up the .ndx files with the wid inserted before the .ndx file suffix
+                        servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                        
         for (key, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 for(widkey, poddict) in widdict.items():
-                    startkey=key[:-(len(config.KEYWORD_INDEX_FILEXTN))]
                     if(widkey==config.OPENACCESS_SYMBOL):
-                        servkey= startkey + '/' + config.OPENACCESS_WEBIDWORD + config.KEYWORD_INDEX_FILEXTN
+                        servkey=config.OPENACCESS_WEBIDWORD + '/' + key
                     else:
-                        servkey= startkey + '/' + widkey + config.KEYWORD_INDEX_FILEXTN
+                        servkey=widkey + '/' + key
                         
                     if servkey not in servidx.keys():
                         servidx[servkey]=''
@@ -183,10 +146,109 @@ class ServerIndex:
                     for(ppathkey, piddict) in poddict.items():
                         for(pidkey, freq) in piddict.items():
                             servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
-    
-        # finally, write the index.sum file
-        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum)
-        # now set the server-level index's writable index to be the one we just created
+                            #print('just added the following to servidx[' + servkey + ']: ' + str(servidx[servkey]))
+                            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
+        #for(filename, contents) in self.index.items():
+            #print(filename + ', ' + contents)
+
+    # HO 13/09/2024 END ******************************
+
+    # HO 17/09/2024 BEGIN ****************************
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, creating one .ndx file per web id, by making the short webid handle the filename at the end of the directory tree
+
+    """
+    def buildservermetaindex_splitbywebid(self):
+        # holder for the server-level index being built
+        servidx = dict()
+        # webid files first
+        # .webid for filename, dictionary with short wid handles as keys
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            # if this filename is not already a key in the server-level index, add it
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            # short wid handle, dictionary with pod index paths as keys
+            for(wid, poddict) in widdict.items():
+                # go through every pod that this WebID has access to
+                for(ppath, pid) in poddict.items():
+                    # The open access symbol is an asterisk, can't be used as filename
+                    # Anyway, add the short wid handle, the short pod handle, and the path to the pod index as a line in the .webid file
+                    if(wid==config.OPENACCESS_SYMBOL):
+                        servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
+                    else:
+                        servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                        
+        # k/e/y/w/o/r/d.ndx filename as key, dictionary with webidwords for keys
+        for (key, wworddict) in self.keywords_dict.items():
+            # for every WebID that has access to this keyword
+            for (wwordkey, widdict) in wworddict.items():
+                # short wid handle as key, dictionary with short pod handle
+                for(widkey, poddict) in widdict.items():
+                    # The open access symbol is an asterisk and can't be used as a filename
+                    # anyway, format the keyword into an .ndx filename
+                    startkey=key[:-(len(config.KEYWORD_INDEX_FILEXTN))]
+                    if(widkey==config.OPENACCESS_SYMBOL):
+                        servkey= startkey + '/' + config.OPENACCESS_WEBIDWORD + config.KEYWORD_INDEX_FILEXTN
+                    else:
+                        servkey= startkey + '/' + widkey + config.KEYWORD_INDEX_FILEXTN
+                    
+                    # if the keyword isn't already a key in the server-level dictionary, add it    
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
+                            #print('just added the following to servidx[' + servkey + ']: ' + str(servidx[servkey]))
+                            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+        #for(filename, contents) in self.index.items():
+            #print(filename + ', ' + contents)
+
+# HO 17/09/2024 END ******************************
+
+# HO 17/09/2024 BEGIN ****************************
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
+
+    """
+    def buildservermetaindex_simple(self):
+        servidx = dict()
+        # webid files first
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            for(wid, poddict) in widdict.items():
+                for(ppath, pid) in poddict.items():
+                    if(wid==config.OPENACCESS_SYMBOL):
+                        servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
+                    else:
+                        servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                        
+        for (servkey, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                for(widkey, poddict) in widdict.items():
+                    if(widkey==config.OPENACCESS_SYMBOL):
+                        widtowrite=config.OPENACCESS_WEBIDWORD
+                    else:
+                        widtowrite=widkey
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey] + widtowrite + ', ' + pidkey+','+str(freq)+'\r\n'
+                            #print('just added the following to servidx[' + servkey + ']: ' + str(servidx[servkey]))
+                            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+        #for(filename, contents) in self.index.items():
+            #print(filename + ', ' + contents)
+
+# HO 17/09/2024 END ******************************
 
         

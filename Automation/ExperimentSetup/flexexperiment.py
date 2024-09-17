@@ -1708,7 +1708,10 @@ class ESPRESSOexperiment:
                 # HO 02/09/2024 BEGIN *************
                 # unwind the server-level dictionary into a writable index
                 #testservindex.index=buildservermetaindex_webidlast(testservindex.webidwords_dict, testservindex.keywords_dict, testservindex.indexsum)
-                testservindex.buildservermetaindex_allwebidsinonefile()
+                # HO 13/09/2024 BEGIN ***********
+                #testservindex.buildservermetaindex_allwebidsinonefile()
+                testservindex.buildservermetaindex_simple()
+                # HO 13/09/2024 END ***********
                 # HO 11/09/2024 END *************
                 # find the ESPRESSO pod to write to
                 enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
@@ -2204,76 +2207,6 @@ class ESPRESSOexperiment:
                     # add the truncated pod address, file text, web ID list to the file tuples
                     filetuples.append((ftrunc,filetext,webidlist))
                     # HO 11/09/2024 BEGIN ***************
-                    # TODO repeated code
-                    # the asterisk means open access
-                    """for webid in webidlist:
-                        # HO 11/09/2024 BEGIN ************
-                        #if webid=="*":
-                        if webid==config.OPENACCESS_SYMBOL:
-                        # HO 11/09/2024 END ************
-                            #widword=webid
-                            widword=config.OPENACCESS_WEBIDWORD
-                            #webidword='openaccess.webid'
-                            webidword=config.OPENACCESS_FILENAME
-                            # HO 11/09/2024 END ************
-                            #if webidword not in serverlevel_widword_lookup.keys():
-                            if webidword not in testservindex.widword_lookup.keys():
-                                # add this webidword:widword mapping to the lookup
-                                #serverlevel_widword_lookup[webidword]=widword
-                                testservindex.widword_lookup[webidword]=widword
-                                # add this widword : {podaddress : podword} mapping to the dictionary
-                                # TODO repeated code
-                                #if webidword not in serverlevel_webidwords_dict.keys(): # it shouldn't be
-                                if webidword not in testservindex.webidwords_dict.keys(): # it shouldn't be
-                                    #piddict = {podaddress : serverlevel_podword_lookup[podaddress]}
-                                    piddict = {podpath : testservindex.podword_lookup[podpath]}
-                                    widdict = {widword : piddict}
-                                    #serverlevel_webidwords_dict[webidword] = widdict
-                                    testservindex.webidwords_dict[webidword] = widdict
-                        else: # remove the punctuation from the WebID so it doesn't gum up the works
-                            # HO 11/09/2024 BEGIN ***********
-                            #webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
-                            webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
-                            
-                        # if this webidword isn't already mapped to a widword, map it
-                        #if webidword not in serverlevel_widword_lookup.keys():
-                        if webidword not in testservindex.widword_lookup.keys():
-                            #widword='w' + str(serverlevel_webid_counter)
-                            widword=config.WIDWORD_PREFIX + str(testservindex.webid_counter)
-                            # HO 11/09/2024 END ***********
-                            # advance the webid counter every time we add a new mapping
-                            #serverlevel_webid_counter = serverlevel_webid_counter+1
-                            testservindex.webid_counter = testservindex.webid_counter+1
-                            #serverlevel_widword_lookup[webidword]=widword
-                            testservindex.widword_lookup[webidword]=widword
-                            # add this widword : {podaddress : podword} mapping to the dictionary
-                            # TODO repeated code
-                            #if webidword not in serverlevel_webidwords_dict.keys(): # it shouldn't be
-                            if webidword not in testservindex.webidwords_dict.keys(): # it shouldn't be
-                                #piddict = {podaddress : serverlevel_podword_lookup[podaddress]}
-                                piddict = {podpath : testservindex.podword_lookup[podpath]}
-                                widdict = {widword : piddict}
-                                #serverlevel_webidwords_dict[webidword] = widdict
-                                testservindex.webidwords_dict[webidword] = widdict
-                            
-                        # if it's not in the dictionary by now something is wrong
-                        #widword = serverlevel_widword_lookup[webidword] if webidword in serverlevel_widword_lookup else ''
-                        widword = testservindex.widword_lookup[webidword] if webidword in testservindex.widword_lookup else ''
-                        if (len(widword) > 0):
-                            #widdict = serverlevel_webidwords_dict[webidword] if webidword in serverlevel_webidwords_dict else dict()
-                            widdict = testservindex.webidwords_dict[webidword] if webidword in testservindex.webidwords_dict else dict()
-                            poddict = widdict[widword] if widword in widdict else dict()
-                            # if this pod isn't already listed against this widword
-                            #if podaddress not in poddict.keys():
-                            if podpath not in poddict.keys():
-                                # add the podword mapping
-                                #poddict[podaddress] = serverlevel_podword_lookup[podaddress]
-                                poddict[podpath] = testservindex.podword_lookup[podpath]
-                                # update the podname mapping
-                                widdict[widword] = poddict
-                                # update the widword mapping
-                                #serverlevel_webidwords_dict[webidword] = widdict
-                                testservindex.webidwords_dict[webidword] = widdict"""
                     # Sequentially number the WebIDs            
                     testservindex.addwebids(podpath, webidlist) 
                 # construct an inverted index from the file tuples
@@ -2281,7 +2214,6 @@ class ESPRESSOexperiment:
                 # HO 05/09/2024 BEGIN ***************
                 #index=PodIndexer.aclindextupleswebidnewdirs(filetuples)
                 podlevel_index=dict()
-                #servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podaddress, serverlevel_keywords_dict, serverlevel_widword_lookup, serverlevel_podword_lookup)
                 servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex)
                 # HO 11/09/2024 END *****************
                 if (servtuples is not None):
@@ -2289,19 +2221,14 @@ class ESPRESSOexperiment:
                     if (len(servtuples) >= 1):
                         podlevel_index = servtuples[0]
                         # HO 11/09/2024 BEGIN ******************
-                        #if 'index.sum' in podlevel_index.keys():
                         if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
-                            #runningsum = podlevel_index['index.sum']
                             runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
-                            #serverlevel_indexsum=serverlevel_indexsum+int(runningsum)
                     if (len(servtuples) >= 2):
-                        #serverlevel_keywords_dict = servtuples[1]
                         testservindex = servtuples[1]
                         testservindex.indexsum=testservindex.indexsum+int(runningsum)
                     # HO 11/09/2024 END ******************
                 
                 # work out how many .ndx files there are?
-                #n=len(index.keys())
                 n=len(podlevel_index.keys())
                 print('About to write podlevel_index')
                 # HO 05/09/2024 END ***************
@@ -2311,15 +2238,12 @@ class ESPRESSOexperiment:
                 podindexzip=ZipFile(podzipindexfile, 'w')
                 # HO 05/09/2024 BEGIN ***************
                 # for each item in the index dictionary
-                #for (name,body) in index.items():
                 for (name,body) in podlevel_index.items():
                 # HO 05/09/2024 END ***************
                     # write them to the zip file (name/key is archive name)
                     podindexzip.writestr(name,body)
                     # gets info about this item
-                    # TODO metadata?
                     info = podindexzip.getinfo(name)
-                    #print('about to give full access')
                     # give full access to this file/item
                     info.external_attr = 0o777 << 16
                     # update the progress bar
@@ -2331,7 +2255,7 @@ class ESPRESSOexperiment:
             # HO 11/09/2024 BEGIN *************
             # webid files first
             #for (webidfile, widdict) in serverlevel_webidwords_dict.items():
-            for (webidfile, widdict) in testservindex.webidwords_dict.items():
+            """for (webidfile, widdict) in testservindex.webidwords_dict.items():
                 #if webidfile not in serverlevel_index.keys():
                 if webidfile not in testservindex.index.keys():
                     #serverlevel_index[webidfile] = ''
@@ -2367,9 +2291,13 @@ class ESPRESSOexperiment:
                 # HO 02/09/2024 END *********************
             # HO 05/09/2024 BEGIN *************************************
             #serverlevel_index['index.sum']=str(serverlevel_indexsum)
-            testservindex.index['index.sum']=str(testservindex.indexsum)
+            testservindex.index['index.sum']=str(testservindex.indexsum)"""
             #serverlevel_index=buildservermetaindex_webidlast(serverlevel_webidwords_dict, serverlevel_keywords_dict, serverlevel_indexsum)
-            """testservindex.buildservermetaindex_webidlast"""
+            #testservindex.buildservermetaindex_webidfirst()
+            # HO 13/09/2024 BEGIN ***********
+            #testservindex.buildservermetaindex_allwebidsinonefile()
+            testservindex.buildservermetaindex_simple()
+            # HO 13/09/2024 END ***********
             #n=len(serverlevel_index.keys())
             n=len(testservindex.index.keys())
             print('About to write serverlevel_index:')
@@ -2452,7 +2380,7 @@ param: servwiddict, the dictionary from which to add the .webid files to the ser
 param: servkeydict, the dictionary from which to add the .ndx files to the server-level metaindex
 param: servidxsum, the running total number of files on this server, to write to the index.sum file
 """
-def buildservermetaindex_webidfirst(servwiddict, servkeydict, servidxsum):
+"""def buildservermetaindex_webidfirst(servwiddict, servkeydict, servidxsum):
     servidx = dict()
     # webid files first
     for (webidfile, widdict) in servwiddict.items():
@@ -2494,7 +2422,7 @@ def buildservermetaindex_webidfirst(servwiddict, servkeydict, servidxsum):
     #servidx['index.sum']=str(servidxsum)
     servidx[config.INDEX_FILECOUNT_FILENAME]=str(servidxsum)
     # HO 11/09/2024 END ****************
-    return servidx
+    return servidx"""
 # HO 05/09/2024 END ******************************
 
 # HO 06/09/2024 BEGIN ****************************
