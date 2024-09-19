@@ -81,13 +81,13 @@ def indexexperiment(experiment):
     
     ########################
     # Option A step 1, for smaller experiments: index the pods on the fly 
-    #experiment.aclindexwebidnewthreaded()
-    #print('pods indexed')
+    experiment.aclindexwebidnewthreaded()
+    print('pods indexed')
     
     # Option A step 2, for smaller experiments: check the indexes 
     # note: we're not doing this for the metaindex even for small experiments
-    #experiment.indexfixerwebidnew()
-    #print('indexes checked')
+    experiment.indexfixerwebidnew()
+    print('indexes checked')
     ########################
     
     ########################
@@ -97,10 +97,10 @@ def indexexperiment(experiment):
     
     # Option B, step 1, zip the indexes and store locally 
     #experiment.storelocalindexzipdirs('zipdir')
-    experiment.serverlevel_storelocalindexzipdirs('zipdir')
+    """experiment.serverlevel_storelocalindexzipdirs('zipdir')
     
     # Option B, step 2: distribute zips(using SSH username and password) 
-    """experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
+    experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
     ########################
 # Server labels
 servlab1 = 'Serverlabel1'
@@ -178,10 +178,8 @@ return: experiment, an object of type flexexperiment.ESPRESSOexperiment
 def createexperiment(podname):
     # Initializing the experiment
 
-    # HO 04/09/2024 BEGIN ***************
-    #experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
     experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
-    # HO 04/09/2024 END ***************
+
     print("Constructed experiment")
     
     # Server list loading
@@ -218,7 +216,6 @@ def createexperiment(podname):
     print('files distributed')
     
     # agent nodes
-    #experiment.initanodelist(numberofwebids=20)
     experiment.initanodelist(numberofwebids=numwebids)
     
     print('agent nodes initialized')
@@ -228,7 +225,6 @@ def createexperiment(podname):
     
     print('special agent nodes initialized')
 
-    #experiment.imagineaclnormal(openperc=100,numofwebids=20,mean=10, disp=0,filelabel=filelab1)
     experiment.imagineaclnormal(openperc=100,mean=(floor(numwebids/2)), disp=0,filelabel=filelab1)
 
     experiment.imagineaclnormal(openperc=50,mean=(floor(numwebids/2)), disp=0,filelabel=filelab2)
@@ -261,11 +257,9 @@ podname='ardfhealth'
 # name for the metaindex file.
 # example espressoindexfile value: 'ardfhealthmetaindex.csv'
 espressoindexfile=podname+'metaindex.csv'
-# HO 04/09/2024 BEGIN ****************************
 # name for the metaindex directory.
 # example espressoindexdir value: 'ardfhealthmetaindex/'
 espressoindexdir=podname+'metaindex/'
-# HO 04/09/2024 END ****************************
 
 # create and save the logical view of the experiment
 # example podname value: 'ardfhealth'

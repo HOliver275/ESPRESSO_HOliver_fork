@@ -186,7 +186,43 @@ def indexchecker(address, CSSa):
 
     # return the list of files
     return files
+    
+"""
+Check the indexes.
 
+param: address, the index address
+param: CSSa, the CSSaccess object that gets us the client credentials
+return: a list of files at the given index address
+"""
+def indexchecker_recursive(address, CSSa):
+    # construct an empty list to hold the files
+    files= []
+    # get the file(s) at the given index address
+    data = CSSa.get_file(address)
+    # parse the graph
+    g=Graph().parse(data=data,publicID=address)
+    
+    # define a query q that gets every file at this address
+    q='''
+    prefix ldp: <http://www.w3.org/ns/ldp#>
+    
+    SELECT ?f WHERE{
+        ?a ldp:contains ?f.
+    }
+    '''
+    # for every query result (file)
+    for r in g.query(q):
+        # get a string representation
+        f=str(r["f"])
+        if f[-1]=='/':
+            d=indexchecker_recursive(f,CSSa)
+            files+=d
+        else:
+            # split the string and append each bit to the list of files
+            files.append(f.rsplit('/')[-1])
+
+    # return the list of files
+    return files
 
 def getwebidlist(address,CSSA):
     acladdress=address+'.acl'

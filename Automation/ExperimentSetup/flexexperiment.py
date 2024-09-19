@@ -8,17 +8,13 @@ sys.path.append('../../Indexer')
 import PodIndexer
 sys.path.append('../../')
 import config
-# HO 09/09/2024 BEGIN ***********
 from ServerIndexer import ServerIndex
-# HO 09/09/2024 END ***********
 # ESPRESSO modules for accessing Community Solid Server using DPOP 
 # from Automation.CSSAccess import CSSaccess,dpop_utils
 sys.path.append('../CSSAccess')
 import CSSaccess,dpop_utils
 # HO 15/08/2024 END ****************
-# HO 29/08/2024 BEGIN **************
 import cleantext, string
-# HO 29/08/2024 END ****************
 # os: https://docs.python.org/3/library/os.html
 # random: https://docs.python.org/3/library/random.html
 # requests: https://requests.readthedocs.io/en/latest/
@@ -50,10 +46,6 @@ from paramiko import SSHClient
 from scp import SCPClient
 # sys: https://docs.python.org/3/library/sys.html#module-sys
 from sys import argv
-# HO 08/08/2024 BEGIN *************
-# redundant import commented out
-# import numpy
-# HO 08/08/2024 END *************
 
 # Hard-coded list of servers. Replace the below with your own.
 """serverlistglobal=['https://srv03812.soton.ac.uk:3000/',
@@ -169,14 +161,6 @@ acl:agentClass foaf:Agent.'''
 """
 The main class defining an experiment and its attributes.
 
-param: self
-param: espressopodname, the name of the server-level ESPRESSO pod, default: 'ESPRESSO', example value: 'ESPRESSO'
-param: espressoemail, the email of the server-level ESPRESSO pod, default: 'espresso@example.com', example value: 'espresso@example.com'
-param: podname, the current base podname, default: 'pod', example value: 'ardfhealth'
-param: podemail, the current pod email, default: '@example.org', example value: '@example.org'
-param: podindexdir, the current pod index directory, default: 'espressoindex/', example value: 'espressoindex/'
-param: password, default: '12345', example value: '12345'
-return: image (Graph) in turtle format
 """
 class ESPRESSOexperiment:
     """
@@ -190,14 +174,11 @@ class ESPRESSOexperiment:
     param: podemail, the current pod email, default: '@example.org'
     param: podindexdir, the current pod index directory, default: 'espressoindex/'
     param: password, default '12345'
-    return: an object of type flexexperiment.ESPRESSOexperiment, example value: 
     """
     def __init__(self, 
         espressopodname='ESPRESSO',
         espressoemail='espresso@example.com',
-        # HO 04/09/2024 BEGIN *************
         espressoindexdir='metaindex/',
-        # HO 04/09/2024 END *************
         podname='pod',
         podemail='@example.org',
         podindexdir='espressoindex/',
@@ -213,10 +194,10 @@ class ESPRESSOexperiment:
         # email of the 'red' server-level ESPRESSO pod, set to 'espresso@example.com' 
         # default value: 'espresso@example.com', example value: 'espresso@example.com'
         self.espressoemail=espressoemail
-        # HO 04/09/2024 BEGIN *************
+        # the server-level metaindex
         self.espressoindexdir=espressoindexdir
-        # HO 04/09/2024 END *************
-        # server-level MetaIndex that is stored in the 'red' server-level ESPRESSO pod
+        # original version of the server-level MetaIndex that is stored in the 
+        # 'red' server-level ESPRESSO pod; contains only a list of pod indexes on this server
         # example value: 'ardfhealthmetaindex.csv'
         self.espressoindexfile=podname+'metaindex.csv'
         # general base name for the pods in these experiments,
@@ -232,13 +213,11 @@ class ESPRESSOexperiment:
         # default value: '12345', example value: '12345'
         self.password=password
         # sequential pod number, starting from a zero base
-        # HO 03/09/2024: it looks like this was meant to sequentially
-        # number each pod in an experiment, just like the servers are
-        # numbered, but it doesn't appear to ever be used
+        # HO 03/09/2024: does not appear to be in use
         # initial value: 0
         self.podnum=0
         # sequential file number, starting from a zero base, 
-        # seemingly counting through the whole experiment
+        # seemingly counting files through the whole experiment
         # initial value: 0
         self.filenum=0
         # forbidden: does not seem to be used 
@@ -258,7 +237,7 @@ class ESPRESSOexperiment:
         
     def __repr__(self):
         """
-        Return image in the turtle format. 
+        Return image of the experiment in turtle format. 
         """
         return self.image.serialize(format='turtle')
     
@@ -285,17 +264,17 @@ class ESPRESSOexperiment:
         pbar.close()
                 
     """
-    Loads the data directory to the pool.
+    Loads the source data directory to the pool.
     
-    experiment.loaddirtopool(sourcedir,’file’) 
-    experiment.loaddirtopool(sourcedir,'goodfile') 
+    experiment.loaddirtopool(sourcedir,’file’) would (if you're doing it that way) load the restricted-access files
+    experiment.loaddirtopool(sourcedir,'goodfile') would (if you're doing it that way) load the open-access files
     
     param: self
     param: datasource, the source directory for the data. Example: '../DatasetSplitter/sourcedir1/'
     param: label, the label applied to the relevant files, default: 'file', example: 'Filelabel1' 
     """
     def loaddirtopool(self,datasource,label='file'):
-        # if the label is a key, the relevant file list will be the value
+        # if the label is a key, get the relevant filelist
         if label in self.filepool.keys():
             thisfilelist=self.filepool[label]
         else: # if the label is not a key, initialize an empty list
@@ -328,17 +307,17 @@ class ESPRESSOexperiment:
         for s in serverlist:
             # construct a short name by prepending 'S' to the label and appending a counter
             sword='S'+label+str(self.servernum)
-            # increment the counter
+            # advance the counter
             self.servernum=self.servernum+1
             # create a blank server node
             snode=BNode(sword)
-            # create a short ESPRESSO server name by prepending 'E' to the short server name
+            # create a short ESPRESSO server handle by prepending 'E' to the short server name
             eword='E'+sword
             # create a blank ESPRESSO server node
             enode=BNode(eword)
             # add the server to the image
             self.image.add((snode,self.namespace.Type,self.namespace.Server))
-            # add the short server name to the image
+            # add the short server handle to the image
             self.image.add((snode,self.namespace.Sword,Literal(sword)))
             # save the current server in the list
             IDP=s
@@ -364,11 +343,14 @@ class ESPRESSOexperiment:
             # HO 04/09/2024 BEGIN **************
             # Note that as of now the MetaindexAddress points to a directory, not a .csv file
             # in conformity to IndexDir
+            # and the metaindex.csv file is still written to the ESPRESSO pod, but whereas
+            # it used to be in the root, it's now in this folder, along with all the other
+            # metaindex files
             #metaindexaddress=esppod+self.espressoindexfile
             metaindexaddress=esppod+self.espressoindexdir
             # add the MetaIndex address to the image
             self.image.add((enode,self.namespace.MetaindexAddress,Literal(metaindexaddress)))
-            # to compensate we add another attribute, MetaindexFile
+            # to point to the metaindex.csv file we add another attribute, MetaindexFile
             metaindexfile=metaindexaddress+self.espressoindexfile
             self.image.add((enode,self.namespace.MetaindexFile,Literal(metaindexfile)))
             # HO 04/09/2024 END **************
@@ -378,7 +360,7 @@ class ESPRESSOexperiment:
     Initializes a pod node
     
     param: self
-    param: pword TODO what?
+    param: pword, the sequentially numbered name given to the pod node, example value: Ppod20
     param: podname
     param: podlabel, default 'pod'  
     
@@ -387,15 +369,15 @@ class ESPRESSOexperiment:
     def initpnode(self,pword,podname,podlabel='pod'):
         # create a blank node named after pword
         pnode=BNode(pword)
-        # add [blank node, Name, podname] to the image
+        # add [pod node, Name, podname] to the image
         self.image.add((pnode,self.namespace.Name,Literal(podname)))
-        # add [blank node, Type, Pod] to the image
+        # add [pod node, Type, Pod] to the image
         self.image.add((pnode,self.namespace.Type,self.namespace.Pod))
-        # add [blank node, Label, podlabel] to the image
+        # add [pod node, Label, podlabel] to the image
         self.image.add((pnode,self.namespace.Label,Literal(podlabel)))
         # create an email address for this podname
         podemail=podname+self.podemail
-        # add [blank node, Email, podemail] to the image
+        # add [pod node, Email, podemail] to the image
         self.image.add((pnode,self.namespace.Email,Literal(podemail)))
         # return the initialized pod node
         return pnode
@@ -408,7 +390,7 @@ class ESPRESSOexperiment:
     param: filename, the filename
     param: filepath, the file path
     param: filetype, the filetype
-    param: filelabel, the short filename, default: 'pod'
+    param: filelabel, the short file label, default: 'pod'
     
     return: an initialized file node
     """
@@ -423,10 +405,11 @@ class ESPRESSOexperiment:
         self.image.add((fnode,self.namespace.Filename,Literal(filename))) 
         # add [file node, Filetype, filetype] to the graph 
         self.image.add((fnode,self.namespace.Filetype,Literal(filetype)))
-        # add [file node, Label, short file name] to the graph
+        # add [file node, Label, file label] to the graph
         self.image.add((fnode,self.namespace.Label,Literal(filelabel)))
         # return the blank file node
         return fnode
+        
     """
     Assign a pod to a server
     
@@ -441,7 +424,7 @@ class ESPRESSOexperiment:
         self.image.add((snode,self.namespace.Contains,pnode))
         # get the name of the pod node
         podname=str(self.image.value(pnode,self.namespace.Name))
-        # construct the pod address from the server node's address plus the podname and a final forward slash
+        # construct the pod address from the server node's address plus the podname
         podaddress=IDP+podname+'/'
         # add [pod node, Address, podaddress] to the graph
         self.image.add((pnode,self.namespace.Address,Literal(podaddress)))
@@ -458,7 +441,7 @@ class ESPRESSOexperiment:
     """
     Creates the logical pods.
     
-    Two types of pods closed and good/open: 
+    Two types of pods, closed ('compod') and open ('goodpod') (if you're doing it that way): 
         - experiment.createlogicalpods(8500*10,0.01,podlabel='compod') 
         - experiment.createlogicalpods(850*10,0.05,podlabel='goodpod') 
     
@@ -530,6 +513,7 @@ class ESPRESSOexperiment:
         # Type, Server, serverlabel2
         thisserverlist2=[snode for snode in self.image.subjects(self.namespace.Type,self.namespace.Server) if str(self.image.value(snode,self.namespace.Label))==serverlabel2]
         
+        # list of paired pod nodes
         ppnodelist=[]
         # for an initial range of 10 pods, initialize a blank node for each one
         for i in range(numberofpods):
@@ -584,9 +568,9 @@ class ESPRESSOexperiment:
             IDP=str(self.image.value(snode,self.namespace.Address))
             # now for every pod that is distributed to this server
             for p in range(len(poddist1[s])):
-                # find the node at element 0
+                # find the first node in the pair
                 pnode=poddist1[s][p][0]
-                # (the other node in the pair is the next one along)
+                # find the other node in the pair
                 otherpnode=poddist1[s][p][1]
                 # assign the current pod node to this server node
                 self.assignpod(snode,pnode)
@@ -630,17 +614,17 @@ class ESPRESSOexperiment:
         # now every filepath and filename gets a sequentially numbered short
         # filename that goes Ffilelabel0, .. Ffilelabeln
         for filepath,filename in thisfiletuplelist:
-                # construct the short filename
-                fword='F'+filelabel+str(self.filenum)
-                # increment the file number suffix
-                self.filenum=self.filenum+1
-                # initialize a file node
-                # passes: the short filename, the filename, the filepath, the filetype, the file label
-                fnode=self.initfnode(fword,filename,filepath,filetype,filelabel)
-                # append the current file node to the file list
-                thisfilelist.append(fnode)
-                # move the progress bar along
-                pbar.update(1)
+            # construct the short filename
+            fword='F'+filelabel+str(self.filenum)
+            # increment the file number suffix
+            self.filenum=self.filenum+1
+            # initialize a file node
+            # passes: the short filename, the filename, the filepath, the filetype, the file label
+            fnode=self.initfnode(fword,filename,filepath,filetype,filelabel)
+            # append the current file node to the file list
+            thisfilelist.append(fnode)
+            # move the progress bar along
+            pbar.update(1)
         # close the progress bar
         pbar.close()
         
@@ -696,8 +680,8 @@ class ESPRESSOexperiment:
     """
     Logically assigns Pareto distribution of files to pods from the file pool.
     
-        - experiment.paretofilestopodsfrompool('text/plain','file','compod','medhist','',False,1) 
-        - experiment.paretofilestopodsfrompool('text/plain','goodfile','goodpod','medhist','',False,1) 
+        - experiment.paretofilestopodsfrompool('text/plain','file','compod','medhist','',False,1) (compod=restricted access, if you're doing it this way)
+        - experiment.paretofilestopodsfrompool('text/plain','goodfile','goodpod','medhist','',False,1) (goodpod=open access, if you're doing it this way)
     
     param: self
     param: filetype
@@ -905,16 +889,12 @@ class ESPRESSOexperiment:
             aword='A'+str(i)
             # construct a blank node with the sequentially-numbered agent name
             anode=BNode(aword)
-            # HO 17/08/2024 BEGIN **********
             # construct a webid in the form of a sequentially-numbered email address
-            #webid='mailto:agent'+str(i)+'@example.org'
             email = 'agent'+str(i)+'@example.org'
             # add the web ID to the agent node
-            #self.image.add((anode,self.namespace.WebID,Literal(webid)))
             self.image.add((anode,self.namespace.Email,Literal(email)))
             webid='http://example.org/agent'+str(i)+'/profile/card#me'
             self.image.add((anode,self.namespace.WebID,Literal(webid)))
-            # HO 17/08/2024 END **********
             # mark the node as being of type Agent
             self.image.add((anode,self.namespace.Type,self.namespace.Agent))
             # append the agent node to the list
@@ -1021,14 +1001,11 @@ class ESPRESSOexperiment:
             saword='SA'+str(i)
             # create a blank node for this special agent
             sanode=BNode(saword)
-            # HO 17/08/2024 BEGIN ************
-            #webid='mailto:sagent'+str(i)+'@example.org'
             webid = 'http://example.org/sagent' + str(i) + '/profile/card#me'
             # add the WebID to this special agent node
             self.image.add((sanode,self.namespace.WebID,Literal(webid)))
             email = 'sagent' + str(i) + '@example.org'
             self.image.add((sanode,self.namespace.Email,Literal(email)))
-            # HO 17/08/2024 END *****************
             # add the current percentage to this special agent node as a Power
             self.image.add((sanode,self.namespace.Power,Literal(str(percs[i]))))
             # mark this node as a Special Agent type node
@@ -1578,23 +1555,6 @@ class ESPRESSOexperiment:
                 IDP=str(self.image.value(snode,self.namespace.Address))
                 # initialize a string to write the metaindex data
                 # HO 09/09/2024 BEGIN ************
-                """# count the pods on this server
-                serverlevel_pod_counter=0
-                # count the WebIDs that have access to any of the pods on this server
-                serverlevel_webid_counter=0
-                # server-level nested dictionary mapping of index keywords 
-                serverlevel_keywords_dict = dict()
-                # lookup of all the webidword:widword mappings on this server
-                serverlevel_widword_lookup = dict()
-                # lookup of all the podaddress:pid mappings on this server
-                serverlevel_podword_lookup = dict()
-                # the server-level index to be written to the ESPRESSO pod metaindex
-                serverlevel_index = dict()
-                # dictionary from which to create the .webid files to be added to serverlevel_index
-                serverlevel_webidwords_dict = dict()
-                # running sum of all the files held on the server
-                serverlevel_indexsum=0"""
-
                 # server-level index (test)
                 testservindex=ServerIndex()
                 # HO 09/09/2024 END ************
@@ -1607,15 +1567,7 @@ class ESPRESSOexperiment:
                     # HO 09/09/2024 BEGIN ************
                     # here we need to create a podword for this pod relative to the server
                     podpath=podname+'/'+self.podindexdir
-                    """if podaddress not in testservindex.podword_lookup:
-                        podword = 'p' + str(testservindex.pod_counter)
-                        # advance the pod counter
-                        testservindex.pod_counter = testservindex.pod_counter+1
-                        # map the podword to this podaddress
-                        testservindex.podword_lookup[podaddress] = podword"""
                     testservindex.addpod(podpath)
-                    #print('testservindex.podword_lookup: ')
-                    #print(testservindex.podword_lookup)
                     # HO 09/09/2024 END **************
                     USERNAME=str(self.image.value(pnode,self.namespace.Email))
                     PASSWORD=self.password
@@ -1629,87 +1581,30 @@ class ESPRESSOexperiment:
                     indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                     # sequentially number the webids that have access to resources on this server
                     # HO 09/09/2024 BEGIN ************
-                    """for (id,text,webidlist) in d:
-                        # the asterisk means open access
-                        for webid in webidlist:
-                            if webid=="*":
-                                # HO 02/09/2024 BEGIN **********
-                                widword=webid
-                                # HO 02/09/2024 END ************
-                                webidword='openaccess.webid'
-                                if webidword not in testservindex.widword_lookup.keys():
-                                    # add this webidword:widword mapping to the lookup
-                                    testservindex.widword_lookup[webidword]=widword
-                                    # add this widword : {podaddress : podword} mapping to the dictionary
-                                    # TODO repeated code
-                                    if webidword not in testservindex.webidwords_dict.keys(): # it shouldn't be
-                                        piddict = {podaddress : testservindex.podword_lookup[podaddress]}
-                                        widdict = {widword : piddict}
-                                        testservindex.webidwords_dict[webidword] = widdict
-                            else: # remove the punctuation from the WebID so it doesn't gum up the works
-                                webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
-                            
-                            # if this webidword isn't already mapped to a widword, map it
-                            if webidword not in testservindex.widword_lookup.keys():
-                                # HO 02/09/2024 BEGIN **********
-                                widword='w' + str(testservindex.webid_counter)
-                                # advance the webid counter every time we add a new mapping
-                                testservindex.webid_counter = testservindex.webid_counter+1
-                                testservindex.widword_lookup[webidword]=widword
-                                # add this widword : {podaddress : podword} mapping to the dictionary
-                                # TODO repeated code
-                                if webidword not in testservindex.webidwords_dict.keys(): # it shouldn't be
-                                    piddict = {podaddress : testservindex.podword_lookup[podaddress]}
-                                    widdict = {widword : piddict}
-                                    testservindex.webidwords_dict[webidword] = widdict
-                            
-                            # if it's not in the dictionary by now something is wrong
-                            widword = testservindex.widword_lookup[webidword] if webidword in testservindex.widword_lookup else ''
-                            if (len(widword) > 0):
-                                widdict = testservindex.webidwords_dict[webidword] if webidword in testservindex.webidwords_dict else dict()
-                                poddict = widdict[widword] if widword in widdict else dict()
-                                # if this pod isn't already listed against this widword
-                                if podaddress not in poddict.keys():
-                                    # add the podword mapping
-                                    poddict[podaddress] = testservindex.podword_lookup[podaddress]
-                                    # update the podname mapping
-                                    widdict[widword] = poddict
-                                    # update the widword mapping
-                                    testservindex.webidwords_dict[webidword] = widdict"""
-                    
-                    # Sequentially number the WebIDs            
-                    testservindex.addwebids(podpath, d)    
-                    
+                    for (id,text,webidlist) in d:
+                        # Sequentially number the WebIDs            
+                        testservindex.addwebids(podpath, webidlist)    
                     # HO 09/09/2024 END ************
                     # get the inverted index for this file
-                    #index=PodIndexer.aclindextupleswebidnewdirs(d)
                     podlevel_index=dict()
-                    #servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podaddress, testservindex.keywords_dict, testservindex.widword_lookup, testservindex.podword_lookup)
                     servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podpath, testservindex)
                     if (servtuples is not None):
                         runningsum=0
                         if (len(servtuples) >= 1):
                             podlevel_index = servtuples[0]
                             
-                            #if 'index.sum' in podlevel_index.keys():
                             if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
-                                #runningsum = podlevel_index['index.sum']
                                 runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
                         if (len(servtuples) >= 2):
-                            #testservindex.keywords_dict = servtuples[1]
                             testservindex = servtuples[1]
                             testservindex.indexsum=testservindex.indexsum+int(runningsum)
-                        # HO 11/09/2024 END *************
 
                     # submit the task with the inverted podlevel_index for this file
                     print('indexaddress = ' + indexaddress)
                     print('CSSA = ' + str(CSSA))
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
-                # HO 02/09/2024 BEGIN *************
-                # unwind the server-level dictionary into a writable index
-                #testservindex.index=buildservermetaindex_webidlast(testservindex.webidwords_dict, testservindex.keywords_dict, testservindex.indexsum)
+
                 # HO 13/09/2024 BEGIN ***********
-                #testservindex.buildservermetaindex_allwebidsinonefile()
                 testservindex.buildservermetaindex_simple()
                 # HO 13/09/2024 END ***********
                 # HO 11/09/2024 END *************
@@ -1723,9 +1618,8 @@ class ESPRESSOexperiment:
                 # and write that server-level index
                 executor.submit(PodIndexer.uploadaclindexwithbar, testservindex.index, metaindexaddress, CSSA)
         # HO 05/09/2024 BEGIN ********
-        # test
-        # TODO better to test this with the indexchecker 
-        """CSSA=CSSaccess.CSSaccess('http://localhost:3000/', self.espressoemail, self.password)
+        # quick-and-dirty tests for files known to be at the given hard-coded addresses
+        CSSA=CSSaccess.CSSaccess('http://localhost:3000/', self.espressoemail, self.password)
         CSSA.create_authstring()
         CSSA.create_authtoken()
         res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
@@ -1760,7 +1654,7 @@ class ESPRESSOexperiment:
         print('---------------')
         res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/index.sum')
         print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
-        print('===============')"""
+        print('===============')
 
     """
     Create and/or update the ACL metaindexes in the server-level ESPRESSO pods.
@@ -1800,11 +1694,10 @@ class ESPRESSOexperiment:
             # HO 04/09/2024 BEGIN **************
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
             targurl = str(self.image.value(enode,self.namespace.MetaindexFile))
-            #print(IDP,CSSAe.put_file(self.espressopodname, self.espressoindexfile, metaindexdata, 'text/csv'))
             print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
             # HO 04/09/2024 END **************
         #print('self = ' + str(self))
-           
+
     """
     Suitable for smaller experiments.
     
@@ -1815,6 +1708,9 @@ class ESPRESSOexperiment:
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
+            # HO 17/09/2024 BEGIN ******
+            testservindex=ServerIndex()
+            # HO 17/09/2024 END ********
             # for each pod on the server
             for pnode in self.image.objects(snode,self.namespace.Contains):
                 # get the pod details
@@ -1824,6 +1720,11 @@ class ESPRESSOexperiment:
                 PASSWORD=self.password
                 # display progress message
                 print("checking index of "+IDP+podname)
+                # HO 17/09/2024 BEGIN ************
+                # here we need to create a podword for this pod relative to the server
+                podpath=podname+'/'+self.podindexdir
+                testservindex.addpod(podpath)
+                # HO 17/09/2024 END **************
                 # construct the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
                 CSSA.create_authstring()
@@ -1831,29 +1732,68 @@ class ESPRESSOexperiment:
                 # get the index address
                 indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                 # get the list of files at the given index address
-                n=PodIndexer.indexchecker(indexaddress, CSSA)
+                # HO 17/09/2024 BEGIN *****************
+                #n=PodIndexer.indexchecker(indexaddress, CSSA)
+                #n=PodIndexer.indexchecker_recursive(indexaddress, CSSA)
+                n=PodIndexer.crawllist(indexaddress, CSSA)
+                # HO 17/09/2024 END *****************
+                #print('n was: ')
+                #print(str(n))
                 # I don't quite understand why you'd display this message
                 # How does it help to have the length of the list of files?
                 print('currently in index of' +IDP+podname +':' +str(len(n)))
                 # crawl the container at the pod address and get back a list of file tuples
                 d=PodIndexer.aclcrawlwebidnew(podaddress, podaddress,CSSA)
+                # HO 17/09/2024 BEGIN **********
+                for (id,text,webidlist) in d:
+                    # Sequentially number the WebIDs            
+                    testservindex.addwebids(podpath, webidlist) 
                 
                 # construct an LdpIndex from the list of file tuples
-                index=PodIndexer.aclindextupleswebidnewdirs(d)
-                # TODO should be? Why would we not be?
-                print('should be in index of ' +IDP+podname +':' +str(len(index.keys())))
+                #index=PodIndexer.aclindextupleswebidnewdirs(d)
+                podlevel_index=dict()
+                servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podpath, testservindex)
+                if (servtuples is not None):
+                    runningsum=0
+                    if (len(servtuples) >= 1):
+                        podlevel_index = servtuples[0]
+                            
+                        if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
+                            runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
+                    if (len(servtuples) >= 2):
+                        testservindex = servtuples[1]
+                        testservindex.indexsum=testservindex.indexsum+int(runningsum)
+                
+                #print('should be in index of ' +IDP+podname +':' +str(len(index.keys())))
+                print('should be in index of ' +IDP+podname +':' +str(len(podlevel_index.keys())))
+                
+                n=PodIndexer.crawllist(indexaddress, CSSA)
                 # files from the list of files we got from the indexaddress, remove them one by one
-                for f in n:
-                    # HO 17/08/2024 BEGIN **********
-                    if f in index.keys():
-                     # HO 17/08/2024 END **********
-                        index.pop(f)
-                # TODO so we're asking if the list of files we got back at the given index address,
-                # is that list length the same as the index dictionary?
-                # Now that I know that, what do I do?
-                print("Difference?"+str(len(index.keys())))
+                compareindexes(podaddress, self.podindexdir, n, podlevel_index)
+
                 # populate the files
-                PodIndexer.uploadaclindexwithbar(index, indexaddress, CSSA)
+                #PodIndexer.uploadaclindexwithbar(index, indexaddress, CSSA)
+                PodIndexer.uploadaclindexwithbar(podlevel_index, indexaddress, CSSA)
+                # HO 17/09/2024 END **************
+            #HO 17/09/2024 BEGIN ****************
+            testservindex.buildservermetaindex_simple()
+            # find the ESPRESSO pod to write to
+            enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
+            metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
+            esppodname=self.image.value(enode,self.namespace.Name)
+            # construct the client credentials
+            CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+            CSSA.create_authstring()
+            CSSA.create_authtoken()
+            # get the list of files at the given metaindex address
+            n=PodIndexer.crawllist(metaindexaddress, CSSA)
+            print('currently in index of' +IDP+esppodname +':' +str(len(n)))
+            print('should be in index of ' +IDP+esppodname +':' +str(len(testservindex.index.keys())))
+            # files from the list of files we got from the metaindexaddress, remove them one by one
+            compareindexes('', metaindexaddress, n, testservindex.index)
+                    
+            PodIndexer.uploadaclindexwithbar(testservindex.index, metaindexaddress, CSSA)
+            #HO 17/09/2024 END ******************
 
     # HO 14/08/2024 appears not to be in use
     def indexfixerthreaded(self):
@@ -2370,68 +2310,28 @@ class ESPRESSOexperiment:
             # close the progress bar
             pbar.close()
             
-
-
-# HO 05/09/2024 BEGIN ****************************
 """
-Takes the server-level dictionary and unwinds it into a server-level metaindex with the short webid handle at the start of the filepath
+Compares two indexes by their keys.
 
-param: servwiddict, the dictionary from which to add the .webid files to the server-level metaindex
-param: servkeydict, the dictionary from which to add the .ndx files to the server-level metaindex
-param: servidxsum, the running total number of files on this server, to write to the index.sum file
+param: podaddress, the address of the pod where one index is located. Used to calculate the key offset from an absolute path.
+param: indexaddress, the index address relative to the pod. Used to calculate the key offset from an absolute path.
+param: comparefrom, the first of two indexes to compare. Assumes the keys have an absolute path that needs to be offset in order to make the comparison.
+param: compareto, the second of two indexes to compare. 
 """
-"""def buildservermetaindex_webidfirst(servwiddict, servkeydict, servidxsum):
-    servidx = dict()
-    # webid files first
-    for (webidfile, widdict) in servwiddict.items():
-        if webidfile not in servidx.keys():
-            servidx[webidfile] = ''
-        for(wid, poddict) in widdict.items():
-            for(paddr, pid) in poddict.items():
-                # HO 11/09/2024 BEGIN *********
-                #if(wid=='*'):
-                if(wid==config.OPENACCESS_SYMBOL):
-                    #servidx[webidfile]=servidx[webidfile]+'openaccess,'+pid+','+paddr+'\r\n'
-                    servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + paddr + '\r\n'
-                # HO 11/09/2024 END *********
-                else:
-                    servidx[webidfile]=servidx[webidfile]+wid+','+pid+','+paddr+'\r\n'
-    
-    # now the .ndx files, with the short webid at the start of the file path                    
-    for (key, wworddict) in servkeydict.items():
-        for (wwordkey, widdict) in wworddict.items():
-            for(widkey, poddict) in widdict.items():
-                # HO 11/09/2024 BEGIN *********
-                #if(widkey=='*'):
-                if(widkey==config.OPENACCESS_SYMBOL):
-                    servkey=config.OPENACCESS_WEBIDWORD+ '/' + key
-                    #servkey='openaccess/' + key
-                # HO 11/09/2024 END *********
-                else:
-                    servkey=widkey + '/' + key
-                        
-                if servkey not in servidx.keys():
-                    servidx[servkey]=''
-                        
-                for(paddrkey, piddict) in poddict.items():
-                    for(pidkey, freq) in piddict.items():
-                        servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
-    
-    # finally the index.sum 
-    # HO 11/09/2024 BEGIN ****************                       
-    #servidx['index.sum']=str(servidxsum)
-    servidx[config.INDEX_FILECOUNT_FILENAME]=str(servidxsum)
-    # HO 11/09/2024 END ****************
-    return servidx"""
-# HO 05/09/2024 END ******************************
-
-# HO 06/09/2024 BEGIN ****************************
-"""
-Takes the server-level dictionary and unwinds it into a server-level metaindex with the short webid handle at the end of the filepath
-
-param: testservindex, the server-level index object containing the dictionary to be unwound into a writable index
-return: testservindex, the server-level index object updated with the writable index
-"""
+def compareindexes(podaddress, indexaddress, comparefrom, compareto):
+    offset = len(podaddress+indexaddress)
+        
+    for f in comparefrom:
+        splitf = str(f)
+        splitf = splitf[offset:]
+        print('splitf ' + splitf + ' is next in comparefrom.')
+        #if splitf in index.keys():
+        if splitf in compareto.keys():
+            print('splitf ' + splitf + ' is in compareto.keys!')
+            #index.pop(splitf)
+            compareto.pop(splitf)
+                    
+    print("Difference?"+str(len(compareto.keys())))
 
 # possibly used by keywordfinder
 def loadexp(filename):
