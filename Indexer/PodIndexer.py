@@ -54,10 +54,7 @@ def crawl(address, CSSa):
             d=crawl(f,CSSa)
             filedict|=d
         # if it's a file, and it's not one of our operational files
-        # HO 11/09/2024 BEGIN ***************
-        #elif ('.' in f.rsplit('/')[-1]) and (not f.endswith('ttl')) and (not f.endswith('.ndx')) and (not f.endswith('.file')):
         elif ('.' in f.rsplit('/')[-1]) and (not f.endswith('ttl')) and (not f.endswith(config.KEYWORD_INDEX_FILEXTN)) and (not f.endswith('.file')):
-        # HO 11/09/2024 END ***************
             # get the file as a dictionary representation
             filedict[f]=CSSa.get_file(f)
         else:
@@ -102,10 +99,7 @@ def aclcrawlwebidnew(address,podaddress, CSSa):
             # add the file tuples from this directory to the list
             filetuples=filetuples+d
         # if this is a file and it's not one of ESPRESSO's utility files
-        # HO 11/09/2024 BEGIN ***********
-        #elif ('.' in f.rsplit('/')[-1]) and (not f.endswith('ttl')) and (not f.endswith('.ndx')) and (not f.endswith('.file')) and (not f.endswith('.sum')) and (not f.endswith('.webid')):
         elif ('.' in f.rsplit('/')[-1]) and (not f.endswith('ttl')) and (not f.endswith(config.KEYWORD_INDEX_FILEXTN)) and (not f.endswith('.file')) and (not f.endswith('.sum')) and (not f.endswith(config.WEBID_FILEXTN)):
-        # HO 11/09/2024 END ***********
             # get the text of the file
             text=CSSa.get_file(f)
             # display the text of the file
@@ -155,11 +149,11 @@ def crawllist(address, CSSa):
     return filelist
 
 """
-Check the indexes.
+Check the indexes were written correctly.
 
 param: address, the index address
 param: CSSa, the CSSaccess object that gets us the client credentials
-return: a list of files at the given index address
+return: a list of files at the given index address. Does not recurse through containers.
 """
 def indexchecker(address, CSSa):
     # construct an empty list to hold the files
@@ -188,7 +182,7 @@ def indexchecker(address, CSSa):
     return files
     
 """
-Check the indexes.
+Check the indexes were written correctly, recursing through all containers.
 
 param: address, the index address
 param: CSSa, the CSSaccess object that gets us the client credentials
@@ -224,14 +218,19 @@ def indexchecker_recursive(address, CSSa):
     # return the list of files
     return files
 
+"""
+Gets a list of WebIDs that have access to a given file.
+
+param: address, the address of the file for which we are seeking the WebID list
+param: CSSA, the CSSaccess object that gets the client credentials.
+return: webidstring, the WebID list represented as a comma-separated string
+"""
 def getwebidlist(address,CSSA):
     acladdress=address+'.acl'
     acldata=CSSA.get_file(acladdress)
-    #print(acldata)
     g=Graph().parse(data=acldata,publicID=acladdress)
     ACL=Namespace('http://www.w3.org/ns/auth/acl')
-    #for s,p,o in g:
-        #print(s,p,o)
+
     webidlist=[]
     q='''prefix acl: <http://www.w3.org/ns/auth/acl#>
 
@@ -248,19 +247,12 @@ def getwebidlist(address,CSSA):
         ?a acl:agentClass foaf:Agent.
     } 
     '''
-    #for i in g.subjects('acl:mode','acl.Read'):
-        #print(i)
-        #for webid in g.object(i,ACL.agent):
-            #webidlist.append(str(webid))
 
     for r in g.query(q1):
         if int(r['n'])>0:
-            # HO 09/11/2024 BEGIN **************
-            #webidlist.append('*')
             webidlist.append(config.OPENACCESS_SYMBOL)
-            # HO 09/11/2024 END **************
+
     for r in g.query(q):
-        #print(r["f"])
         f=str(r["f"])
         webidlist.append(f)
     webidstring=','.join(webidlist)
@@ -274,18 +266,12 @@ param: CSSA, the CSSaccess object that provides the client credentials
 return: a deduplicated list of WebIDs that have access to the file at the given address
 """
 def getwebidlistlist(address,CSSA):
-    #print('inside getwebidlistlist')
-    #print('address = ' + address)
-    #print('CSSA = ' + str(CSSa))
     # find the .acl file at the given address
     acladdress=address+'.acl'
     # get the .acl file
-    #print('acladdress = ' + acladdress)
     acldata=CSSA.get_file(acladdress)
-    #print('acldata = ' + str(acldata))
     # parse the .acl file
     g=Graph().parse(data=acldata,publicID=acladdress)
-    #print('g = ' + str(g))
     # the ACL namespace
     ACL=Namespace('http://www.w3.org/ns/auth/acl')
     # create an empty list to hold the WebIDs
@@ -314,21 +300,14 @@ def getwebidlistlist(address,CSSA):
     # It looks like the asterisk indicates open access.
     for r in g.query(q1):
         if int(r['n'])>0:
-            # HO 09/11/2024 BEGIN ***********
-            #webidlist.append('*')
             webidlist.append(config.OPENACCESS_SYMBOL)
-            # HO 09/11/2024 END ***********
+
     # for every agent that has Read access, 
     for r in g.query(q):
         # get the WebID and add it to the WebID list
         f=str(r["f"])
-        #print('f = ' + f)
         webidlist.append(f)
-        #print('webidlist = ')
-        #print(webidlist)
-    # return the deduplicated list of WebIDs that have access to this file
-    #print('deduplicated webidlist = ')
-    #print(list(set(webidlist)))
+
     return list(set(webidlist))
 
 
@@ -355,7 +334,6 @@ param: text, the text of a file
 return: res, the cleansed text as a list of individual words
 """
 def myclean(text):
-    #print('inside myclean')
     res=cleantext.clean_words(text,
     clean_all= False, # Execute all cleaning operations
     extra_spaces=True ,  # Remove extra white spaces 
@@ -366,8 +344,7 @@ def myclean(text):
     punct=True ,# Remove all punctuations
     stp_lang='english'  # Language for stop words
     )
-    #print('res = ')
-    #print(res)
+
     # return the cleaned text
     return res
 
@@ -401,10 +378,7 @@ class LdpIndex:
         # Dictionary with each term and the frequency it appears in the text.
         for term in terms:
             if len(term)<50:
-                # HO 11/09/2024 BEGIN **********
-                #termword=term+'.ndx'
                 termword=term+config.KEYWORD_INDEX_FILEXTN
-                # HO 11/09/2024 END **********
                 term_frequency = appearances_dict[termword] if termword in appearances_dict else 0
                 appearances_dict[termword] =  term_frequency + 1
             
@@ -412,11 +386,8 @@ class LdpIndex:
         self.f=self.f+1
         filename=fileword+'.file'
         self.index[filename]=id
-        # HO 11/09/2024 BEGIN ***************
-        #self.index['index.sum']=str(self.f)
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
-        # HO 11/09/2024 END ***************
-        #print(fileword,id)
+
         for (key, freq) in appearances_dict.items():
             if key not in self.index.keys():
                 self.index[key]=''           
@@ -430,15 +401,12 @@ class LdpIndex:
     def index_id_text_acl(self, id, text, webidliststring):
         
         terms=myclean(text)
-            #print(terms)
+
         appearances_dict = dict()
-            # Dictionary with each term and the frequency it appears in the text.
+        # Dictionary with each term and the frequency it appears in the text.
         for term in terms:
             if len(term)<50:
-                # HO 11/09/2024 BEGIN ***********
-                #termword=term+'.ndx'
                 termword=term+config.KEYWORD_INDEX_FILEXTN
-                # HO 11/09/2024 END ***********
                 term_frequency = appearances_dict[termword] if termword in appearances_dict else 0
                 appearances_dict[termword] =  term_frequency + 1
             
@@ -446,11 +414,8 @@ class LdpIndex:
         self.f=self.f+1
         filename=fileword+'.file'
         self.index[filename]=id+','+ webidliststring
-        # HO 11/09/2024 BEGIN **************
-        #self.index['index.sum']=str(self.f)
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
-        # HO 11/09/2024 END **************
-        #print(fileword,id)
+
         for (key, freq) in appearances_dict.items():
             if key not in self.index.keys():
                 self.index[key]=''           
@@ -460,15 +425,11 @@ class LdpIndex:
     
     def indexwebid(self, id, text, webidlist):
         terms=myclean(text)
-            #print(terms)
         appearances_dict = dict()
-            # Dictionary with each term and the frequency it appears in the text.
+        # Dictionary with each term and the frequency it appears in the text.
         for term in terms:
             if len(term)<50:
-                # HO 11/09/2024 BEGIN ********
-                #termword=term+'.ndx'
                 termword=term+config.KEYWORD_INDEX_FILEXTN
-                # HO 11/09/2024 END ********
                 term_frequency = appearances_dict[termword] if termword in appearances_dict else 0
                 appearances_dict[termword] =  term_frequency + 1
             
@@ -477,21 +438,16 @@ class LdpIndex:
         filename=fileword+'.file'
         self.index[filename]=id
         for webid in webidlist:
-            # HO 11/09/2024 BEGIN ***********
-            #if webid=="*":
-                #webidword='openaccess.webid'
             if webid==config.OPENACCESS_SYMBOL:
                 webidword=config.OPENACCESS_FILENAME
             else:
-                #webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
                 webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
             if webidword not in self.index.keys():
                 self.index[webidword]=''
             self.index[webidword]=self.index[webidword]+fileword+'\r\n'
-        #self.index['index.sum']=str(self.f)
+
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
-        # HO 11/09/2024 END ***********
-        #print(fileword,id)
+
         for (key, freq) in appearances_dict.items():
             if key not in self.index.keys():
                 self.index[key]=''           
@@ -506,10 +462,7 @@ class LdpIndex:
             # Dictionary with each term and the frequency it appears in the text.
         for term in terms:
             if len(term)<50:
-                # HO 11/09/2024 BEGIN *********
-                #termword=term+'.ndx'
                 termword=term+config.KEYWORD_INDEX_FILEXTN
-                # HO 11/09/2024 END *********
                 term_frequency = appearances_dict[termword] if termword in appearances_dict else 0
                 appearances_dict[termword] =  term_frequency + 1
         
@@ -520,24 +473,18 @@ class LdpIndex:
         
         # go through the WebID list
         for webid in webidlist:
-            # HO 09/11/2024 BEGIN ************
-            #if webid=="*":
-                #webidword='openaccess.webid'
             if webid==config.OPENACCESS_SYMBOL:
                 webidword=config.OPENACCESS_FILENAME
             
             else:
-                #webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
                 webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
-            # HO 09/11/2024 END ************
+
             if webidword not in self.index.keys():
                 self.index[webidword]=''
             self.index[webidword]=self.index[webidword]+fileword+','+id+'\r\n'
-        # HO 11/09/2024 BEGIN *************
-        #self.index['index.sum']=str(self.f)
+
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
-        # HO 11/09/2024 END *************
-        #print(fileword,id)
+
         for (key, freq) in appearances_dict.items():
             if key not in self.index.keys():
                 self.index[key]=''           
@@ -560,10 +507,9 @@ class LdpIndex:
         print('inside indexwebidnewdirs')
         # if the file is empty, return the filename
         if len(text)==0:
-            #print('returning id = ' + ids)
             return id
         # cleans the text for NLP processing
-        #print('about to call myclean')
+
         terms=myclean(text)
         # Dictionary with each term and the frequency it appears in the text.
         appearances_dict = dict()
@@ -572,49 +518,33 @@ class LdpIndex:
         # and keep a running total of the number of times it appears in this file
         for term in terms:
             if len(term)<50:
-                # HO 11/09/2024 BEGIN ***********
-                #termword='/'.join(term)+'.ndx'
                 termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
-                # HO 11/09/2024 END ***********
                 term_frequency = appearances_dict[termword] if termword in appearances_dict else 0
                 appearances_dict[termword] =  term_frequency + 1
-        # HO 21/08/2024 BOOKMARK
-        # say that we have a pod-level running total,
-        # well then we want a pod-level running total.
-        # say we also  
-        # prepend 'f' and just a sequential number
+        
+        # pod-level running total files
         fileword='f'+str(self.f)
         # increment the sequential number
         self.f=self.f+1
-        #print('fileword = ' + fileword)
         # the asterisk means open access
         for webid in webidlist:
-            # HO 09/11/2024 BEGIN ***********
-            #if webid=="*":
-                #webidword='openaccess.webid'
             if webid==config.OPENACCESS_SYMBOL:
                 webidword=config.OPENACCESS_FILENAME
-            # HO 09/11/2024 END ***********
             else: # remove the punctuation from the WebID so it doesn't gum up the works
-                #webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
                 webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
-            # HO 09/11/2024 END ***********
+                
             # if this WebID isn't already an index key, add it
             if webidword not in self.index.keys():
                 self.index[webidword]=''
             # concatenate the sequentially numbered file ID plus the file ID that got
-            # passed in [TODO is this adding a local sequentially numbered ID to another that was passed in?]
+            # passed in 
             # plus a newline, and assign it to this WebID
             self.index[webidword]=self.index[webidword]+fileword+','+id+'\r\n'
-            #print('next index item = ')
-            #print(self.index[webidword])
         
         # updating the index dictionary entry 'index.sum'
         # with a running total of the number of files
-        # HO 11/09/2024 BEGIN ***************
-        #self.index['index.sum']=str(self.f)
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
-        # HO 11/09/2024 END ***************
+
         # now go through the word counts
         for (key, freq) in appearances_dict.items():
             # if this word isn't already being counted, add it
@@ -623,15 +553,11 @@ class LdpIndex:
             # append the sequentially numbered file ID, a comma, the appearance count, and a newline           
             self.index[key]=self.index[key]+fileword+','+str(freq)+'\r\n'                     
 
-        # return the filename
-        #print('id = ' + id)
         return id
-
-# HO 28/08/2024 BEGIN **************        
+     
     """
     Updates the inverted index with the index file path structure, file ID, text of file, and the list
     of WebIDs that have access to the file.
-    This function indexes one file at a time.
     
     param: self
     param: id, the filename
@@ -641,7 +567,6 @@ class LdpIndex:
     param: testservindex, the server-level index that we are building up alongside the pod indexes
     return: testservindex, the updated server-level index object
     """
-    #def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podaddress, serverlevel_keyworddict, serverlevel_webidworddict, serverlevel_poddict):
     def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
         print('inside serverlevel_indexwebidnewdirs')
         # if the file is empty, return the filename
@@ -658,21 +583,13 @@ class LdpIndex:
         # the list of webidwords that can access the current file
         filelevel_webidwordlist=[]
         
-        # TODO we've already translated these before adding them
-        # to the server-level serverlevel_webidworddict, find a way to remove the redundancy
-        # HO 02/09/2024 BOOKMARK 
         for webid in webidlist:
             # signify open access with an asterisk
-            # HO 09/11/2024 BEGIN *************
-            #if webid=="*":
-                #webidword='openaccess.webid'
             if webid==config.OPENACCESS_SYMBOL:
                 webidword=config.OPENACCESS_FILENAME
-            # HO 09/11/2024 END *************
             else: # form the webidword by removing the punctuation from the WebID so it can become a filename
-                #webidword=webid.translate(str.maketrans('', '', string.punctuation))+'.webid'
                 webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
-            # HO 09/11/2024 END *************
+
             # if this webidword isn't already a key in the pod-level index, add it
             if webidword not in self.index.keys():
                 self.index[webidword]=''
@@ -690,18 +607,14 @@ class LdpIndex:
         # and keep a running total of the number of times it appears in this file
         for term in terms:
             if len(term)<50:
-                # HO 11/09/2024 BEGIN ************
-                #termword='/'.join(term)+'.ndx'
                 termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
-                # HO 11/09/2024 END ************
                 term_frequency = filelevel_appearances_dict[termword] if termword in filelevel_appearances_dict else 0
                 filelevel_appearances_dict[termword] =  term_frequency + 1
                 # At the same time as we are building the file-level keyword dictionary,
                 # we are building the server-level keyword dictionary,
                 # which has the following structure
                 # {keyword : {webidword : {widword : {podpath : {podword : keywordcount}}}}}
-                # HO 11/09/2024 BEGIN **********
-                #webidworddict = serverlevel_keyworddict[termword] if termword in serverlevel_keyworddict else dict()
+
                 webidworddict = testservindex.keywords_dict[termword] if termword in testservindex.keywords_dict else dict()
                 # now add to the {keyword : {webidword : dictionary for every webidword
                 # that has access to this file
@@ -709,16 +622,13 @@ class LdpIndex:
                     # {keyword : {webidword : {widword : 
                     widdict = webidworddict[f_webidword] if f_webidword in webidworddict else dict()
                     # get the short-form wid mapped to this webidword
-                    #wid = serverlevel_webidworddict[f_webidword]
                     wid = testservindex.widword_lookup[f_webidword]
                     # {keyword : {webidword : {widword : {podpath : 
                     podpathdict = widdict[wid] if wid in widdict else dict()
                     # {keyword : {webidword : {widword : {podpath : {podword :
                     piddict = podpathdict[podpath] if podpath in podpathdict else dict()
                     # get the short-form pid mapped to this pod address
-                    #pid = serverlevel_poddict[podpath]
                     pid = testservindex.podword_lookup[podpath]
-                    # HO 11/09/2024 END **********
                     # {keyword : {webidword : {widword : {podpath : {podword : keywordcount
                     podlevel_term_frequency = piddict[pid] if pid in piddict else 0
                     # add another appearance to the pod-level count
@@ -730,19 +640,12 @@ class LdpIndex:
                     widdict[wid] = podpathdict
                     # {webidword : {widword : {podpath : {podword : keywordcount}}}}
                     webidworddict[f_webidword] = widdict
-                    #serverlevel_keyworddict[termword] = webdict
                 # {keyword : {webidword : {widword : {podpath : {podword : keywordcount}}}}}
-                # HO 11/09/2024 BEGIN ***********
-                #serverlevel_keyworddict[termword] = webidworddict
                 testservindex.keywords_dict[termword] = webidworddict
-                #print('testservindex.keywords_dict[termword] = ')
-                #print(testservindex.keywords_dict[termword])
         
         # updating the index dictionary entry 'index.sum'
         # with a running total of the number of files
-        #self.index['index.sum']=str(self.f)
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
-        # HO 11/09/2024 END ***********
         # now go through the word counts
         for (key, freq) in filelevel_appearances_dict.items():
             # if this word isn't already being counted, add it
@@ -752,11 +655,8 @@ class LdpIndex:
             self.index[key]=self.index[key]+fileword+','+str(freq)+'\r\n'                     
 
         # return the server-level index object
-        # HO 11/09/2024 BEGIN ***********
-        #return serverlevel_keyworddict
         return testservindex
-        # HO 11/09/2024 END ***********
-# HO 28/08/2024 END **************
+
         
 def ldpindexdict(filedict):
     ldpindex=LdpIndex()
@@ -771,8 +671,6 @@ def aclindextuples(filetuples):
         print('indexing '+id)
         ldpindex.index_id_text_acl(id, text, webidlist)
     return ldpindex.index
-
-
 
 def aclindextupleswebid(filetuples):
     ldpindex=LdpIndex()
@@ -837,8 +735,6 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     for (id,text,webidlist) in filetuples:
         # Update the inverted index with the index file path structure, file ID, text of file, and the list
         # of WebIDs that have access to the file.
-        # HO 11/09/2024 BEGIN ************
-        #servindexdict = ldpindex.serverlevel_indexwebidnewdirs(id, text, webidlist, podpath, serverlevel_keyworddict, serverlevel_webidworddict, serverlevel_poddict)
         testservindex = ldpindex.serverlevel_indexwebidnewdirs(id, text, webidlist, podpath, testservindex)
         # advance the progress bar
         pbar.update(1)
@@ -847,10 +743,8 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     # return the index created over the file tuples
     servtuples.append(ldpindex.index)
     # return the on-running server-level index
-    #servtuples.append(servindexdict)
     servtuples.append(testservindex)
-    # HO 11/09/2024 END ************
-    #return ldpindex.index
+
     return servtuples
     
 """

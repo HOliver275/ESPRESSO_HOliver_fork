@@ -910,7 +910,6 @@ class ESPRESSOexperiment:
     - experiment.imagineaclnormal(0,mean, disp,'file') 
     - experiment.imagineaclnormal(0,mean, disp,'goodfile') 
     - experiment.imagineaclspecial('goodfile') 
-    [TODO by 'good', we meant 'open']
     
     param: self
     param: openperc, the percentage of files that are open-access. example: 50
@@ -1554,21 +1553,16 @@ class ESPRESSOexperiment:
                 # get the identity provider
                 IDP=str(self.image.value(snode,self.namespace.Address))
                 # initialize a string to write the metaindex data
-                # HO 09/09/2024 BEGIN ************
-                # server-level index (test)
                 testservindex=ServerIndex()
-                # HO 09/09/2024 END ************
             
                 # for each pod on this server
                 for pnode in self.image.objects(snode,self.namespace.Contains):
                     # get the pod details
                     podaddress=str(self.image.value(pnode,self.namespace.Address))
                     podname=str(self.image.value(pnode,self.namespace.Name))
-                    # HO 09/09/2024 BEGIN ************
                     # here we need to create a podword for this pod relative to the server
                     podpath=podname+'/'+self.podindexdir
                     testservindex.addpod(podpath)
-                    # HO 09/09/2024 END **************
                     USERNAME=str(self.image.value(pnode,self.namespace.Email))
                     PASSWORD=self.password
                     # construct the client credentials
@@ -1580,19 +1574,19 @@ class ESPRESSOexperiment:
                     # get the address of this pod index
                     indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                     # sequentially number the webids that have access to resources on this server
-                    # HO 09/09/2024 BEGIN ************
-                    for (id,text,webidlist) in d:
-                        # Sequentially number the WebIDs            
+                    for (id,text,webidlist) in d:     
                         testservindex.addwebids(podpath, webidlist)    
-                    # HO 09/09/2024 END ************
+
                     # get the inverted index for this file
                     podlevel_index=dict()
                     servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podpath, testservindex)
+                    # the first item is the pod level index, and the second item is the
+                    # dictionary to be unwound into a server-level index
                     if (servtuples is not None):
+                        # get the running total file count from each pod and add them up into the server-level total
                         runningsum=0
                         if (len(servtuples) >= 1):
                             podlevel_index = servtuples[0]
-                            
                             if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
                                 runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
                         if (len(servtuples) >= 2):
@@ -1604,10 +1598,9 @@ class ESPRESSOexperiment:
                     print('CSSA = ' + str(CSSA))
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
 
-                # HO 13/09/2024 BEGIN ***********
+                # unwind the server-level metaindex
                 testservindex.buildservermetaindex_simple()
-                # HO 13/09/2024 END ***********
-                # HO 11/09/2024 END *************
+
                 # find the ESPRESSO pod to write to
                 enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
                 metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
@@ -1617,7 +1610,7 @@ class ESPRESSOexperiment:
                 CSSA.create_authtoken()
                 # and write that server-level index
                 executor.submit(PodIndexer.uploadaclindexwithbar, testservindex.index, metaindexaddress, CSSA)
-        # HO 05/09/2024 BEGIN ********
+
         # quick-and-dirty tests for files known to be at the given hard-coded addresses
         CSSA=CSSaccess.CSSaccess('http://localhost:3000/', self.espressoemail, self.password)
         CSSA.create_authstring()
@@ -1668,11 +1661,7 @@ class ESPRESSOexperiment:
             IDP=str(self.image.value(snode,self.namespace.Address))
             print('IDP=' + IDP)
             # initialize an output string for the metaindex data
-            # HO 09/09/2024 BEGIN ************
-            #metaindexdata=''
-            # rename to reflect changes to metaindex
             metaindexpodlist=''
-            # HO 09/09/2024 END ************
             
             # for each pod on the server
             for pnode in self.image.objects(snode,self.namespace.Contains):
@@ -1691,11 +1680,9 @@ class ESPRESSOexperiment:
             CSSAe.create_authtoken()
             # PUT the new metaindex data out to the server-level ESPRESSO pod metaindex,
             # and display the identity provider and the server response to the PUT request
-            # HO 04/09/2024 BEGIN **************
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
             targurl = str(self.image.value(enode,self.namespace.MetaindexFile))
             print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
-            # HO 04/09/2024 END **************
         #print('self = ' + str(self))
 
     """
@@ -1733,15 +1720,10 @@ class ESPRESSOexperiment:
                 indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                 # get the list of files at the given index address
                 # HO 17/09/2024 BEGIN *****************
-                #n=PodIndexer.indexchecker(indexaddress, CSSA)
-                #n=PodIndexer.indexchecker_recursive(indexaddress, CSSA)
                 n=PodIndexer.crawllist(indexaddress, CSSA)
                 # HO 17/09/2024 END *****************
-                #print('n was: ')
-                #print(str(n))
-                # I don't quite understand why you'd display this message
-                # How does it help to have the length of the list of files?
-                print('currently in index of' +IDP+podname +':' +str(len(n)))
+
+                print('currently in index of ' +IDP+podname +':' +str(len(n)))
                 # crawl the container at the pod address and get back a list of file tuples
                 d=PodIndexer.aclcrawlwebidnew(podaddress, podaddress,CSSA)
                 # HO 17/09/2024 BEGIN **********
@@ -1750,7 +1732,6 @@ class ESPRESSOexperiment:
                     testservindex.addwebids(podpath, webidlist) 
                 
                 # construct an LdpIndex from the list of file tuples
-                #index=PodIndexer.aclindextupleswebidnewdirs(d)
                 podlevel_index=dict()
                 servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podpath, testservindex)
                 if (servtuples is not None):
@@ -1764,7 +1745,6 @@ class ESPRESSOexperiment:
                         testservindex = servtuples[1]
                         testservindex.indexsum=testservindex.indexsum+int(runningsum)
                 
-                #print('should be in index of ' +IDP+podname +':' +str(len(index.keys())))
                 print('should be in index of ' +IDP+podname +':' +str(len(podlevel_index.keys())))
                 
                 n=PodIndexer.crawllist(indexaddress, CSSA)
@@ -1772,7 +1752,6 @@ class ESPRESSOexperiment:
                 compareindexes(podaddress, self.podindexdir, n, podlevel_index)
 
                 # populate the files
-                #PodIndexer.uploadaclindexwithbar(index, indexaddress, CSSA)
                 PodIndexer.uploadaclindexwithbar(podlevel_index, indexaddress, CSSA)
                 # HO 17/09/2024 END **************
             #HO 17/09/2024 BEGIN ****************
@@ -1787,7 +1766,7 @@ class ESPRESSOexperiment:
             CSSA.create_authtoken()
             # get the list of files at the given metaindex address
             n=PodIndexer.crawllist(metaindexaddress, CSSA)
-            print('currently in index of' +IDP+esppodname +':' +str(len(n)))
+            print('currently in index of ' +IDP+esppodname +':' +str(len(n)))
             print('should be in index of ' +IDP+esppodname +':' +str(len(testservindex.index.keys())))
             # files from the list of files we got from the metaindexaddress, remove them one by one
             compareindexes('', metaindexaddress, n, testservindex.index)
@@ -1898,12 +1877,10 @@ class ESPRESSOexperiment:
             # get the ESPRESSO pod auth token from the client credentials
             t=CSSA.create_authtoken()
             # make the ESPRESSO index file accessible
-            # HO 04/09/2024 BEGIN ******************
             # we do need to make the whole metaindex folder accessible to the experiment
             # not just the metaindex file
-            #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexfile)
             res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
-            # HO 04/09/2024 BEGIN ******************
+
             # display the server response
             print(res)
        #print('self = ' + str(self))
@@ -2010,10 +1987,7 @@ class ESPRESSOexperiment:
             serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
             # create directories recursively, no need to raise error if any already exist
             print('make directory ' + serdir)
-            # HO 17/08/2024 BEGIN *********
-            #os.makedirs(serdir,exist_ok=True)
             os.makedirs(serdir,mode=0o777,exist_ok=True)
-            # HO 17/08/2024 END *********
             print('made directory ' + serdir)
             # for every pod in this server
             for pnode in self.image.objects(snode,self.namespace.Contains):
@@ -2042,10 +2016,8 @@ class ESPRESSOexperiment:
                         webidlist.append(webid)
                     # if a given file is open access, represent that in the list with an asterisk
                     if fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile):
-                        # HO 11/09/2024 BEGIN ************
-                        #webidlist.append('*')
                         webidlist.append(config.OPENACCESS_SYMBOL)
-                        # HO 11/09/2024 END ***************
+
                     # cut the pod address off the target URL
                     ftrunc=targetUrl[len(podaddress):]
                     # add the truncated pod address, file text, web ID list to the file tuples
@@ -2065,9 +2037,8 @@ class ESPRESSOexperiment:
                     # write them to the zip file (name/key is archive name)
                     podindexzip.writestr(name,body)
                     # gets info about this item
-                    # TODO metadata?
                     info = podindexzip.getinfo(name)
-                    #print('about to give full access')
+
                     # give full access to this file/item
                     info.external_attr = 0o777 << 16
                     # update the progress bar
@@ -2076,8 +2047,7 @@ class ESPRESSOexperiment:
                 pbar.close()
                 # close the pod index zip file
                 podindexzip.close()
-
-    # HO 05/09/2024 BEGIN *********************                
+            
     """
     Zip the indexes and store locally. For experiments that are too big to index on the fly.
     
@@ -2090,10 +2060,8 @@ class ESPRESSOexperiment:
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # name the current zip directory after the current server
             serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
-            # HO 11/09/2024 BEGIN ************
-            # server-level index (test)
             testservindex=ServerIndex()
-            # HO 11/09/2024 END **************
+
             # create directories recursively, no need to raise error if any already exist
             print('make directory ' + serdir)
             os.makedirs(serdir,mode=0o777,exist_ok=True)
@@ -2109,14 +2077,12 @@ class ESPRESSOexperiment:
                 podzipindexfile=serdir +'/'+str(self.image.value(pnode,self.namespace.Name))+'index.zip'
                 # get the pod address
                 podaddress=str(self.image.value(pnode,self.namespace.Address))
-                # HO 11/09/2024 BEGIN ************
+
                 # here we need to create a podword for this pod relative to the server
                 podname=str(self.image.value(pnode,self.namespace.Name))
                 podpath=podname+'/'+self.podindexdir
                 testservindex.addpod(podpath)
-                #print('testservindex.podword_lookup: ')
-                #print(testservindex.podword_lookup)
-                # HO 11/09/2024 END **************
+
                 # create an empty list for the file tuples
                 filetuples=[]
                 # for each file in the pod
@@ -2138,48 +2104,42 @@ class ESPRESSOexperiment:
                         webidlist.append(webid)
                     # if a given file is open access, represent that in the list with an asterisk
                     if fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile):
-                        # HO 11/09/2024 BEGIN ************
-                        #webidlist.append('*')
                         webidlist.append(config.OPENACCESS_SYMBOL)
-                        # HO 11/09/2024 END ************
+
                     # cut the pod address off the target URL
                     ftrunc=targetUrl[len(podaddress):]
                     # add the truncated pod address, file text, web ID list to the file tuples
                     filetuples.append((ftrunc,filetext,webidlist))
-                    # HO 11/09/2024 BEGIN ***************
+
                     # Sequentially number the WebIDs            
                     testservindex.addwebids(podpath, webidlist) 
                 # construct an inverted index from the file tuples
                 print('constructing inverted index')
-                # HO 05/09/2024 BEGIN ***************
-                #index=PodIndexer.aclindextupleswebidnewdirs(filetuples)
                 podlevel_index=dict()
                 servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex)
-                # HO 11/09/2024 END *****************
+
                 if (servtuples is not None):
                     runningsum=0
                     if (len(servtuples) >= 1):
                         podlevel_index = servtuples[0]
-                        # HO 11/09/2024 BEGIN ******************
                         if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
                             runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
                     if (len(servtuples) >= 2):
                         testservindex = servtuples[1]
                         testservindex.indexsum=testservindex.indexsum+int(runningsum)
-                    # HO 11/09/2024 END ******************
                 
                 # work out how many .ndx files there are?
                 n=len(podlevel_index.keys())
                 print('About to write podlevel_index')
-                # HO 05/09/2024 END ***************
+
                 # set up a progress bar
                 pbar = tqdm.tqdm(total=n,desc=podzipindexfile)
                 # open the pod index zip file for writing
                 podindexzip=ZipFile(podzipindexfile, 'w')
-                # HO 05/09/2024 BEGIN ***************
+
                 # for each item in the index dictionary
                 for (name,body) in podlevel_index.items():
-                # HO 05/09/2024 END ***************
+
                     # write them to the zip file (name/key is archive name)
                     podindexzip.writestr(name,body)
                     # gets info about this item
@@ -2192,63 +2152,18 @@ class ESPRESSOexperiment:
                 pbar.close()
                 # close the pod index zip file
                 podindexzip.close()
-            # HO 11/09/2024 BEGIN *************
+
             # webid files first
-            #for (webidfile, widdict) in serverlevel_webidwords_dict.items():
-            """for (webidfile, widdict) in testservindex.webidwords_dict.items():
-                #if webidfile not in serverlevel_index.keys():
-                if webidfile not in testservindex.index.keys():
-                    #serverlevel_index[webidfile] = ''
-                    testservindex.index[webidfile] = ''
-                for(wid, poddict) in widdict.items():
-                    for(paddr, pid) in poddict.items():
-                        #serverlevel_index[webidfile]=serverlevel_index[webidfile]+wid+','+pid+','+paddr+'\r\n'
-                        testservindex.index[webidfile]=testservindex.index[webidfile]+wid+','+pid+','+paddr+'\r\n'
-            #for (key, wworddict) in serverlevel_keywords_dict.items():
-            for (key, wworddict) in testservindex.keywords_dict.items():
-                # HO 05/09/2024 BEGIN *************
-                # if this word isn't already being counted, add it
-                #if key not in serverlevel_index.keys():
-                    #serverlevel_index[key]=''
-                # HO 05/09/2024 END ***************
-                for (wwordkey, widdict) in wworddict.items():
-                    for(widkey, poddict) in widdict.items():
-                        # HO 05/09/2024 BEGIN *************
-                        servkey=widkey + '/' + key
-                        #if servkey not in serverlevel_index.keys():
-                        if servkey not in testservindex.index.keys():
-                            #serverlevel_index[servkey]=''
-                            testservindex.index[servkey]=''
-                        # HO 05/09/2024 END *************
-                        #for(paddrkey, piddict) in poddict.items():
-                        for(ppathkey, piddict) in poddict.items():
-                            for(pidkey, freq) in piddict.items():
-                                # HO 05/09/2024 BEGIN *************
-                                #serverlevel_index[key]=serverlevel_index[key]+widkey+','+pidkey+','+str(freq)+'\r\n'
-                                #serverlevel_index[servkey]=serverlevel_index[servkey]+pidkey+','+str(freq)+'\r\n'
-                                testservindex.index[servkey]=testservindex.index[servkey]+pidkey+','+str(freq)+'\r\n'
-                                # HO 05/09/2024 END *************
-                # HO 02/09/2024 END *********************
-            # HO 05/09/2024 BEGIN *************************************
-            #serverlevel_index['index.sum']=str(serverlevel_indexsum)
-            testservindex.index['index.sum']=str(testservindex.indexsum)"""
-            #serverlevel_index=buildservermetaindex_webidlast(serverlevel_webidwords_dict, serverlevel_keywords_dict, serverlevel_indexsum)
-            #testservindex.buildservermetaindex_webidfirst()
-            # HO 13/09/2024 BEGIN ***********
-            #testservindex.buildservermetaindex_allwebidsinonefile()
             testservindex.buildservermetaindex_simple()
-            # HO 13/09/2024 END ***********
-            #n=len(serverlevel_index.keys())
+
             n=len(testservindex.index.keys())
-            print('About to write serverlevel_index:')
+            print('About to write server level index:')
             # set up a progress bar
             pbar = tqdm.tqdm(total=n,desc=serzipindexfile)
             # open the server index zip file for writing
             serindexzip=ZipFile(serzipindexfile, 'w')
             # for each item in the index dictionary
-            #for (name,body) in serverlevel_index.items():
             for (name,body) in testservindex.index.items():
-            # HO 11/09/2024 END ************************************
                 # write them to the zip file (name/key is archive name)
                 serindexzip.writestr(name,body)
                 # gets info about this item
@@ -2262,7 +2177,6 @@ class ESPRESSOexperiment:
             pbar.close()
             # close the server index zip file
             serindexzip.close()
-            # HO 05/09/2024 END ********************* 
             
     """
     Distribute the zip files around the servers using ssh
@@ -2278,7 +2192,6 @@ class ESPRESSOexperiment:
         i=0
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-            # TODO ??
             server=str(self.image.value(snode,self.namespace.Address)).rsplit('/')[-2].rsplit(':')[0]
             # display progress message
             print('Uploading',server)
@@ -2324,11 +2237,9 @@ def compareindexes(podaddress, indexaddress, comparefrom, compareto):
     for f in comparefrom:
         splitf = str(f)
         splitf = splitf[offset:]
-        print('splitf ' + splitf + ' is next in comparefrom.')
-        #if splitf in index.keys():
+
         if splitf in compareto.keys():
             print('splitf ' + splitf + ' is in compareto.keys!')
-            #index.pop(splitf)
             compareto.pop(splitf)
                     
     print("Difference?"+str(len(compareto.keys())))
