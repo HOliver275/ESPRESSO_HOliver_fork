@@ -56,7 +56,10 @@ class CSSaccess:
         # dump the data at that pod
         datajson=json.dumps(data)
         # post the dumped data using the IDP credentials URL
+        # HO 25/09/2024 BEGIN ****************
         res = requests.post(self.cred_url, headers={ 'content-type': 'application/json' }, data=str(datajson))
+        #res = requests.post(self.cred_url, headers={ 'content-type': 'application/json' }, data=str(datajson), timeout=5000)
+        # HO 25/09/2024 END **************
         # JSONify the result
         res=res.json()
         # parse the id and secret to get the authstring
@@ -88,6 +91,9 @@ class CSSaccess:
     return: authtoken, the auth token from the client credentials
     """    
     def create_authtoken(self):
+        # HO 22/09/2024 BEGIN ***********
+        
+        # HO 22/09/2024 END *************
         # get the auth string as bytes
         s=bytes(self.authstring, 'utf-8')
         # base-64 encode everything from element 2 of the auth string onwards
@@ -104,9 +110,10 @@ class CSSaccess:
             },
             data={"grant_type":"client_credentials","scope": "webid"},
             timeout=5000
-        )
+        ) 
         # get the auth token out of the response
         self.authtoken =res.json()['access_token']
+
         # return the auth token
         return self.authtoken
 
@@ -128,7 +135,6 @@ class CSSaccess:
     def put_file(self,podname,filename,filetext,filetype):
         # construct a full path to the target file
         targetUrl=self.idp+podname+'/'+filename
-        #print('targetUrl=' + targetUrl)
         # create authorization headers
         headers={ 'content-type': filetype, 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
         # PUT the new text to the file
@@ -137,7 +143,6 @@ class CSSaccess:
             data=filetext
         )
         # return the response
-        #print(res.text)
         return res 
 
     """
@@ -154,10 +159,17 @@ class CSSaccess:
         headers={ 'content-type': filetype, 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
 
         # PUT the new filetext
+        # HO 25/09/2024 BEGIN *********
         res= requests.put(targetUrl,
             headers=headers,
             data=filetext
         )
+        #res= requests.put(targetUrl,
+            #headers=headers,
+            #data=filetext,
+            #timeout=5000
+        #)
+        # HO 25/09/2024 END *********
         
         # return server response
         return res 
@@ -174,9 +186,15 @@ class CSSaccess:
         # passes: the auth token, and a string representing the encoded JSON Web Token
         headers={  'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "GET", self.dpopKey)}
         # get request headers
+        # HO 25/09/2024 BEGIN ***********
         res= requests.get(targetUrl,
            headers=headers
         )
+        #res= requests.get(targetUrl,
+           #headers=headers,
+           #timeout=5000
+        #)
+        # HO 25/09/2024 BEGIN ***********
 
         # return response text
         return res.text
@@ -192,9 +210,15 @@ class CSSaccess:
         # set up authorization headers
         headers={  'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "DELETE", self.dpopKey)}
         # delete the file
+        # HO 25/09/2024 BEGIN ***********
         res= requests.delete(targetUrl,
                 headers=headers
         )
+        #res= requests.delete(targetUrl,
+            #headers=headers,
+            #timeout=5000
+        #)
+        # HO 25/09/2024 END ***********
         # return the response
         return res
 
@@ -249,16 +273,21 @@ acl:mode acl:Read.
     return: res, the server response
     """
     def makefileaccessible(self,podname,filename):
-        #print('inside makefileaccessible')
         # construct the target URL from the target file's .acl file path
         targetUrl=self.idp+podname+'/'+filename+'.acl'
         # get DPOP headers
         headers={  'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "GET", self.dpopKey)}
         
         # get the file's .acl
+        # HO 25/09/2024 BEGIN *********
         res= requests.get(targetUrl,
            headers=headers
         )
+        #res= requests.get(targetUrl,
+           #headers=headers,
+           #timeout=5000
+        #)
+        # HO 25/09/2024 END *********
         
         # if we couldn't get the .acl file
         if not res.ok:
@@ -277,20 +306,33 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             # create DPOP headers 
             headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
             # update the target .acl file to grant c:me full access
+            # HO 25/09/2024 BEGIN *********
             res= requests.put(targetUrl,
                headers=headers,
                 data=acldef
             )
+            #res= requests.put(targetUrl,
+               #headers=headers,
+               #data=acldef,
+               #timeout=5000
+            #)
+            # HO 25/09/2024 END *********
         # if we did manage to get the .acl file
         else:
-            #print('existing .acl file was like this: ' + res.text)
             # create the headers for a SPARQL update PATCH request
             headers={ "Content-Type": "application/sparql-update",'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PATCH", self.dpopKey)}
             # insert a triple giving full access to an Agent
+            # HO 25/09/2024 BEGIN *********
             res= requests.patch(targetUrl,
                headers=headers,
                 data="INSERT DATA { <#ControlReadWrite> <acl:agentClass> <foaf:Agent> }"
             )
+            #res= requests.patch(targetUrl,
+               #headers=headers,
+               #data="INSERT DATA { <#ControlReadWrite> <acl:agentClass> <foaf:Agent> }",
+               #timeout=5000
+            #)
+            # HO 25/09/2024 END *********
         # return the response
         return res
 
@@ -339,10 +381,17 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
         # create auth headers for a PUT request
         headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
         # PUT the text granting access to the WebIDs to the given .acl file
+        # HO 25/09/2024 BEGIN **********
         res= requests.put(targetUrl,
                headers=headers,
                 data=acldef
             )
+        #res= requests.put(targetUrl,
+               #headers=headers,
+               #data=acldef,
+               #timeout=5000
+            #)
+        # HO 25/09/2024 BEGIN **********
         # return the server response
         return(res)
 
@@ -370,10 +419,17 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
         # construct the SPARQL query
         data="INSERT DATA {" + triplestring+ "}"
         # do a PATCH request with the SPARQL query
+        # HO 25/09/2024 BEGIN *********
         res= requests.patch(url,
                headers=headers,
                 data=data
             )
+        #res= requests.patch(url,
+            #headers=headers,
+            #data=data,
+            #timeout=5000
+        #)
+        # HO 25/09/2024 END *********
         
         # return the result
         return res
@@ -402,7 +458,6 @@ param: password, the pod password
 return: res1, response to the POST request
 """
 def podcreate(IDP,podname,email,password):
-    #print('inside podcreate')
     register_endpoint=IDP+'idp/register/'
     res1 = requests.post(
                         register_endpoint,
@@ -430,7 +485,6 @@ param: openbool, default: False, is True if the given resource is open access
 return: acldef2, text for writing to an .acl file designating the WebIDs that have Read access to it
 """
 def returnacllist(url, podaddress, webidlist,openbool=False):
-   #print('inside returnacllist')
     # format the list of WebIDs for writing
     webidstring='<'+'>,<'.join(webidlist)+'>'
     # initialize a string to say what type of Subject has access to this file

@@ -118,7 +118,13 @@ def uploadllistreplacewithbar(filetuplelist,replacetemplate,podaddress,CSSA):
             # PUT the filetext to the target file
             if(str(filetype) == '0'):
                 filetype='text/plain'
+            # HO 25/09/2024 BEGIN ***********
+            #try: 
             res=CSSA.put_url(targetUrl, filetext, filetype)
+            #except:
+                #print("Couldn't put to " + targeturl + ", trying again: ")
+                #res=CSSA.put_url(targetUrl, filetext, filetype)
+            # HO 25/09/2024 END ***********
             # if it didn't work
             if not res.ok:
                 # add this to the list of failed uploads

@@ -33,7 +33,13 @@ def crawl(address, CSSa):
     # initialize an empty dictionary of files
     filedict= dict()
     # get the data from the pod at that address
+    # HO 25/09/2024 BEGIN **************
+    #try: 
     data = CSSa.get_file(address)
+    #except:
+        #print("Couldn't get file at " + address + ", trying again: ")
+        #data = CSSa.get_file(address)
+    # HO 25/09/2024 END **************
     # parse the graph of that pod
     g=Graph().parse(data=data,publicID=address)
     # query to get every file contained in that graph
@@ -56,7 +62,13 @@ def crawl(address, CSSa):
         # if it's a file, and it's not one of our operational files
         elif ('.' in f.rsplit('/')[-1]) and (not f.endswith('ttl')) and (not f.endswith(config.KEYWORD_INDEX_FILEXTN)) and (not f.endswith('.file')):
             # get the file as a dictionary representation
+            # HO 25/09/2024 BEGIN **************
+            #try: 
             filedict[f]=CSSa.get_file(f)
+            #except:
+                #print("Couldn't get file " + f + ", trying again: ")
+                #filedict[f]=CSSa.get_file(f)
+            # HO 25/09/2024 END **************
         else:
             # do nothing
             pass
@@ -76,7 +88,13 @@ def aclcrawlwebidnew(address,podaddress, CSSa):
     # initialize an empty list to hold the file tuples
     filetuples= []
     # get the container at the given address
+    # HO 25/09/2024 BEGIN ************
+    #try:
     data = CSSa.get_file(address)
+    #except: 
+        #print("Couldn't get file at " + address + ", trying again: ")
+        #data = CSSa.get_file(address)
+    # HO 25/09/2024 END ************
     # parse the response
     g=Graph().parse(data=data,publicID=address)
     
@@ -101,7 +119,13 @@ def aclcrawlwebidnew(address,podaddress, CSSa):
         # if this is a file and it's not one of ESPRESSO's utility files
         elif ('.' in f.rsplit('/')[-1]) and (not f.endswith('ttl')) and (not f.endswith(config.KEYWORD_INDEX_FILEXTN)) and (not f.endswith('.file')) and (not f.endswith('.sum')) and (not f.endswith(config.WEBID_FILEXTN)):
             # get the text of the file
+            # HO 25/09/2024 BEGIN *********
+            #try: 
             text=CSSa.get_file(f)
+            #except:
+                #print("Couldn't get file " + f + ", trying again: ")
+                #text=CSSa.get_file(f)
+            # HO 25/09/2024 END *********
             # display the text of the file
             #print(text)
             # get the list of WebIDs that have access to this file
@@ -159,7 +183,13 @@ def indexchecker(address, CSSa):
     # construct an empty list to hold the files
     files= []
     # get the file(s) at the given index address
+    # HO 25/09/2024 BEGIN ***********
+    #try: 
     data = CSSa.get_file(address)
+    #except:
+        #print("Couldn't get file at " + address + ", trying again: ")
+        #data = CSSa.get_file(address)
+    # HO 25/09/2024 END ***********
     # parse the graph
     g=Graph().parse(data=data,publicID=address)
     
@@ -192,7 +222,13 @@ def indexchecker_recursive(address, CSSa):
     # construct an empty list to hold the files
     files= []
     # get the file(s) at the given index address
+    # HO 25/09/2024 BEGIN ***********
+    #try:
     data = CSSa.get_file(address)
+    #except:
+        #print("Couldn't get file at " + address + ", trying again: ")
+        #data = CSSa.get_file(address)
+    # HO 25/09/2024 END ***********
     # parse the graph
     g=Graph().parse(data=data,publicID=address)
     
@@ -227,7 +263,13 @@ return: webidstring, the WebID list represented as a comma-separated string
 """
 def getwebidlist(address,CSSA):
     acladdress=address+'.acl'
+    # HO 25/09/2024 BEGIN **************
+    #try:
     acldata=CSSA.get_file(acladdress)
+    #except:
+        #print("Couldn't get file at " + acladdress + ", trying again: ")
+        #acldata=CSSA.get_file(acladdress)
+    # HO 25/09/2024 END **************
     g=Graph().parse(data=acldata,publicID=acladdress)
     ACL=Namespace('http://www.w3.org/ns/auth/acl')
 
@@ -269,7 +311,13 @@ def getwebidlistlist(address,CSSA):
     # find the .acl file at the given address
     acladdress=address+'.acl'
     # get the .acl file
+    # HO 25/09/2024 BEGIN *************
+    #try:
     acldata=CSSA.get_file(acladdress)
+    #except:
+        #print("Couldn't get file at " + acladdress + ", trying again: ")
+        #acldata=CSSA.get_file(acladdress)
+    # HO 25/09/2024 END *************
     # parse the .acl file
     g=Graph().parse(data=acldata,publicID=acladdress)
     # the ACL namespace
@@ -769,12 +817,28 @@ def uploadaclindexwithbar(ldpindex,indexdir,CSSA):
         # construct a target URL from the current filename
         targetUrl=indexdir+name
         # PUT the file text into that file
+        # HO 25/09/2024 BEGIN **************
+        #try:
         res=CSSA.put_url(targetUrl,body,'text/csv')
+        #except:
+            #print("Couldn't put to " + targetUrl + ", trying again: ")
+            #res=CSSA.put_url(targetUrl,body,'text/csv')
+        # HO 25/09/2024 END **************
         # if that didn't work
         if (not res.ok):
             # construct client credentials and try again
-            CSSA.create_authtoken()
+            # HO 25/09/2024 BEGIN **************
+            try: 
+                CSSA.create_authtoken()
+            except:
+                print("Couldn't create auth token, trying again: ")
+                CSSA.create_authtoken()
+            #try:
             res=CSSA.put_url(targetUrl,body,'text/csv')
+            #except:
+                #print("Couldn't put to " + targetUrl + ", trying again: ")
+                #res=CSSA.put_url(targetUrl,body,'text/csv')
+            # HO 25/09/2024 END **************
             # then give up
             if (not res.ok):
                 print('Cannot upload index')

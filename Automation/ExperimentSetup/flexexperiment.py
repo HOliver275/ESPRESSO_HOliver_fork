@@ -100,7 +100,7 @@ from sys import argv
                     'https://srv03955.soton.ac.uk:3000/'
                     ]"""
 
-serverlistglobal = ['https://localhost:3000/']
+serverlistglobal = ['https://srv04031.soton.ac.uk:3000/']
 
 # HO 14/08/2024 appears not to be in use
 def returnaclopen(fileaddress,webidlist):
@@ -1106,7 +1106,13 @@ class ESPRESSOexperiment:
             # get the address of the ESPRESSO pod
             esppodaddress=self.image.value(enode,self.namespace.Address)
             # get the response text without using DPOP to access the ESPRESSO pod address
+            # HO 25/09/2024 BEGIN ******************
+            #try:
             res =CSSaccess.get_file(esppodaddress)
+            #except:
+                #print("ESPRESSOcreate: Couldn't get file at " + esppodaddress + ", trying again.")
+                #res =CSSaccess.get_file(esppodaddress)
+            # HO 25/09/2024 END ******************
             # if it didn't work, there isn't an ESPRESSO pod, so we have to create one
             if not res.ok:
                 # display user message
@@ -1134,8 +1140,15 @@ class ESPRESSOexperiment:
                 # construct a CSSaccess object with the identity provider, 
                 # the ESPRESSO email, and the password
                 CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                # HO 25/09/2024 BEGIN ******************
+                #try:
                 # now try again to access the ESPRESSO pod and display the response text
                 print(CSSA.get_file(esppodaddress))
+                #except:
+                    #print("ESPRESSOcreate: Couldn't get file at " + esppodaddress + ", trying again.")
+                    #print(CSSA.get_file(esppodaddress))
+                # HO 25/09/2024 BEGIN ******************
+                 
             else: # if it did work, display user message
                 print('ESPRESSO pod is present at '+IDP+self.espressopodname+'/')
         #print('self = ' + str(self))
@@ -1166,7 +1179,13 @@ class ESPRESSOexperiment:
                 # get the triple string
                 triplestring=str(self.image.value(pnode,self.namespace.TripleString))
                 # access the pod and display the response text
+                # HO 25/09/2024 BEGIN *****************
+                #try: 
                 res=CSSaccess.get_file(podaddress)
+                #except:
+                    #print("podcreate: Couldn't get file at " + podaddress + ", trying again.")
+                    #res=CSSaccess.get_file(podaddress)
+                # HO 25/09/2024 END *****************
                 
                 # if it worked
                 if res.ok:
@@ -1206,10 +1225,20 @@ class ESPRESSOexperiment:
         email=str(self.image.value(pnode,self.namespace.Email))
         # create a CSSaccess object with this identity provider, email and password
         CSSA=CSSaccess.CSSaccess(IDP, email, self.password)
-        # get the auth string containing the ID and secret
-        a=CSSA.create_authstring()
-        # get the auth token from the client credentials
-        t=CSSA.create_authtoken()
+        # HO 25/09/2024 BEGIN *******************
+        try: 
+            # get the auth string containing the ID and secret
+            a=CSSA.create_authstring()
+            # get the auth token from the client credentials
+            t=CSSA.create_authtoken()
+        except:
+            print("Couldn't create auth token, trying again: ")
+            CSSA=CSSaccess.CSSaccess(IDP, email, self.password)
+            # get the auth string containing the ID and secret
+            a=CSSA.create_authstring()
+            # get the auth token from the client credentials
+            t=CSSA.create_authtoken()
+        # HO 25/09/2024 END *******************
         # get the pod address
         podaddress=str(self.image.value(pnode,self.namespace.Address))
         # crawl that pod and get back a dictionary of its files
@@ -1221,13 +1250,25 @@ class ESPRESSOexperiment:
         # for every target URL
         for targetUrl in files:
             # delete the file
+            # HO 25/09/2024 BEGIN *******************
+            #try: 
             res=CSSA.delete_file(targetUrl)
+            #except: 
+                #print("Couldn't delete file at " + targetUrl + ", trying again: ")
+                #res=CSSA.delete_file(targetUrl)
+            # HO 25/09/2024 END *******************
             # display the response text
             print(res.text)
             # if the deletion attempt didn't work
             if not res.ok:
+                # HO 25/09/2024 BEGIN *******************
                 # get the auth token from the client credentials
-                CSSA.create_authtoken()
+                try: 
+                    CSSA.create_authtoken()
+                except:
+                    print("Couldn't create auth token, trying again: ")
+                    CSSA.create_authtoken()
+                # HO 25/09/2024 BEGIN *******************
             # update the progress bar
             pbar.update(1)
         # close the progress bar
@@ -1269,8 +1310,16 @@ class ESPRESSOexperiment:
                     filetuplelist.append((f,targetUrl,filetype,substring))
                 # create a CSSaccess object and get the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                a=CSSA.create_authstring()
-                t=CSSA.create_authtoken()
+                # HO 23/09/2024 BEGIN ****************
+                try:
+                    a=CSSA.create_authstring()
+                    t=CSSA.create_authtoken()
+                except:
+                    print("Couldn't create authtoken to upload files, trying again: ")
+                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                    a=CSSA.create_authstring()
+                    t=CSSA.create_authtoken()
+                # HO 23/09/2024 END ****************
                 
                 # display progress message
                 print('populating',podaddress)
@@ -1301,8 +1350,16 @@ class ESPRESSOexperiment:
                 PASSWORD=self.password
                 # construct the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                a=CSSA.create_authstring()
-                t=CSSA.create_authtoken()
+                # HO 24/09/2024 BEGIN **************
+                try:
+                    a=CSSA.create_authstring()
+                    t=CSSA.create_authtoken()
+                except:
+                    print("Couldn't create authtoken. Trying again: ")
+                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                    a=CSSA.create_authstring()
+                    t=CSSA.create_authtoken()
+                # HO 24/09/2024 END **************
                 # get the WebID
                 webid=str(self.image.value(pnode,self.namespace.WebID))
                 # display progress message
@@ -1324,7 +1381,13 @@ class ESPRESSOexperiment:
                     openbool= fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile)
                     # update the .acl file to grant Read access to the given list of WebIDs
                     # (and make c:me the owner)
+                    # HO 25/09/2024 BEGIN **************
+                    #try:
                     res=CSSA.makeurlaccessiblelist(targetUrl,podaddress,webid,webidlist,openbool)
+                    #except:
+                        #print("Couldn't make webidlist accessible at " + targeturl + ", trying again: ")
+                        #res=CSSA.makeurlaccessiblelist(targetUrl,podaddress,webid,webidlist,openbool)
+                    # HO 25/09/2024 END **************
                     # display the server response
                     print(res,end=' ')
                     print('\n')
@@ -1351,10 +1414,20 @@ class ESPRESSOexperiment:
                 # get the pod password
                 PASSWORD=self.password
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                # get the pod auth string containing the ID and secret
-                a=CSSA.create_authstring()
-                # get the pod auth token from the client credentials
-                t=CSSA.create_authtoken()
+                # HO 23/09/2024 BEGIN *********************
+                try:
+                    # get the pod auth string containing the ID and secret
+                    a=CSSA.create_authstring()
+                    # get the pod auth token from the client credentials
+                    t=CSSA.create_authtoken()
+                except KeyError: 
+                    print("Couldn't create auth token, trying again: ")
+                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                    # get the pod auth string containing the ID and secret
+                    a=CSSA.create_authstring()
+                    # get the pod auth token from the client credentials
+                    t=CSSA.create_authtoken()
+                # HO 23/09/2024 END *********************
                 
                 # get the pod WebID
                 webid=str(self.image.value(pnode,self.namespace.WebID))
@@ -1364,8 +1437,14 @@ class ESPRESSOexperiment:
                 triplestring=self.image.value(pnode,self.namespace.TripleString)
                 # if there is a triple string
                 if len(triplestring)>0:
+                    # HO 23/09/2024 BEGIN *********************
                     # insert the triple string
-                    res=CSSA.inserttriplestring(webid[:-3],triplestring)
+                    try:
+                        res=CSSA.inserttriplestring(webid[:-3],triplestring)
+                    except:
+                        print("Couldn't insert triple string, trying again: ")
+                        res=CSSA.inserttriplestring(webid[:-3],triplestring)
+                    # HO 23/09/2024 END *********************
                     # display the WebID and the result text
                     print(webid,res.text)
                 
@@ -1375,8 +1454,14 @@ class ESPRESSOexperiment:
                     triplestring=self.image.value(fnode,self.namespace.TripleString)
                     # if there is a triple string
                     if len(triplestring)>0:
+                        # HO 23/09/2024 BEGIN *********************
                         # insert the triple string
-                        res=CSSA.inserttriplestring(webid[:-3],triplestring)
+                        try: 
+                            res=CSSA.inserttriplestring(webid[:-3],triplestring)
+                        except:
+                            print("Couldn't insert triple string, trying again: ")
+                            res=CSSA.inserttriplestring(webid[:-3],triplestring)
+                        # HO 23/09/2024 END *********************
                         # display the WebID and the result text
                         print(webid,res.text)
         #print('self = ' + str(self))
@@ -1567,8 +1652,16 @@ class ESPRESSOexperiment:
                     PASSWORD=self.password
                     # construct the client credentials
                     CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                    CSSA.create_authstring()
-                    CSSA.create_authtoken()
+                    # HO 25/09/2024 BEGIN ************
+                    try:
+                        CSSA.create_authstring()
+                        CSSA.create_authtoken()
+                    except: 
+                        print("Couldn't create auth token, trying again: ")
+                        CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                        CSSA.create_authstring()
+                        CSSA.create_authtoken()
+                    # HO 25/09/2024 END ************
                     # gets a list of file tuples containing [relative path, text of the file, WebID list]
                     d=PodIndexer.aclcrawlwebidnew(podaddress,podaddress, CSSA)
                     # get the address of this pod index
@@ -1606,47 +1699,53 @@ class ESPRESSOexperiment:
                 metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
                 # construct the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-                CSSA.create_authstring()
-                CSSA.create_authtoken()
+                # HO 25/09/2024 BEGIN ************
+                try:
+                    CSSA.create_authstring()
+                    CSSA.create_authtoken()
+                except:
+                    print("Couldn't create auth token, trying again: ")
+                    CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                    CSSA.create_authstring()
+                    CSSA.create_authtoken()
+                # HO 25/09/2024 END ************
                 # and write that server-level index
                 executor.submit(PodIndexer.uploadaclindexwithbar, testservindex.index, metaindexaddress, CSSA)
 
         # quick-and-dirty tests for files known to be at the given hard-coded addresses
-        CSSA=CSSaccess.CSSaccess('http://localhost:3000/', self.espressoemail, self.password)
-        CSSA.create_authstring()
-        CSSA.create_authtoken()
-        res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
-        print('Contents of http://localhost:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
+        CSSA=CSSaccess.CSSaccess('https://srv04031.soton.ac.uk:3000', self.espressoemail, self.password)
+        try: 
+            CSSA.create_authstring()
+            CSSA.create_authtoken()
+        except:
+            print("Couldn't get auth token, trying again: ")
+            CSSA=CSSaccess.CSSaccess('https://srv04031.soton.ac.uk:3000', self.espressoemail, self.password)
+            CSSA.create_authstring()
+            CSSA.create_authtoken()
+            
+        try: 
+            res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
+        except:
+            print("Couldn't get file at https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid, trying again") 
+            res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
+        
+        print('Contents of https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
         print('---------------')
-        res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
-        print('Contents of http://localhost:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
+        try: 
+            res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
+        except: 
+            print("Couldn't get file at https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx, trying again: ")
+            res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
+        
+        print('Contents of https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
         print('---------------')
-        res = CSSA.get_file('http://localhost:3000/ESPRESSO/ardfhealthmetaindex/index.sum')
-        print('Contents of http://localhost:3000/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
-        print('===============')
-        CSSA=CSSaccess.CSSaccess('http://localhost:3001/', self.espressoemail, self.password)
-        CSSA.create_authstring()
-        CSSA.create_authtoken()
-        res = CSSA.get_file('http://localhost:3001/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
-        print('Contents of http://localhost:3001/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
-        print('---------------')
-        res = CSSA.get_file('http://localhost:3001/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
-        print('Contents of http://localhost:3001/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
-        print('---------------')
-        res = CSSA.get_file('http://localhost:3001/ESPRESSO/ardfhealthmetaindex/index.sum')
-        print('Contents of http://localhost:3001/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
-        print('===============')
-        CSSA=CSSaccess.CSSaccess('http://localhost:3002/', self.espressoemail, self.password)
-        CSSA.create_authstring()
-        CSSA.create_authtoken()
-        res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid')
-        print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/httpexampleorgagent4profilecardme.webid: ' + res)
-        print('---------------')
-        res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx')
-        print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/e/f/f/e/c/t.ndx: ' + res)
-        print('---------------')
-        res = CSSA.get_file('http://localhost:3002/ESPRESSO/ardfhealthmetaindex/index.sum')
-        print('Contents of http://localhost:3002/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
+        try:
+            res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/index.sum')
+        except:
+            print("Couldn't get file at https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/index.sum, trying again: ")
+            res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/index.sum')
+        
+        print('Contents of https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
         print('===============')
 
     """
@@ -1674,15 +1773,31 @@ class ESPRESSOexperiment:
                 
             # instantiate a new CSSaccess object for the server-level ESPRESSO pod
             CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+            # HO 23/09/2024 BEGIN **************
             # get the auth string containing the ID and secret for the server-level ESPRESSO pod
-            CSSAe.create_authstring()
-            # get the auth token for the server-level ESPRESSO pod from the client credentials
-            CSSAe.create_authtoken()
+            try: 
+                CSSAe.create_authstring()
+                # get the auth token for the server-level ESPRESSO pod from the client credentials
+                CSSAe.create_authtoken()
+            except:
+                print("Couldn't create auth token. Trying again: ")
+                # instantiate a new CSSaccess object for the server-level ESPRESSO pod
+                CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                CSSAe.create_authstring()
+                # get the auth token for the server-level ESPRESSO pod from the client credentials
+                CSSAe.create_authtoken()
+            # HO 23/09/2024 END **************
             # PUT the new metaindex data out to the server-level ESPRESSO pod metaindex,
             # and display the identity provider and the server response to the PUT request
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
             targurl = str(self.image.value(enode,self.namespace.MetaindexFile))
-            print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+            # HO 23/09/2024 BEGIN **************
+            try:
+                print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+            except:
+                print("Couldn't put to " + targurl + ", trying again: ")
+                print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+            # HO 23/09/2024 END **************
         #print('self = ' + str(self))
 
     """
@@ -1714,8 +1829,16 @@ class ESPRESSOexperiment:
                 # HO 17/09/2024 END **************
                 # construct the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                CSSA.create_authstring()
-                CSSA.create_authtoken()
+                # HO 25/09/2024 BEGIN ******
+                try:
+                    CSSA.create_authstring()
+                    CSSA.create_authtoken()
+                except:
+                    print("Couldn't create auth token, trying again: ") 
+                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                    CSSA.create_authstring()
+                    CSSA.create_authtoken()
+                # HO 25/09/2024 END ******
                 # get the index address
                 indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                 # get the list of files at the given index address
@@ -1762,8 +1885,16 @@ class ESPRESSOexperiment:
             esppodname=self.image.value(enode,self.namespace.Name)
             # construct the client credentials
             CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-            CSSA.create_authstring()
-            CSSA.create_authtoken()
+            # HO 25/09/2024 BEGIN ***********
+            try: 
+                CSSA.create_authstring()
+                CSSA.create_authtoken()
+            except:
+                print("Couldn't create auth token, trying again: ")
+                CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                CSSA.create_authstring()
+                CSSA.create_authtoken()
+            # HO 25/09/2024 BEGIN ***********
             # get the list of files at the given metaindex address
             n=PodIndexer.crawllist(metaindexaddress, CSSA)
             print('currently in index of ' +IDP+esppodname +':' +str(len(n)))
@@ -1828,10 +1959,22 @@ class ESPRESSOexperiment:
                 PASSWORD=self.password
                 # create a CSSaccess object with the identity provider, username and password
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                # get the auth string containing the pod ID and secret
-                CSSA.create_authstring()
-                # get the pod auth token from the client credentials
-                CSSA.create_authtoken()
+                
+                # HO 22/09/2024 BEGIN ************
+                try: 
+                    # get the auth string containing the pod ID and secret
+                    CSSA.create_authstring()
+                    # get the pod auth token from the client credentials
+                    CSSA.create_authtoken()
+                except:
+                    # try one more time
+                    # create a CSSaccess object with the identity provider, username and password
+                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                    # get the auth string containing the pod ID and secret
+                    CSSA.create_authstring()
+                    # get the pod auth token from the client credentials
+                    CSSA.create_authtoken()
+                # HO 22/09/2024 END ************
                 
                 # construct the target URL for an .acl file for the pod index address
                 targetUrl=podindexaddress+'.acl'
@@ -1840,10 +1983,18 @@ class ESPRESSOexperiment:
                 # do a PUT request with the acldefopen query
                 # which makes c.me (the experiment) the owner of the .acl file
                 # and makes the .acl file open access 
-                res= requests.put(targetUrl,headers=headers,data=acldefopen)
+                # HO 22/09/2024 BEGIN ************
+                try:
+                    #res= requests.put(targetUrl,headers=headers,data=acldefopen)
+                    res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
+                except:
+                    print("Couldn't do a put to " + targetUrl + ", trying again: ")
+                    res= requests.put(targetUrl,headers=headers,data=acldefopen,timeout=5000)
+                # HO 22/09/2024 END ************
                 # display the .acl file URL and the server response to the PUT request
                 print(targetUrl,res)
         #print('self = ' + str(self))
+        
 
     # HO 14/08/2024 appears not to be in use
     def indexpubthreaded(self):
@@ -1872,14 +2023,28 @@ class ESPRESSOexperiment:
             # create a CSSaccess object for this identity provider, the ESPRESSO
             # pod email, and the ESPRESSO pod password
             CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-            # get the auth string containing the ESPRESSO pod ID and secret
-            a=CSSA.create_authstring()
-            # get the ESPRESSO pod auth token from the client credentials
-            t=CSSA.create_authtoken()
+            #HO 23/09/2024 BEGIN ******************
+            try:
+                # get the auth string containing the ESPRESSO pod ID and secret
+                a=CSSA.create_authstring()
+                # get the ESPRESSO pod auth token from the client credentials
+                t=CSSA.create_authtoken()
+            except: 
+                print("Couldn't create auth token. Trying again: ")
+                CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                # get the auth string containing the ESPRESSO pod ID and secret
+                a=CSSA.create_authstring()
+                # get the ESPRESSO pod auth token from the client credentials
+                t=CSSA.create_authtoken()
             # make the ESPRESSO index file accessible
             # we do need to make the whole metaindex folder accessible to the experiment
             # not just the metaindex file
-            res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+            try:
+                res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+            except:
+                print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
+                res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+            #HO 23/09/2024 END ******************
 
             # display the server response
             print(res)

@@ -231,7 +231,7 @@ class ServerIndex:
                         
                     for(ppathkey, piddict) in poddict.items():
                         for(pidkey, freq) in piddict.items():
-                            servidx[servkey]=servidx[servkey] + widtowrite + ', ' + pidkey+','+str(freq)+'\r\n'
+                            servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
                             #print('just added the following to servidx[' + servkey + ']: ' + str(servidx[servkey]))
                             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'

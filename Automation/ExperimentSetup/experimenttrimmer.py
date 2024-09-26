@@ -65,22 +65,26 @@ serverlistglobal=['https://srv03812.soton.ac.uk:3000/',
                     ]
 
 # HO 04/09/2024 BEGIN ********************
-# TODO not sure if this is used in its current form, but the metaindex.csv file is now
+# Not sure if this is used in its current form, but the metaindex.csv file is now
 # in a subfolder in the ESPRESSO pod
 # suggested updates have been inserted as comments, to be applied where appropriate
 # and MetaindexAddress now points to a directory, like IndexAddress does
 # and a new attribute MetaindexFile points to the metaindex.csv now
 def experimenttrimmer(podname,newmetaindexname,firstserver,lastserver,trimto,espressopodname='ESPRESSO/',espressoemail='espresso@example.com',password='12345'):
+
 #def experimenttrimmer(podname,newmetaindexname,firstserver,lastserver,trimto,espressopodname='ESPRESSO/',espressoemail='espresso@example.com',espressoindexdir='metaindex/', password='12345'):
     #serverlist=serverlistglobal[firstserver:lastserver]
     serverlist=['https://srv03955.soton.ac.uk:3000/']
     
     for IDP in serverlist:
         metaindexaddress=IDP+espressopodname+podname+'metaindex.csv'
+        # swap in this line to account for the server-level metaindex
         #metaindexfile=IDP+espressopodname+espressoindexdir+podname+'metaindex.csv'
         print(metaindexaddress)
+        # swap in this line to account for the server-level metaindex
         #print(metaindexfile)
         res=CSSaccess.get_file(metaindexaddress)
+        # swap in this line to account for the server-level metaindex
         #res=CSSaccess.get_file(metaindexfile)
         print(res.text)
         podindexlist=res.text.rsplit('\r\n')[:-1]
@@ -93,8 +97,10 @@ def experimenttrimmer(podname,newmetaindexname,firstserver,lastserver,trimto,esp
         t=CSSAe.create_authtoken()
         #print(t)
         targeturl=IDP+espressopodname+newmetaindexname
+        # swap in this line to account for the server-level metaindex
         #targeturl=IDP+espressopodname+espressoindexdir+newmetaindexname
         print(metaindexaddress)
+        # swap in this line to account for the server-level metaindex
         #print(metaindexfile)
         # HO 04/09/2024 END ********************
 
