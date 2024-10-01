@@ -311,11 +311,11 @@ print('===================')
 
 
 # Uploading of the files and corresponding acls
-""""uploadexperiment(experiment)
+uploadexperiment(experiment)
 print('Experiment uploaded')
 print('===================')
 
 #Indexing of the experiment
 indexexperiment(experiment)
 print('Experiment indexed')
-print('===================')"""
+print('===================')

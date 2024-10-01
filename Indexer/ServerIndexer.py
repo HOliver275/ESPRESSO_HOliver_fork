@@ -223,6 +223,7 @@ class ServerIndex:
             if webidfile not in servidx.keys():
                 servidx[webidfile] = ''
             for(wid, poddict) in widdict.items():
+                servidx[webidfile]=servidx[webidfile] + wid + '\r\n'
                 # HO 01/10/2024 BEGIN ******************
                 for(ppath, pid) in poddict.items():
                     # HO 01/10/2024 BEGIN ******************
@@ -230,7 +231,7 @@ class ServerIndex:
                         #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
                     #else:
                         #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
-                    servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
                     # HO 01/10/2024 END ******************
         
         # now the keyword files                
