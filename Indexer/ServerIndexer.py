@@ -74,13 +74,19 @@ class ServerIndex:
     def addwebids(self, podpath, webidlist):
         # the WebID becomes the filename for a .webid file
         for webid in webidlist:
+            # HO 01/10/2024 BEGIN ****************
+            #if webid==config.OPENACCESS_SYMBOL:
+                #widword=config.OPENACCESS_WEBIDWORD
+                #webidword=config.OPENACCESS_FILENAME
             if webid==config.OPENACCESS_SYMBOL:
-                widword=config.OPENACCESS_WEBIDWORD
+                widword=config.OPENACCESS_WIDWORD
                 webidword=config.OPENACCESS_FILENAME
+            # HO 01/10/2024 END ****************
 
                 if webidword not in self.widword_lookup.keys():
                     # add this webidword:widword mapping to the lookup
                     self.widword_lookup[webidword]=widword
+                    print("widword_lookup[" + webidword + "]=" + widword)
                     # add this widword : {podpath : podword} mapping to the dictionary
                     if webidword not in self.webidwords_dict.keys(): # it shouldn't be
                         piddict = {podpath : self.podword_lookup[podpath]}
@@ -127,16 +133,19 @@ class ServerIndex:
                 servidx[webidfile] = ''
             for(wid, poddict) in widdict.items():
                 for(ppath, pid) in poddict.items():
-                    if(wid==config.OPENACCESS_SYMBOL):
-                        servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
-                    else:
-                        servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    # HO 01/10/2024 BEGIN ***************
+                    #if(wid==config.OPENACCESS_WIDWORD):
+                        #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
+                    #else:
+                        #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    # HO 01/10/2024 END ***************
         
         # now the keyword files                
         for (key, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 for(widkey, poddict) in widdict.items():
-                    if(widkey==config.OPENACCESS_SYMBOL):
+                    if(widkey==config.OPENACCESS_WIDWORD):
                         servkey=config.OPENACCESS_WEBIDWORD + '/' + key
                     else:
                         servkey=widkey + '/' + key
@@ -170,7 +179,7 @@ class ServerIndex:
                 for(ppath, pid) in poddict.items():
                     # The open access symbol is an asterisk, can't be used as filename
                     # Anyway, add the short wid handle, the short pod handle, and the path to the pod index as a line in the .webid file
-                    if(wid==config.OPENACCESS_SYMBOL):
+                    if(wid==config.OPENACCESS_WIDWORD):
                         servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
                     else:
                         servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
@@ -184,7 +193,7 @@ class ServerIndex:
                     # The open access symbol is an asterisk and can't be used as a filename
                     # anyway, format the keyword into an .ndx filename
                     startkey=key[:-(len(config.KEYWORD_INDEX_FILEXTN))]
-                    if(widkey==config.OPENACCESS_SYMBOL):
+                    if(widkey==config.OPENACCESS_WIDWORD):
                         servkey= startkey + '/' + config.OPENACCESS_WEBIDWORD + config.KEYWORD_INDEX_FILEXTN
                     else:
                         servkey= startkey + '/' + widkey + config.KEYWORD_INDEX_FILEXTN
@@ -211,20 +220,27 @@ class ServerIndex:
             if webidfile not in servidx.keys():
                 servidx[webidfile] = ''
             for(wid, poddict) in widdict.items():
+                # HO 01/10/2024 BEGIN ******************
                 for(ppath, pid) in poddict.items():
-                    if(wid==config.OPENACCESS_SYMBOL):
-                        servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
-                    else:
-                        servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    # HO 01/10/2024 BEGIN ******************
+                    #if(wid==config.OPENACCESS_SYMBOL):
+                        #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
+                    #else:
+                        #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    # HO 01/10/2024 END ******************
         
         # now the keyword files                
         for (servkey, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 for(widkey, poddict) in widdict.items():
-                    if(widkey==config.OPENACCESS_SYMBOL):
-                        widtowrite=config.OPENACCESS_WEBIDWORD
-                    else:
-                        widtowrite=widkey
+                    # HO 01/10/2024 BEGIN ******************
+                    #if(widkey==config.OPENACCESS_SYMBOL):
+                        #widtowrite=config.OPENACCESS_WEBIDWORD
+                    #else:
+                        #widtowrite=widkey
+                    widtowrite=widkey
+                    # HO 01/10/2024 END ******************
                         
                     if servkey not in servidx.keys():
                         servidx[servkey]=''
@@ -232,7 +248,6 @@ class ServerIndex:
                     for(ppathkey, piddict) in poddict.items():
                         for(pidkey, freq) in piddict.items():
                             servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
-                            #print('just added the following to servidx[' + servkey + ']: ' + str(servidx[servkey]))
                             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx

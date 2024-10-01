@@ -1692,7 +1692,7 @@ class ESPRESSOexperiment:
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
 
                 # unwind the server-level metaindex
-                testservindex.buildservermetaindex_simple()
+                testservindex.buildservermetaindex_groupbywebid()
 
                 # find the ESPRESSO pod to write to
                 enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
@@ -1878,7 +1878,7 @@ class ESPRESSOexperiment:
                 PodIndexer.uploadaclindexwithbar(podlevel_index, indexaddress, CSSA)
                 # HO 17/09/2024 END **************
             #HO 17/09/2024 BEGIN ****************
-            testservindex.buildservermetaindex_simple()
+            testservindex.buildservermetaindex_groupbywebid()
             # find the ESPRESSO pod to write to
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
             metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
@@ -2333,7 +2333,7 @@ class ESPRESSOexperiment:
                 podindexzip.close()
 
             # webid files first
-            testservindex.buildservermetaindex_simple()
+            testservindex.buildservermetaindex_groupbywebid()
 
             n=len(testservindex.index.keys())
             print('About to write server level index:')
