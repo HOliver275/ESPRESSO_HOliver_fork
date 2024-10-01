@@ -1646,7 +1646,10 @@ class ESPRESSOexperiment:
                     podaddress=str(self.image.value(pnode,self.namespace.Address))
                     podname=str(self.image.value(pnode,self.namespace.Name))
                     # here we need to create a podword for this pod relative to the server
-                    podpath=podname+'/'+self.podindexdir
+                    # HO 01/10/2024 BEGIN ***************
+                    #podpath=podname+'/'+self.podindexdir
+                    podpath=podname+'/'
+                    # HO 01/10/2024 END ***************
                     testservindex.addpod(podpath)
                     USERNAME=str(self.image.value(pnode,self.namespace.Email))
                     PASSWORD=self.password
@@ -1692,7 +1695,7 @@ class ESPRESSOexperiment:
                     executor.submit(PodIndexer.uploadaclindexwithbar, podlevel_index, indexaddress, CSSA)
 
                 # unwind the server-level metaindex
-                testservindex.buildservermetaindex_splitbywebid()
+                testservindex.buildservermetaindex_simple()
 
                 # find the ESPRESSO pod to write to
                 enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
@@ -1824,7 +1827,10 @@ class ESPRESSOexperiment:
                 print("checking index of "+IDP+podname)
                 # HO 17/09/2024 BEGIN ************
                 # here we need to create a podword for this pod relative to the server
-                podpath=podname+'/'+self.podindexdir
+                # HO 01/10/2024 BEGIN ***************
+                #podpath=podname+'/'+self.podindexdir
+                podpath=podname+'/'
+                # HO 01/10/2024 END ***************
                 testservindex.addpod(podpath)
                 # HO 17/09/2024 END **************
                 # construct the client credentials
@@ -1878,7 +1884,7 @@ class ESPRESSOexperiment:
                 PodIndexer.uploadaclindexwithbar(podlevel_index, indexaddress, CSSA)
                 # HO 17/09/2024 END **************
             #HO 17/09/2024 BEGIN ****************
-            testservindex.buildservermetaindex_splitbywebid()
+            testservindex.buildservermetaindex_simple()
             # find the ESPRESSO pod to write to
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
             metaindexaddress=str(self.image.value(enode,self.namespace.MetaindexAddress))
@@ -2259,7 +2265,10 @@ class ESPRESSOexperiment:
 
                 # here we need to create a podword for this pod relative to the server
                 podname=str(self.image.value(pnode,self.namespace.Name))
-                podpath=podname+'/'+self.podindexdir
+                # HO 01/10/2024 BEGIN ******************
+                #podpath=podname+'/'+self.podindexdir
+                podpath=podname+'/'
+                # HO 01/10/2024 END ******************
                 testservindex.addpod(podpath)
 
                 # create an empty list for the file tuples
@@ -2333,7 +2342,7 @@ class ESPRESSOexperiment:
                 podindexzip.close()
 
             # webid files first
-            testservindex.buildservermetaindex_splitbywebid()
+            testservindex.buildservermetaindex_simple()
 
             n=len(testservindex.index.keys())
             print('About to write server level index:')
