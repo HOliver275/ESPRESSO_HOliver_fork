@@ -179,10 +179,13 @@ class ServerIndex:
                 for(ppath, pid) in poddict.items():
                     # The open access symbol is an asterisk, can't be used as filename
                     # Anyway, add the short wid handle, the short pod handle, and the path to the pod index as a line in the .webid file
-                    if(wid==config.OPENACCESS_WIDWORD):
-                        servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
-                    else:
-                        servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    # HO 01/10/2024 BEGIN *************
+                    #if(wid==config.OPENACCESS_WIDWORD):
+                        #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
+                    #else:
+                        #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                    # HO 01/10/2024 END *************
                         
         # k/e/y/w/o/r/d.ndx filename as key, dictionary with webidwords for keys
         for (key, wworddict) in self.keywords_dict.items():
