@@ -2006,6 +2006,19 @@ class ESPRESSOexperiment:
                 addresstemplate='/'+self.podindexdir+'.acl'
                 podlist=[str(self.image.value(pnode,self.namespace.Name)) for pnode in self.image.objects(snode,self.namespace.Contains)]
                 executor.submit(seriespub,IDP,podlist,addresstemplate,self.podemail,self.password)
+                
+    # HO 26/09/2024 BEGIN
+    # was called in previous experiments, but we should use indexpubthreaded
+    def indexpubthreaded2(self):
+        with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
+            
+            for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+                IDP=str(self.image.value(snode,self.namespace.Address))
+                if IDP== "https://srv03914.soton.ac.uk:3000/" or IDP== "https://srv03915.soton.ac.uk:3000/":
+                    print('opening indices for '+ IDP)
+                    addresstemplate='/'+self.podindexdir+'.acl'
+                    podlist=[str(self.image.value(pnode,self.namespace.Name)) for pnode in self.image.objects(snode,self.namespace.Contains)]
+                    executor.submit(seriespub,IDP,podlist,addresstemplate,self.podemail,self.password)
                     
     """
     Makes the ESPRESSO server-level metaindexes accessible to the experiment.
@@ -2051,6 +2064,7 @@ class ESPRESSOexperiment:
        #print('self = ' + str(self))
 
     # HO 14/08/2024 appears not to be in use
+    # HO 26/09/2024 - was called in previous experiments, we probably should call it this time
     def storelocalfileszip(self,dir):
         #os.makedirs(self.localimage,exist_ok=True)
         pbar=tqdm.tqdm(total=self.filenum)
@@ -2085,7 +2099,7 @@ class ESPRESSOexperiment:
                         pbar.update(1)
                         #ftrunc=targetUrl[len(podaddress):]
                         #filetuples.append((ftrunc,filetext,webidlist))
-        pbar.close()
+        pbar.close() 
 
     # HO 14/08/2024 appears not to be in use
     def storelocalindexzip(self,dir):
@@ -2426,6 +2440,7 @@ def seriespodcreate(IDP,podlist,podemail,password):
     pbar.close(1)
 
 # HO 14/08/2024 appears not to be in use
+# HO 26/09/2024 is called by indexpubthreaded2, which was used in the last set of experiments
 def seriespub(IDP,podlist,addresstemplate,podemail,password):
     pbar=tqdm.tqdm(total=len(podlist))
     for podname in podlist:

@@ -24,34 +24,48 @@ param: experiment, a flexexperiment.ESPRESSOexperiment
 """
 def deployexperiment(experiment):
     # Create the ESPRESSO pods, if they haven't already been created.
+    # HO 26/09/2024 - not called in previous experiments, but we should call it
     experiment.ESPRESSOcreate()
     # display progress message
     print('ESPRESSO checked')
     
     # Create the normal pods, unless they're already there in which case, wipe the contents
-    experiment.podcreate()
-    print('Pods created')
+    # HO 26/09/2024 - not called in previous experiments, call threadedpodcreate instead
+    #experiment.podcreate()
+    #print('Pods created')
     
     # Insert the triples into the pods.
-    experiment.inserttriples()
+    # HO 26/09/2024 - not called in previous experiments, MR confirms we don't need it
+    #experiment.inserttriples()
     # display progress message
-    print('Triples inserted')
+    #print('Triples inserted')
     
     # Create the server-level metaindexes.
+    # HO 26/09/2024 - not called in previous experiments
     experiment.aclmetaindex()
     # display progress message
     print('metaindexes created')
     
     # Make all the pod indexes open access.
-    experiment.indexpub()
+    # HO 26/09/2024 - in previous experiments, indexpubthreaded2 was called
+    # which restricted it to two hard-coded servers; we should call indexpubthreaded here
+    #experiment.indexpub()
     # display progress message
-    print('indexes opened')
+    #print('indexes opened')
     
     # Make the metaindexes open access.
     # HO 06/09/2024 - MR documented this as opening access, but they're only accessible to the experiment
+    # HO 26/09/2024 - in previous experiments, this wasn't called, but it needs to be called this time
     experiment.metaindexpub()
     # display progress message
     print('metaindexes made accessible to the experiment')
+    
+    # HO 27/09/2024 BEGIN - do it the threaded way
+    experiment.threadedpodcreate()
+    print('Pods created')
+    experiment.indexpubthreaded()
+    print('Indexes open')
+    # HO 27/09/2024 END - do it the threaded way
 
 """
 Step 3. 
@@ -61,7 +75,9 @@ Upload ACLs to the pods from the image
 param: experiment, a flexexperiment.ESPRESSOexperiment  
 """
 def uploadexperiment(experiment):
-    # upload the files to populate the pods
+    # HO 27/09/2024 BEGIN *********************
+    # OPTION A: if you have 18 hours to waste
+    """# upload the files to populate the pods
     experiment.uploadfiles()
     # display progress message
     print('Pods populated')
@@ -69,7 +85,11 @@ def uploadexperiment(experiment):
     # upload the ACL files
     experiment.uploadacls()
     # display progress message
-    print('Acls populated')
+    print('Acls populated')"""
+    
+    # OPTION B: for people who have things to do
+    experiment.storelocalfileszip(zipdir)
+    # HO 27/09/2024 END *********************
     
 """
 Step 4. We can do this if the experiment is not too big, otherwise we have to call zip(experiment,zipdir,SSHuser,SSHPassword) 
@@ -97,10 +117,10 @@ def indexexperiment(experiment):
     
     # Option B, step 1, zip the indexes and store locally 
     #experiment.storelocalindexzipdirs('zipdir')
-    experiment.serverlevel_storelocalindexzipdirs('zipdir')
+    experiment.serverlevel_storelocalindexzipdirs(zipdir)
     
     # Option B, step 2: distribute zips(using SSH username and password) 
-    """experiment.distributezips('zipdir',SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
+    """experiment.distributezips(zipdir,SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
     ########################
 # Server labels
 servlab1 = 'Serverlabel1'
@@ -116,6 +136,7 @@ podlab2 = 'pod2'
 podlab3 = 'pod3'
 # server lists
 serverlist1=['https://srv04031.soton.ac.uk:3000/']
+#serverlist1=['http://localhost:3000/']
 #serverlist2=['http://localhost:3001/']
 #serverlist3=['http://localhost:3002/']
 # source directories for data
@@ -123,6 +144,7 @@ sourcedir1='../DatasetSplitter/sourcedir1/'
 sourcedir2='../DatasetSplitter/sourcedir2/'
 sourcedir3='../DatasetSplitter/sourcedir3/'
 numfiles = 9500
+#numfiles = 10
 
 # Name of the ESPRESSO pod. ESPRESSO is default.
 espressopodname='ESPRESSO'
@@ -146,15 +168,20 @@ openperc=10
 #numofwebids=50
 # TODO this is always hard-coded to 20 at the last minute
 # set a differently named variable
-numwebids=50
+numwebids=250
+#numwebids=20
 # number of pods
-numpods=9500
+#numpods=9500
+numpods=10
 # on average how many webids can read a given file
-themean=10
+themean=1
 # relative deviation of the percentage of webids that can read a given file, can be left 0
 disp=0
     #how many files on average a webid can read
     #initializing the experiment
+    
+# zip directory name
+zipdir='zipdir'
 
 """ Step 0. 
 
@@ -194,7 +221,7 @@ def createexperiment(podname):
     
     # Creating connected pod pairs 
     #experiment.createlogicalpairedpods(numberofpods=numpods,serverdisp=0,serverlabel1=servlab1,serverlabel2=servlab2,podlabel1=podlab1,podlabel2=podlab2,conpred=URIRef('http://espresso.org/haspersonalWebID'))
-    print('logical paired pods created ')
+    #print('logical paired pods created ')
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
     print('logical pods created ')
 
@@ -229,7 +256,10 @@ def createexperiment(podname):
 
     #experiment.imagineaclnormal(openperc=50,mean=(floor(numwebids/themean)), disp=0,filelabel=filelab2)
 
-    experiment.imagineaclnormal(openperc=10,mean=floor(numwebids/themean), disp=0,filelabel=filelab3)
+    # HO 27/09/2024 BEGIN ******************
+    #experiment.imagineaclnormal(openperc=10,mean=floor(numwebids/themean), disp=0,filelabel=filelab3)
+    experiment.imagineaclnormal(openperc=10,mean=themean, disp=0,filelabel=filelab1)
+    # HO 27/09/2024 END ********************
     
     print('Normal ACLs distributed')
 
@@ -285,5 +315,5 @@ print('===================')
 
 #Indexing of the experiment
 indexexperiment(experiment)
-"""print('Experiment indexed')
-print('===================')"""
+print('Experiment indexed')
+print('===================')
