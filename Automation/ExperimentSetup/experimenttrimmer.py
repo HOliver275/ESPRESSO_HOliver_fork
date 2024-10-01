@@ -97,7 +97,7 @@ def experimenttrimmer(podname,newmetaindexname,firstserver,lastserver,trimto,esp
         t=CSSAe.create_authtoken()
         #print(t)
         targeturl=IDP+espressopodname+newmetaindexname
-        # swap in this line to account for the server-level metaindex
+        # swap in this line to place the .csv file into the server-level metaindex
         #targeturl=IDP+espressopodname+espressoindexdir+newmetaindexname
         print(metaindexaddress)
         # swap in this line to account for the server-level metaindex

@@ -56,7 +56,7 @@ def deployexperiment(experiment):
     # Make the metaindexes open access.
     # HO 06/09/2024 - MR documented this as opening access, but they're only accessible to the experiment
     # HO 26/09/2024 - in previous experiments, this wasn't called, but it needs to be called this time
-    experiment.metaindexpub()
+    """experiment.metaindexpub()
     # display progress message
     print('metaindexes made accessible to the experiment')
     
@@ -64,7 +64,7 @@ def deployexperiment(experiment):
     experiment.threadedpodcreate()
     print('Pods created')
     experiment.indexpubthreaded()
-    print('Indexes open')
+    print('Indexes open')"""
     # HO 27/09/2024 END - do it the threaded way
 
 """
@@ -311,11 +311,11 @@ print('===================')
 
 
 # Uploading of the files and corresponding acls
-uploadexperiment(experiment)
+""""uploadexperiment(experiment)
 print('Experiment uploaded')
 print('===================')
 
 #Indexing of the experiment
 indexexperiment(experiment)
 print('Experiment indexed')
-print('===================')
+print('===================')"""

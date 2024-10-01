@@ -343,15 +343,17 @@ class ESPRESSOexperiment:
             # HO 04/09/2024 BEGIN **************
             # Note that as of now the MetaindexAddress points to a directory, not a .csv file
             # in conformity to IndexDir
-            # and the metaindex.csv file is still written to the ESPRESSO pod, but whereas
-            # it used to be in the root, it's now in this folder, along with all the other
-            # metaindex files
+            # and the metaindex.csv file is still written to the ESPRESSO pod root
             #metaindexaddress=esppod+self.espressoindexfile
             metaindexaddress=esppod+self.espressoindexdir
             # add the MetaIndex address to the image
             self.image.add((enode,self.namespace.MetaindexAddress,Literal(metaindexaddress)))
             # to point to the metaindex.csv file we add another attribute, MetaindexFile
-            metaindexfile=metaindexaddress+self.espressoindexfile
+            # HO 01/10/2024 BEGIN ****************
+            # Go back to putting the metaindex.csv file in the root of the ESPRESSO pod
+            #metaindexfile=metaindexaddress+self.espressoindexfile
+            metaindexfile=esppod+self.espressoindexfile
+            # HO 01/10/2024 END ****************
             self.image.add((enode,self.namespace.MetaindexFile,Literal(metaindexfile)))
             # HO 04/09/2024 END **************
         #print('self: ' + str(self))
