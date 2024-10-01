@@ -135,16 +135,17 @@ podlab1 = 'pod1'
 podlab2 = 'pod2'
 podlab3 = 'pod3'
 # server lists
-serverlist1=['https://srv04031.soton.ac.uk:3000/']
-#serverlist1=['http://localhost:3000/']
-#serverlist2=['http://localhost:3001/']
-#serverlist3=['http://localhost:3002/']
+#serverlist1=['https://srv04031.soton.ac.uk:3000/']
+serverlist1=['http://localhost:3001/']
+#serverlist2=['http://localhost:3002/']
+#serverlist3=['http://localhost:3003/']
 # source directories for data
-sourcedir1='../DatasetSplitter/sourcedir1/'
-sourcedir2='../DatasetSplitter/sourcedir2/'
-sourcedir3='../DatasetSplitter/sourcedir3/'
-numfiles = 9500
-#numfiles = 10
+#sourcedir1='../DatasetSplitter/sourcedir1/'
+sourcedir1='../DatasetSplitter/testsource/'
+#sourcedir2='../DatasetSplitter/sourcedir2/'
+#sourcedir3='../DatasetSplitter/sourcedir3/'
+#numfiles = 9500
+numfiles = 10
 
 # Name of the ESPRESSO pod. ESPRESSO is default.
 espressopodname='ESPRESSO'
@@ -168,13 +169,14 @@ openperc=10
 #numofwebids=50
 # TODO this is always hard-coded to 20 at the last minute
 # set a differently named variable
-numwebids=250
-#numwebids=20
+#numwebids=250
+numwebids=20
 # number of pods
 #numpods=9500
 numpods=10
 # on average how many webids can read a given file
-themean=1
+#themean=1
+themean=10
 # relative deviation of the percentage of webids that can read a given file, can be left 0
 disp=0
     #how many files on average a webid can read

@@ -2129,7 +2129,7 @@ class ESPRESSOexperiment:
                         if fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile):
                             # HO 11/09/2024 BEGIN *********
                             #webidlist.append('*')
-                            webidlist.append(OPENACCESS_SYMBOL)
+                            webidlist.append(config.OPENACCESS_SYMBOL)
                             # HO 11/09/2024 END ***********
                         ftrunc=targetUrl[len(podaddress):]
                         filetuples.append((ftrunc,filetext,webidlist))
@@ -2291,7 +2291,7 @@ class ESPRESSOexperiment:
                     filetuples.append((ftrunc,filetext,webidlist))
 
                     # Sequentially number the WebIDs            
-                    testservindex.addwebids(podpath, webidlist) 
+                    testservindex.addwebids(podpath, webidlist)
                 # construct an inverted index from the file tuples
                 print('constructing inverted index')
                 podlevel_index=dict()
