@@ -928,13 +928,16 @@ class ESPRESSOexperiment:
         # make a list of all the file nodes for the input filelabel
         thisfilelist=[fnode for fnode in self.image.subjects(self.namespace.Type,self.namespace.File) if str(self.image.value(fnode,self.namespace.Label))==filelabel]
         # get an integer representing the number of files for the requisite percentage
-        openn=floor(len(thisfilelist)*(openperc/100))
-        # and select the open files at random from the list of file nodes
-        thisopenfilelist=random.sample(thisfilelist, openn)
-        # and for every file in the list of open files
-        for fnode in thisopenfilelist:
-            # add them to the filenode as the OpenFile type
-            self.image.add((fnode,self.namespace.Type,self.namespace.OpenFile))
+        # HO 03/10/2024 BEGIN *****************
+        if (openperc > 0):
+            # HO 03/10/2024 END *******************
+            openn=floor(len(thisfilelist)*(openperc/100))
+            # and select the open files at random from the list of file nodes
+            thisopenfilelist=random.sample(thisfilelist, openn)
+            # and for every file in the list of open files
+            for fnode in thisopenfilelist:
+                # add them to the filenode as the OpenFile type
+                self.image.add((fnode,self.namespace.Type,self.namespace.OpenFile))
 
         # initialize the progress bar
         pbar=tqdm.tqdm(total=len(thisfilelist),desc='acls:')
@@ -1201,7 +1204,10 @@ class ESPRESSOexperiment:
         #print('self = ' + 'self')
 
                      
-    # HO 14/08/2024 appears not to be in use
+    """
+    Same as podcreate, but threaded.
+    
+    """
     def threadedpodcreate(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
             for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
@@ -2071,8 +2077,11 @@ class ESPRESSOexperiment:
             print(res)
        #print('self = ' + str(self))
 
-    # HO 14/08/2024 appears not to be in use
-    # HO 26/09/2024 - was called in previous experiments, we probably should call it this time
+    """
+    Stores all the files in zip files locally.
+    
+    param: dir, the directory to save the zip files to.
+    """
     def storelocalfileszip(self,dir):
         #os.makedirs(self.localimage,exist_ok=True)
         pbar=tqdm.tqdm(total=self.filenum)

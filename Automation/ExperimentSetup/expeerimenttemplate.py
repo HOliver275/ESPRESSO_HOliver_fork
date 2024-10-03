@@ -56,7 +56,7 @@ def deployexperiment(experiment):
     # Make the metaindexes open access.
     # HO 06/09/2024 - MR documented this as opening access, but they're only accessible to the experiment
     # HO 26/09/2024 - in previous experiments, this wasn't called, but it needs to be called this time
-    """experiment.metaindexpub()
+    experiment.metaindexpub()
     # display progress message
     print('metaindexes made accessible to the experiment')
     
@@ -64,7 +64,7 @@ def deployexperiment(experiment):
     experiment.threadedpodcreate()
     print('Pods created')
     experiment.indexpubthreaded()
-    print('Indexes open')"""
+    print('Indexes open')
     # HO 27/09/2024 END - do it the threaded way
 
 """
@@ -164,7 +164,8 @@ password='12345'
 # percs of sp.agents
 percs=[100,50,25,10]
 # percent of openfiles
-openperc=10
+#openperc=10
+openperc=0
 # number of agents
 #numofwebids=50
 # TODO this is always hard-coded to 20 at the last minute
@@ -260,7 +261,7 @@ def createexperiment(podname):
 
     # HO 27/09/2024 BEGIN ******************
     #experiment.imagineaclnormal(openperc=10,mean=floor(numwebids/themean), disp=0,filelabel=filelab3)
-    experiment.imagineaclnormal(openperc=10,mean=themean, disp=0,filelabel=filelab1)
+    experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab1)
     # HO 27/09/2024 END ********************
     
     print('Normal ACLs distributed')
