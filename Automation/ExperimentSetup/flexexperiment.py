@@ -2384,7 +2384,7 @@ class ESPRESSOexperiment:
     param: zipdir, the zip directory
     param: SSHUser
     param: SSHPassword
-    param: targetdir, default: '/srf/espresso/'
+    param: targetdir, default: '/srv/espresso/'
     """
     def distributezips(self,zipdir,SSHUser,SSHPassword,targetdir='/srv/espresso/'):
         # counter

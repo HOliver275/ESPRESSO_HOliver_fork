@@ -613,9 +613,13 @@ class LdpIndex:
     param: webidlist, list of WebIDs that have access to the file
     param: podpath, the relative path of the pod index in the server
     param: testservindex, the server-level index that we are building up alongside the pod indexes
+    param: b_hierarchical, a boolean that is true if we are splitting the filename into a hierarchical folder structure, false otherwise
     return: testservindex, the updated server-level index object
     """
-    def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
+    # HO 04/10/2024 BEGIN ***************
+    #def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
+    def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex, b_hierarchical=False):
+    # HO 04/10/2024 END ***************
         print('inside serverlevel_indexwebidnewdirs')
         # if the file is empty, return the filename
         if len(text)==0:
@@ -655,7 +659,13 @@ class LdpIndex:
         # and keep a running total of the number of times it appears in this file
         for term in terms:
             if len(term)<50:
-                termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
+                # HO 04/10/2024 BEGIN ***************
+                #termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
+                if (b_hierarchical):
+                    termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
+                else:
+                    termword = term + config.KEYWORD_INDEX_FILEXTN
+                # HO 04/10/2024 END ***************
                 term_frequency = filelevel_appearances_dict[termword] if termword in filelevel_appearances_dict else 0
                 filelevel_appearances_dict[termword] =  term_frequency + 1
                 # At the same time as we are building the file-level keyword dictionary,

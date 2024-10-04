@@ -226,7 +226,7 @@ class ServerIndex:
                 # HO 03/10/2024 BEGIN ***************
                 if wid != config.OPENACCESS_WIDWORD:
                 # HO 03/10/2024 END ***************
-                    servidx[webidfile]=servidx[webidfile] + "handle : " + wid + '\r\n'
+                    servidx[webidfile]=servidx[webidfile] + "handle," + wid + '\r\n'
                 # HO 01/10/2024 BEGIN ******************
                 for(ppath, pid) in poddict.items():
                     # HO 01/10/2024 BEGIN ******************

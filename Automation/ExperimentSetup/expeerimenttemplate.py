@@ -1,6 +1,5 @@
 # an ESPRESSO experiment script
 import flexexperiment
-# https://github.com/RDFLib/rdflib
 from rdflib import URIRef
 from math import floor
 
@@ -47,15 +46,12 @@ def deployexperiment(experiment):
     print('metaindexes created')
     
     # Make all the pod indexes open access.
-    # HO 26/09/2024 - in previous experiments, indexpubthreaded2 was called
-    # which restricted it to two hard-coded servers; we should call indexpubthreaded here
+    # HO 26/09/2024 - we call indexpubthreaded below instead.
     #experiment.indexpub()
     # display progress message
     #print('indexes opened')
     
-    # Make the metaindexes open access.
-    # HO 06/09/2024 - MR documented this as opening access, but they're only accessible to the experiment
-    # HO 26/09/2024 - in previous experiments, this wasn't called, but it needs to be called this time
+    # Make the metaindexes accessible to the experiment
     experiment.metaindexpub()
     # display progress message
     print('metaindexes made accessible to the experiment')
@@ -75,7 +71,6 @@ Upload ACLs to the pods from the image
 param: experiment, a flexexperiment.ESPRESSOexperiment  
 """
 def uploadexperiment(experiment):
-    # HO 27/09/2024 BEGIN *********************
     # OPTION A: if you have 18 hours to waste
     """# upload the files to populate the pods
     experiment.uploadfiles()
@@ -89,7 +84,6 @@ def uploadexperiment(experiment):
     
     # OPTION B: for people who have things to do
     experiment.storelocalfileszip(zipdir)
-    # HO 27/09/2024 END *********************
     
 """
 Step 4. We can do this if the experiment is not too big, otherwise we have to call zip(experiment,zipdir,SSHuser,SSHPassword) 
@@ -116,7 +110,6 @@ def indexexperiment(experiment):
     # And distribute them to the corresponding servers using ssh.
     
     # Option B, step 1, zip the indexes and store locally 
-    #experiment.storelocalindexzipdirs('zipdir')
     experiment.serverlevel_storelocalindexzipdirs(zipdir)
     
     # Option B, step 2: distribute zips(using SSH username and password) 
