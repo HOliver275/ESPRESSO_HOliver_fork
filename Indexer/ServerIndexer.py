@@ -218,11 +218,10 @@ class ServerIndex:
     """
     Prepares the pod lookup to be output as a JSON file.
     
-    return: servidx, a dictionary with the filename as key, JSON as value.
+    param: servidx, an empty dictionary
+    return: servidx, the same dictionary with the filename as key, JSON as value.
     """
-    def jsonify_podlookup(self):
-        servidx = dict()
-        
+    def jsonify_podlookup(self, servidx):
         # write the pod lookup file
         if self.podlookupfilename not in servidx.keys():
             servidx[self.podlookupfilename] = '{ '
@@ -245,7 +244,7 @@ class ServerIndex:
     Prepares the .webid file contents to be output as JSON.
     
     param: servidx, a dictionary with the filename as key, JSON as value.
-    return: servidx, a dictionary with the .webid files added.
+    return: servidx, the same dictionary with the .webid files added.
     """
     def jsonify_webidfiles(self, servidx):
         for (webidfile, widdict) in self.webidwords_dict.items(): 
@@ -269,85 +268,28 @@ class ServerIndex:
             
         return servidx
     # HO 07/10/2024 END ************
-
+    
+    # HO 07/10/2024 BEGIN ******************
     """
-    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
-
+    Prepares the .ndx files to be output as JSON.
+    
+    param: servidx, a dictionary with the filename as key, JSON as value.
+    return: servidx, the same dictionary with the .ndx files added.
     """
-    def buildservermetaindex_simple(self):
-
-        # HO 07/10/2024 BEGIN ************    
-        #servidx = dict()
-        # write the pod lookup file
-        servidx = self.jsonify_podlookup()
-        # write the .webid files
-        servidx = self.jsonify_webidfiles(servidx)
-        # HO 07/10/2024 END ************
-        
-        # webid files first
-        """for (webidfile, widdict) in self.webidwords_dict.items(): 
-            if webidfile not in servidx.keys():
-                # HO 07/10/2024 BEGIN ************
-                #servidx[webidfile] = ''
-                servidx[webidfile] = '{ '
-                # HO 07/10/2024 END ************
-            for(wid, poddict) in widdict.items():
-                # HO 07/10/2024 BEGIN ************
-                if (servidx[webidfile] == '{ '):
-                    servidx[webidfile] = servidx[webidfile] + '"' + wid + '"' + ': ['
-                    for(ppath) in poddict.keys():
-                        # if this is not the first list item, add a comma to the end of the line first
-                        if (servidx[webidfile] != '{ "' + wid + '": ['):
-                            servidx[webidfile] = servidx[webidfile] + ','
-                        # add the next pid to the list
-                        servidx[webidfile] = servidx[webidfile] + '"' + poddict[ppath] + '"'
-                    # close the list and end the file
-                    servidx[webidfile] = servidx[webidfile] + '] }\r\n'
-                print("servidx[" + webidfile + "] = ")
-                print(servidx[webidfile])
-            # HO 07/10/2024 END ************
-            
-            # HO 03/10/2024 BEGIN ***************
-            if wid != config.OPENACCESS_WIDWORD:
-            # HO 03/10/2024 END ***************
-                servidx[webidfile]=servidx[webidfile] + "handle," + wid + '\r\n'
-            # HO 01/10/2024 BEGIN ******************
-            for(ppath, pid) in poddict.items():
-                # HO 01/10/2024 BEGIN ******************
-                #if(wid==config.OPENACCESS_SYMBOL):
-                    #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
-                #else:
-                    #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
-                servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
-            # HO 01/10/2024 END ******************"""
-        
+    def jsonify_ndxfiles(self, servidx):
         # now the keyword files                
         for (servkey, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 for(widkey, poddict) in widdict.items():
-                    print("looking at widkey=" + widkey + " in widdict.items()")
-                    # HO 01/10/2024 BEGIN ******************
-                    #if(widkey==config.OPENACCESS_SYMBOL):
-                        #widtowrite=config.OPENACCESS_WEBIDWORD
-                    #else:
-                        #widtowrite=widkey
                     widtowrite=widkey
-                    # HO 01/10/2024 END ******************
                         
                     if servkey not in servidx.keys():
                         servidx[servkey]='{ ' 
-                    # HO 07/10/2024 BEGIN ************
+
                     servidx[servkey] = servidx[servkey] + '"' + widtowrite + '"' + ': { '
-                    # HO 07/10/2024 END ************
                         
                     for(ppathkey, piddict) in poddict.items():
-                        print("looking at ppathkey=" + ppathkey + "in poddict.items()")
                         for(pidkey, freq) in piddict.items():
-                            print("looking at pidkey=" + pidkey + ", freq=" + str(freq) + " in piddict.items")
-                            # if this is not the first pid : frequency, prepend a comma
-                            #if(servidx[servkey] != ' { "' + widtowrite + ': { '):
-                                #servidx[servkey] = servidx[servkey] + ','
-                                
                             servidx[servkey]=servidx[servkey] + '"' + pidkey + '" : "' + str(freq) + '", '
                     if(servidx[servkey].endswith(', ')):
                         servidx[servkey]=servidx[servkey][:-2]
@@ -363,7 +305,25 @@ class ServerIndex:
               
             print("servidx[" + servkey + "] = ")
             print(servidx[servkey])
-                            
+            
+        return servidx
+    # HO 07/10/2024 END ********************
+
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
+
+    """
+    def buildservermetaindex_simple(self):
+        # HO 07/10/2024 BEGIN ************    
+        servidx = dict()
+        # write the pod lookup file
+        servidx = self.jsonify_podlookup(servidx)
+        # write the .webid files
+        servidx = self.jsonify_webidfiles(servidx)
+        # and the .ndx files
+        servidx = self.jsonify_ndxfiles(servidx)
+        # HO 07/10/2024 END ************
+        
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
 
