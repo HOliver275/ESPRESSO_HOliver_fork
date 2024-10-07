@@ -43,6 +43,8 @@ class ServerIndex:
         self.webidwords_dict = dict()
         # running sum of all the files held on the server
         self.indexsum=0
+        # name of the pod handle lookup file
+        self.podlookupfilename='podlookup.json'
         
     def __repr__(self):
         """
@@ -211,13 +213,47 @@ class ServerIndex:
                             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
+        
+    # HO 07/10/2024 BEGIN ************
+    """
+    Prepares the pod lookup to be output as a JSON file.
+    
+    return: servidx, a dictionary with the filename as key, JSON as value.
+    """
+    def jsonify_podlookup(self):
+        servidx = dict()
+        
+        # write the pod lookup file
+        if self.podlookupfilename not in servidx.keys():
+            servidx[self.podlookupfilename] = '{ '
+            
+        for ppath, pid in self.podword_lookup.items():
+            # if this is not the first item, append a comma before adding the next item
+            if(servidx[self.podlookupfilename] != '{ '):
+                servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + ','
+            # add the next item
+            servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + '"' + pid + '":"' + ppath + '"'
+            
+        # close the JSON
+        servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + ' }\r\n'
+        # return the dictionary with the JSON pod lookup
+        return servidx
 
     """
     Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
 
     """
     def buildservermetaindex_simple(self):
-        servidx = dict()
+        print("Let's see what we have to output to podlookup.json: ")
+        for ppath, pid in self.podword_lookup.items():
+            print(pid + ':' + ppath)
+        
+        # HO 07/10/2024 BEGIN ************    
+        #servidx = dict()
+        # write the pod lookup file
+        servidx = self.jsonify_podlookup()
+        # HO 07/10/2024 END ************
+        
         # webid files first
         for (webidfile, widdict) in self.webidwords_dict.items():
             if webidfile not in servidx.keys():
