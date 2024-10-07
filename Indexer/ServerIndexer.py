@@ -266,8 +266,6 @@ class ServerIndex:
                     servidx[webidfile] = servidx[webidfile] + '"' + poddict[ppath] + '"'
                 # close the list and end the file
                 servidx[webidfile] = servidx[webidfile] + '] }\r\n'
-            print("servidx[" + webidfile + "] = ")
-            print(servidx[webidfile])
             
         return servidx
     # HO 07/10/2024 END ************
@@ -277,10 +275,7 @@ class ServerIndex:
 
     """
     def buildservermetaindex_simple(self):
-        print("Let's see what we have to output to podlookup.json: ")
-        for ppath, pid in self.podword_lookup.items():
-            print(pid + ':' + ppath)
-        
+
         # HO 07/10/2024 BEGIN ************    
         #servidx = dict()
         # write the pod lookup file
@@ -330,6 +325,7 @@ class ServerIndex:
         for (servkey, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 for(widkey, poddict) in widdict.items():
+                    print("looking at widkey=" + widkey + " in widdict.items()")
                     # HO 01/10/2024 BEGIN ******************
                     #if(widkey==config.OPENACCESS_SYMBOL):
                         #widtowrite=config.OPENACCESS_WEBIDWORD
@@ -339,11 +335,34 @@ class ServerIndex:
                     # HO 01/10/2024 END ******************
                         
                     if servkey not in servidx.keys():
-                        servidx[servkey]=''
+                        servidx[servkey]='{ ' 
+                    # HO 07/10/2024 BEGIN ************
+                    servidx[servkey] = servidx[servkey] + '"' + widtowrite + '"' + ': { '
+                    # HO 07/10/2024 END ************
                         
                     for(ppathkey, piddict) in poddict.items():
+                        print("looking at ppathkey=" + ppathkey + "in poddict.items()")
                         for(pidkey, freq) in piddict.items():
-                            servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
+                            print("looking at pidkey=" + pidkey + ", freq=" + str(freq) + " in piddict.items")
+                            # if this is not the first pid : frequency, prepend a comma
+                            #if(servidx[servkey] != ' { "' + widtowrite + ': { '):
+                                #servidx[servkey] = servidx[servkey] + ','
+                                
+                            servidx[servkey]=servidx[servkey] + '"' + pidkey + '" : "' + str(freq) + '", '
+                    if(servidx[servkey].endswith(', ')):
+                        servidx[servkey]=servidx[servkey][:-2]
+                    servidx[servkey]=servidx[servkey] + ' }'
+                # end the wid, end the row
+                #servidx[servkey] = servidx[servkey] + ' },\r\n'
+                servidx[servkey] = servidx[servkey] + ', \r\n'
+                #servidx[servkey] = servidx[servkey] + ', '
+            
+            if(servidx[servkey].endswith(', \r\n')):
+                servidx[servkey] = servidx[servkey][:-4]  
+                servidx[servkey] = servidx[servkey] + ' }\r\n'
+              
+            print("servidx[" + servkey + "] = ")
+            print(servidx[servkey])
                             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
