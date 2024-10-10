@@ -278,7 +278,7 @@ def createexperiment(podname):
 
 # Pod name template and experiment name
 # example podname value: 'ardfhealth'
-podname='ardfhealth'
+podname='ardfhealth_hierarchical'
 
 # name for the metaindex file.
 # example espressoindexfile value: 'ardfhealthmetaindex.csv'

@@ -793,7 +793,7 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     for (id,text,webidlist) in filetuples:
         # Update the inverted index with the index file path structure, file ID, text of file, and the list
         # of WebIDs that have access to the file.
-        testservindex = ldpindex.serverlevel_indexwebidnewdirs(id, text, webidlist, podpath, testservindex)
+        testservindex = ldpindex.serverlevel_indexwebidnewdirs(id, text, webidlist, podpath, testservindex, True)
         # advance the progress bar
         pbar.update(1)
     # close the progress bar

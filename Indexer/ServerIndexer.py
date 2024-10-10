@@ -310,10 +310,10 @@ class ServerIndex:
     # HO 07/10/2024 END ********************
 
     """
-    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file. All server-level index files are in JSON format.
 
     """
-    def buildservermetaindex_simple(self):
+    def buildservermetaindex_simple_json(self):
         # HO 07/10/2024 BEGIN ************    
         servidx = dict()
         # write the pod lookup file
@@ -326,5 +326,38 @@ class ServerIndex:
         
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
+        
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file, formatted as tuples.
+
+    """
+    def buildservermetaindex_simple(self):
+        servidx = dict()
+        # webid files first
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            for(wid, poddict) in widdict.items():
+                if wid != config.OPENACCESS_WIDWORD:
+                    servidx[webidfile]=servidx[webidfile] + "handle," + wid + '\r\n'
+                for(ppath, pid) in poddict.items():
+                    servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
+        
+        # now the keyword files                
+        for (servkey, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                for(widkey, poddict) in widdict.items():
+                    widtowrite=widkey
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
+                            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+
 
         
