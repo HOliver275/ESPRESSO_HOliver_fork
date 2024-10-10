@@ -1,7 +1,7 @@
 # handles the DPOP preparations
 # HO 15/08/2024 BEGIN ***********
-# from Automation.CSSAccess import dpop_utils
-import dpop_utils
+from Automation.CSSAccess import dpop_utils
+# import dpop_utils
 # HO 15/08/2024 END ***********
 # json: https://docs.python.org/3/library/json.html
 # requests: https://pypi.org/project/requests/

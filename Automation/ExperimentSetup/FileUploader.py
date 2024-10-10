@@ -7,7 +7,7 @@ import os, json
 # HO 15/08/2024 BEGIN *********************
 import sys
 sys.path.append('../CSSAccess')
-import CSSaccess
+from Automation.CSSAccess import CSSaccess
 #from Automation.CSSAccess import CSSaccess
 #import ..Automation
 #from .Automation.CSSAccess import CSSaccess

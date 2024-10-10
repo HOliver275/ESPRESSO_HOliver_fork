@@ -1,18 +1,18 @@
 # ESPRESSO modules
-import FileDistributor, FileUploader
+from Automation.ExperimentSetup import FileDistributor, FileUploader
 # ESPRESSO module
 # HO 15/08/2024 BEGIN **************
 # from Indexer import PodIndexer
 import sys
 sys.path.append('../../Indexer')
-import PodIndexer
+from Indexer import PodIndexer
 sys.path.append('../../')
 import config
-from ServerIndexer import ServerIndex
+from Indexer.ServerIndexer import ServerIndex
 # ESPRESSO modules for accessing Community Solid Server using DPOP 
-# from Automation.CSSAccess import CSSaccess,dpop_utils
+from Automation.CSSAccess import CSSaccess,dpop_utils
 sys.path.append('../CSSAccess')
-import CSSaccess,dpop_utils
+# import CSSaccess,dpop_utils
 # HO 15/08/2024 END ****************
 import cleantext, string
 # os: https://docs.python.org/3/library/os.html
