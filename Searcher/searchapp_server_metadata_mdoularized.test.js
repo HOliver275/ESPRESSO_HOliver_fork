@@ -314,22 +314,25 @@ describe('handleQuery Vulnerability Tests', () => {
     const { handleQuery, readSourcesWithSrvrMetadata, integrateResults } = require('./searchapp_server_metadata_mdoularized');
 
 // Mock the entire module at the beginning of your test file
-    test('should not allow path traversal in URL', async () => {
-        const maliciousUrl = '../etc/passwd'; // Example of a path traversal payload
-        const req = {
-            query: {
-                keyword: maliciousUrl,
-            },
-        };
-        const res = {
-            json: jest.fn(),
-            send: jest.fn(),
-        };
+    describe('handleQuery Vulnerability Tests', () => {
+        test('should not allow path traversal in URL', async () => {
+            const maliciousUrl = '../etc/passwd'; // Example of a path traversal payload
+            const req = {
+                query: {
+                    keyword: `validKeyword,${maliciousUrl}`,
+                },
+            };
+            const res = {
+                json: jest.fn(),
+                send: jest.fn(),
+            };
 
-        await handleQuery(req, res, 'valid-webIdQuery', 'valid-metaIndexName');
+            await handleQuery(req, res, 'valid-webIdQuery', 'valid-metaIndexName');
 
-        // Check that the error handling mechanism is invoked
-        expect(res.send).toHaveBeenCalledWith(expect.stringContaining("An error occurred")); // Ensure the error message is generic
-        expect(res.json).not.toHaveBeenCalled(); // Ensure that json was not called
+            // Check that the error handling mechanism is invoked
+            expect(res.send).toHaveBeenCalledWith(expect.stringContaining("An error occurred")); // Ensure the error message is generic
+            expect(res.json).not.toHaveBeenCalled(); // Ensure that json was not called
+        });
     });
+
 });

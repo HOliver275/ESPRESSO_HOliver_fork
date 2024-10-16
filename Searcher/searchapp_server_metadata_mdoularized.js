@@ -182,8 +182,15 @@ async function handleQuery(req, res, urlArgument, metaIndexName) {
         res.send("invalid keyword");
         return;
     }
-
+    if(!webId)
+        return;
     const webIdQuery = webId.replace(/[^a-zA-Z0-9 ]/g, "");
+
+    if (keyword.includes('../') || keyword.includes(';') || keyword.includes('`')) {
+        console.log("Malicious input detected:", keyword);
+        res.send("An error occurred"); // Respond with a generic error message
+        return;
+    }
 
     try {
         console.time("readSourcesWithSrvrMetadata");
