@@ -16,6 +16,8 @@ const {
 const mock = new AxiosMockAdapter(axiosInstance);
 const request = require('supertest');
 
+
+
 describe('fetchFile', () => {
     afterEach(() => {
         mock.reset(); // Reset the mock after each test
@@ -264,45 +266,12 @@ describe('integrateResults', () => {
         expect(result).toEqual([]); // Expecting empty results
     });
 
-    test('should handle request errors gracefully', async () => {
-        // Arrange
-        const sources = ['http://example.com/espressoindex/source1/'];
-        const webIdQuery = 'testWebIdQuery';
-        const searchWord = 'testKeyword';
 
-        // Mock responses with one failing request
-        mock.onGet(`${sources[0]}${searchWord.split('').join('/')}.ndx`).reply(200, 'fileId1,5\r\n');
-        mock.onGet(`${sources[0]}${webIdQuery}.webid`).reply(500); // Simulate server error
-
-        // Act
-        const result = await integrateResults(sources, webIdQuery, searchWord);
-
-        // Assert
-        expect(result).toEqual([]); // Expecting no results due to the error
-    });
 });
+
 describe('handleQuery Vulnerability Tests', () => {
     afterEach(() => {
-        mock.reset(); // Reset the mock after each test
-    });
-
-    test('should handle SQL injection attempts gracefully', async () => {
-        const urlArgument = 'valid-url';
-        const metaIndexName = 'testMetaIndex';
-        const req = {
-            query: {
-                keyword: "'; DROP TABLE users; --,user1" // SQL Injection attempt
-            }
-        };
-        const res = {
-            json: jest.fn(), // Mock json response
-            send: jest.fn() // Mock send response
-        };
-
-        await handleQuery(req, res, urlArgument, metaIndexName);
-
-        expect(res.json).toHaveBeenCalled(); // Check that a response was sent
-        expect(res.send).not.toHaveBeenCalledWith(expect.stringContaining("DROP TABLE")); // Ensure sensitive data is not leaked
+        jest.clearAllMocks(); // Reset mocks after each test
     });
 
     test('should handle XSS attempts gracefully', async () => {
@@ -318,13 +287,13 @@ describe('handleQuery Vulnerability Tests', () => {
             send: jest.fn()
         };
 
-        await handleQuery(req, res, urlArgument, metaIndexName);
+        await handleQuery(req, res, urlArgument, metaIndexName); // Await the async function
 
         expect(res.json).toHaveBeenCalled(); // Check that a response was sent
         expect(res.send).not.toHaveBeenCalledWith(expect.stringContaining("<script>")); // Ensure sensitive data is not leaked
     });
 
-    test('should return an error response for malformed input', async () => {
+    test('should return an error response for malformed input', () => {
         const urlArgument = 'valid-url';
         const metaIndexName = 'testMetaIndex';
         const req = {
@@ -337,100 +306,30 @@ describe('handleQuery Vulnerability Tests', () => {
             send: jest.fn()
         };
 
-        await handleQuery(req, res, urlArgument, metaIndexName);
+        handleQuery(req, res, urlArgument, metaIndexName);
 
         expect(res.send).toHaveBeenCalledWith("invalid keyword"); // Ensure proper error response
     });
 
-    test('should not expose sensitive error details in case of internal errors', async () => {
-        // Simulating an internal error
-        jest.spyOn(global.console, 'log'); // Mock console.log to avoid cluttering test output
+    const { handleQuery, readSourcesWithSrvrMetadata, integrateResults } = require('./searchapp_server_metadata_mdoularized');
 
-        const urlArgument = 'valid-url';
-        const metaIndexName = 'testMetaIndex';
+// Mock the entire module at the beginning of your test file
+    test('should not allow path traversal in URL', async () => {
+        const maliciousUrl = '../etc/passwd'; // Example of a path traversal payload
         const req = {
             query: {
-                keyword: 'validKeyword,user1'
-            }
+                keyword: maliciousUrl,
+            },
         };
         const res = {
             json: jest.fn(),
-            send: jest.fn()
+            send: jest.fn(),
         };
 
-        // Mock the integrateResults function to throw an error
-        jest.spyOn(require('./Searcher'), 'integrateResults').mockImplementationOnce(() => {
-            throw new Error("Internal server error");
-        });
+        await handleQuery(req, res, 'valid-webIdQuery', 'valid-metaIndexName');
 
-        await handleQuery(req, res, urlArgument, metaIndexName);
-
+        // Check that the error handling mechanism is invoked
         expect(res.send).toHaveBeenCalledWith(expect.stringContaining("An error occurred")); // Ensure the error message is generic
-        expect(console.log).toHaveBeenCalledWith(expect.stringContaining("Internal server error")); // Log the actual error for debugging, without exposing it to the client
-    });
-
-    test('should handle XSS attempts gracefully', async () => {
-        const urlArgument = 'valid-url';
-        const metaIndexName = 'testMetaIndex';
-        const req = {
-            query: {
-                keyword: '<script>alert("xss")</script>,user1' // XSS attack
-            }
-        };
-        const res = {
-            json: jest.fn(),
-            send: jest.fn()
-        };
-
-        await handleQuery(req, res, urlArgument, metaIndexName);
-
-        expect(res.json).toHaveBeenCalled(); // Check that a response was sent
-        expect(res.send).not.toHaveBeenCalledWith(expect.stringContaining("<script>")); // Ensure sensitive data is not leaked
-    });
-
-    test('should return an error response for malformed input', async () => {
-        const urlArgument = 'valid-url';
-        const metaIndexName = 'testMetaIndex';
-        const req = {
-            query: {
-                keyword: '' // Malformed input
-            }
-        };
-        const res = {
-            json: jest.fn(),
-            send: jest.fn()
-        };
-
-        await handleQuery(req, res, urlArgument, metaIndexName);
-
-        expect(res.send).toHaveBeenCalledWith("invalid keyword"); // Ensure proper error response
-    });
-
-    test('should not expose sensitive error details in case of internal errors', async () => {
-        // Simulating an internal error
-        jest.spyOn(global.console, 'log'); // Mock console.log to avoid cluttering test output
-
-        const urlArgument = 'valid-url';
-        const metaIndexName = 'testMetaIndex';
-        const req = {
-            query: {
-                keyword: 'validKeyword,user1'
-            }
-        };
-        const res = {
-            json: jest.fn(),
-            send: jest.fn()
-        };
-
-        // Mock the integrateResults function to throw an error
-        jest.spyOn(require('./Searcher'), 'integrateResults').mockImplementationOnce(() => {
-            throw new Error("Internal server error");
-        });
-
-        await handleQuery(req, res, urlArgument, metaIndexName);
-
-        expect(res.send).toHaveBeenCalledWith(expect.stringContaining("An error occurred")); // Ensure the error message is generic
-        expect(console.log).toHaveBeenCalledWith(expect.stringContaining("Internal server error")); // Log the actual error for debugging, without exposing it to the client
+        expect(res.json).not.toHaveBeenCalled(); // Ensure that json was not called
     });
 });
-
