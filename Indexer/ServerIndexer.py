@@ -302,9 +302,6 @@ class ServerIndex:
             if(servidx[servkey].endswith(', \r\n')):
                 servidx[servkey] = servidx[servkey][:-4]  
                 servidx[servkey] = servidx[servkey] + ' }\r\n'
-              
-            print("servidx[" + servkey + "] = ")
-            print(servidx[servkey])
             
         return servidx
     # HO 07/10/2024 END ********************
@@ -332,6 +329,12 @@ class ServerIndex:
 
     """
     def buildservermetaindex_simple(self):
+        # HO 22/10/2024 BEGIN **************
+        if(config.JSON_SERVER_INDEXES == 'True'):
+            self.buildservermetaindex_simple_json()
+            return
+        # HO 22/10/2024 END **************
+        
         servidx = dict()
         # webid files first
         for (webidfile, widdict) in self.webidwords_dict.items():

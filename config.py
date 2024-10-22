@@ -4,6 +4,8 @@ HIERARCHICAL_POD_INDEXES = 'False'
 HIERARCHICAL_SERVER_INDEXES = 'False'
 # filename for index file containing total number of files indexed
 INDEX_FILECOUNT_FILENAME = 'index.sum'
+# flag whether the server index should be written in JSON
+JSON_SERVER_INDEXES = 'True'
 # file extension for keyword index files
 KEYWORD_INDEX_FILEXTN = '.ndx'
 # programmatic symbol used to denote open access
