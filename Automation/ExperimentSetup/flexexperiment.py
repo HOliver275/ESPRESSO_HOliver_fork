@@ -2097,6 +2097,10 @@ class ESPRESSOexperiment:
                 # HO 22/09/2024 BEGIN ************
                 try:
                     #res= requests.put(targetUrl,headers=headers,data=acldefopen)
+                    print("targetUrl = " + targetUrl)
+                    print("headers: ")
+                    print(headers)
+                    print("data = " + acldefopen)
                     res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
                 except:
                     # HO 16/10/2024 BEGIN **************
@@ -2187,15 +2191,20 @@ class ESPRESSOexperiment:
             # not just the metaindex file
             try:
                 print("Making " + self.espressoindexdir + " accessible: ")
-                res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                # HO 22/10/2024 BEGIN ************
+                #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
+                # HO 22/10/2024 END ************
             except:
                 # HO 16/10/2024 BEGIN **********
                 try:
                     print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
-                    res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                    # HO 22/10/2024 BEGIN ************
+                    #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                    res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
+                    # HO 22/10/2024 END ************
                 except:
                     print("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping ")
-                    print(res)
                     with open(self.podname + "couldntmetaindexpub.log", 'a') as f:
                         f.write("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping\r\n")
                         f.write("res: " + res + "\r\n")

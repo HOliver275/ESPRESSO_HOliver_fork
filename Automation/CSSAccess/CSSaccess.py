@@ -308,9 +308,15 @@ acl:agent c:me;
 acl:agentClass foaf:Agent;
 acl:mode acl:Control, acl:Read, acl:Write.'''
 
+            
             # create DPOP headers 
             headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
             # update the target .acl file to grant c:me full access
+            print("In makefileaccessible.")
+            print("targetUrl = " + targetUrl)
+            print("headers: ")
+            print(headers)
+            print("data = " + acldef)
             # HO 25/09/2024 BEGIN *********
             res= requests.put(targetUrl,
                headers=headers,
@@ -328,6 +334,11 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             headers={ "Content-Type": "application/sparql-update",'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PATCH", self.dpopKey)}
             # insert a triple giving full access to an Agent
             # HO 25/09/2024 BEGIN *********
+            print("patching: ")
+            print("targetUrl = " + targetUrl)
+            print("headers: ")
+            print(headers)
+            print("data = " + data)
             res= requests.patch(targetUrl,
                headers=headers,
                 data="INSERT DATA { <#ControlReadWrite> <acl:agentClass> <foaf:Agent> }"
@@ -340,6 +351,58 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             # HO 25/09/2024 END *********
         # return the response
         return res
+        
+# HO 22/10/2024 BEGIN *******************
+    """
+    Makes a file accessible to the experiment through its .acl file.
+    
+    param: self
+    param: podname, the pod where the file is located
+    param: filename, the file to make accessible
+    return: res, the server response
+    """
+    def makemetaindexaccessible(self,podname,filename,datadef):
+        # construct the target URL from the target file's .acl file path
+        targetUrl=self.idp+podname+'/'+filename+'.acl'
+        # get DPOP headers
+        headers={  'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "GET", self.dpopKey)}
+        
+        # get the file's .acl
+        res= requests.get(targetUrl,
+           headers=headers
+        )
+        
+        # if we couldn't get the .acl file
+        if not res.ok:
+            # create DPOP headers 
+            headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
+            # update the target .acl file to grant c:me full access
+            print("In makemetaindexaccessible.")
+            print("targetUrl = " + targetUrl)
+            print("headers: ")
+            print(headers)
+            print("data = " + datadef)
+
+            res= requests.put(targetUrl,
+               headers=headers,
+                data=datadef
+            )
+        # if we did manage to get the .acl file
+        else:
+            # create the headers for a SPARQL update PATCH request
+            headers={ "Content-Type": "application/sparql-update",'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PATCH", self.dpopKey)}
+            # insert a triple giving full access to an Agent
+            print("patching: ")
+            print("targetUrl = " + targetUrl)
+            print("headers: ")
+            print(headers)
+            res= requests.patch(targetUrl,
+               headers=headers,
+                data="INSERT DATA { <#ControlReadWrite> <acl:agentClass> <foaf:Agent> }"
+            )
+        # return the response
+        return res
+# HO 22/10/2024 END *********************
 
     def makeurlaccessible(self,url,filename):
         targetUrl=url+'.acl'
