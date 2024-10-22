@@ -7,7 +7,12 @@ import os, json
 # HO 15/08/2024 BEGIN *********************
 import sys
 sys.path.append('../CSSAccess')
-from Automation.CSSAccess import CSSaccess
+# HO 11/10/2024 BEGIN *********************
+# this was an unmarked change introduced to accommodate the tests,
+# but it breaks the actual run. Reverting
+#from Automation.CSSAccess import CSSaccess
+import CSSaccess
+# HO 11/10/2024 END *********************
 #from Automation.CSSAccess import CSSaccess
 #import ..Automation
 #from .Automation.CSSAccess import CSSaccess

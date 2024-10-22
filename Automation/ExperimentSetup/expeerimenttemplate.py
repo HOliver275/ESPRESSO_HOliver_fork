@@ -30,7 +30,8 @@ def deployexperiment(experiment):
     
     # Create the normal pods, unless they're already there in which case, wipe the contents
     # HO 26/09/2024 - not called in previous experiments, call threadedpodcreate instead
-    #experiment.podcreate()
+    # HO 11/10/2024 - no! threads bad? or are they?
+    experiment.podcreate()
     #print('Pods created')
     
     # Insert the triples into the pods.
@@ -47,9 +48,10 @@ def deployexperiment(experiment):
     
     # Make all the pod indexes open access.
     # HO 26/09/2024 - we call indexpubthreaded below instead.
-    #experiment.indexpub()
+    # HO 11/10/2024 - no! threads bad? or are they?
+    experiment.indexpub()
     # display progress message
-    #print('indexes opened')
+    print('indexes opened')
     
     # Make the metaindexes accessible to the experiment
     experiment.metaindexpub()
@@ -57,10 +59,11 @@ def deployexperiment(experiment):
     print('metaindexes made accessible to the experiment')
     
     # HO 27/09/2024 BEGIN - do it the threaded way
-    experiment.threadedpodcreate()
-    print('Pods created')
-    experiment.indexpubthreaded()
-    print('Indexes open')
+    # HO 11/10/2024 - no! threads bad? or are they?
+    #experiment.threadedpodcreate()
+    #print('Pods created')
+    #experiment.indexpubthreaded()
+    #print('Indexes open')
     # HO 27/09/2024 END - do it the threaded way
 
 """
@@ -278,7 +281,7 @@ def createexperiment(podname):
 
 # Pod name template and experiment name
 # example podname value: 'ardfhealth'
-podname='ardfhealth_hierarchical'
+podname='ardfhealth_wambooli'
 
 # name for the metaindex file.
 # example espressoindexfile value: 'ardfhealthmetaindex.csv'

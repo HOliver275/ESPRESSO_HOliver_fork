@@ -1,3 +1,7 @@
+# flag whether the pod index file structure is hierarchical
+HIERARCHICAL_POD_INDEXES = 'False'
+# flag whether the server index file structure is hierarchical
+HIERARCHICAL_SERVER_INDEXES = 'False'
 # filename for index file containing total number of files indexed
 INDEX_FILECOUNT_FILENAME = 'index.sum'
 # file extension for keyword index files

@@ -613,12 +613,11 @@ class LdpIndex:
     param: webidlist, list of WebIDs that have access to the file
     param: podpath, the relative path of the pod index in the server
     param: testservindex, the server-level index that we are building up alongside the pod indexes
-    param: b_hierarchical, a boolean that is true if we are splitting the filename into a hierarchical folder structure, false otherwise
     return: testservindex, the updated server-level index object
     """
     # HO 04/10/2024 BEGIN ***************
     #def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
-    def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex, b_hierarchical=False):
+    def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
     # HO 04/10/2024 END ***************
         print('inside serverlevel_indexwebidnewdirs')
         # if the file is empty, return the filename
@@ -661,19 +660,33 @@ class LdpIndex:
             if len(term)<50:
                 # HO 04/10/2024 BEGIN ***************
                 #termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
-                if (b_hierarchical):
-                    termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
+                # HO 22/10/2024 BEGIN ***************
+                #if (b_hierarchical):
+                if (config.HIERARCHICAL_POD_INDEXES == 'True'):
+                # HO 22/10/2024 END *****************
+                    pod_termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
                 else:
-                    termword = term + config.KEYWORD_INDEX_FILEXTN
+                    pod_termword = term + config.KEYWORD_INDEX_FILEXTN
+                    
+                if (config.HIERARCHICAL_SERVER_INDEXES == 'True'):
+                    server_termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
+                else:
+                    server_termword = term + config.KEYWORD_INDEX_FILEXTN
                 # HO 04/10/2024 END ***************
-                term_frequency = filelevel_appearances_dict[termword] if termword in filelevel_appearances_dict else 0
-                filelevel_appearances_dict[termword] =  term_frequency + 1
+                # HO 22/10/2024 BEGIN ***************
+                #term_frequency = filelevel_appearances_dict[termword] if termword in filelevel_appearances_dict else 0
+                term_frequency = filelevel_appearances_dict[pod_termword] if pod_termword in filelevel_appearances_dict else 0
+                filelevel_appearances_dict[pod_termword] =  term_frequency + 1
+                # HO 22/10/2024 END ***************
                 # At the same time as we are building the file-level keyword dictionary,
                 # we are building the server-level keyword dictionary,
                 # which has the following structure
                 # {keyword : {webidword : {widword : {podpath : {podword : keywordcount}}}}}
-
-                webidworddict = testservindex.keywords_dict[termword] if termword in testservindex.keywords_dict else dict()
+  
+                # HO 22/10/2024 BEGIN ***************
+                #webidworddict = testservindex.keywords_dict[termword] if termword in testservindex.keywords_dict else dict()
+                webidworddict = testservindex.keywords_dict[server_termword] if server_termword in testservindex.keywords_dict else dict()
+                # HO 22/10/2024 END ***************
                 # now add to the {keyword : {webidword : dictionary for every webidword
                 # that has access to this file
                 for f_webidword in filelevel_webidwordlist:
@@ -699,7 +712,10 @@ class LdpIndex:
                     # {webidword : {widword : {podpath : {podword : keywordcount}}}}
                     webidworddict[f_webidword] = widdict
                 # {keyword : {webidword : {widword : {podpath : {podword : keywordcount}}}}}
-                testservindex.keywords_dict[termword] = webidworddict
+                # HO 22/10/2024 BEGIN ***************
+                #testservindex.keywords_dict[termword] = webidworddict
+                testservindex.keywords_dict[server_termword] = webidworddict
+                # HO 22/10/2024 END ***************
         
         # updating the index dictionary entry 'index.sum'
         # with a running total of the number of files
@@ -793,7 +809,7 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     for (id,text,webidlist) in filetuples:
         # Update the inverted index with the index file path structure, file ID, text of file, and the list
         # of WebIDs that have access to the file.
-        testservindex = ldpindex.serverlevel_indexwebidnewdirs(id, text, webidlist, podpath, testservindex, True)
+        testservindex = ldpindex.serverlevel_indexwebidnewdirs(id, text, webidlist, podpath, testservindex)
         # advance the progress bar
         pbar.update(1)
     # close the progress bar

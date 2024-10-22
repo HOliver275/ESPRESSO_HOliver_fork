@@ -1,25 +1,29 @@
-# ESPRESSO modules
-from Automation.ExperimentSetup import FileDistributor, FileUploader
-# ESPRESSO module
-# HO 15/08/2024 BEGIN **************
-# from Indexer import PodIndexer
+# sys: https://docs.python.org/3/library/sys.html
 import sys
-sys.path.append('../../Indexer')
-from Indexer import PodIndexer
-sys.path.append('../../')
-import config
-from Indexer.ServerIndexer import ServerIndex
-# ESPRESSO modules for accessing Community Solid Server using DPOP 
-from Automation.CSSAccess import CSSaccess,dpop_utils
-sys.path.append('../CSSAccess')
-# import CSSaccess,dpop_utils
-# HO 15/08/2024 END ****************
-import cleantext, string
 # os: https://docs.python.org/3/library/os.html
 # random: https://docs.python.org/3/library/random.html
 # requests: https://requests.readthedocs.io/en/latest/
 # numpy: https://numpy.readthedocs.io/en/latest/
 import os, random, requests, numpy
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+from Automation.ExperimentSetup import FileDistributor, FileUploader
+sys.path.append('../../Indexer')
+from Indexer import PodIndexer
+sys.path.append('../../')
+
+import config
+
+from Indexer.ServerIndexer import ServerIndex
+# ESPRESSO modules for accessing Community Solid Server using DPOP 
+from Automation.CSSAccess import CSSaccess,dpop_utils
+sys.path.append('../CSSAccess')
+
+# cleantext: https://pypi.org/project/cleantext/
+# string: https://docs.python.org/3/library/string.html
+import cleantext, string
+
 # rdflib.URIRef: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.term.URIRef
 # rdflib.BNode: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.term.BNode
 # rdflib.Literal: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.term.Literal
@@ -142,6 +146,8 @@ def returnacldefault(fileaddress,webidlist):
     return acltext
 
 # query to construct a default open ACL
+# which makes c.me (the experiment) the owner of the .acl file
+# and makes the .acl file open access 
 acldefopen='''@prefix acl: <http://www.w3.org/ns/auth/acl#>.
 @prefix foaf: <http://xmlns.com/foaf/0.1/>.
 @prefix c: <profile/card#>.
@@ -349,11 +355,7 @@ class ESPRESSOexperiment:
             # add the MetaIndex address to the image
             self.image.add((enode,self.namespace.MetaindexAddress,Literal(metaindexaddress)))
             # to point to the metaindex.csv file we add another attribute, MetaindexFile
-            # HO 01/10/2024 BEGIN ****************
-            # Go back to putting the metaindex.csv file in the root of the ESPRESSO pod
-            #metaindexfile=metaindexaddress+self.espressoindexfile
             metaindexfile=esppod+self.espressoindexfile
-            # HO 01/10/2024 END ****************
             self.image.add((enode,self.namespace.MetaindexFile,Literal(metaindexfile)))
             # HO 04/09/2024 END **************
         #print('self: ' + str(self))
@@ -635,7 +637,7 @@ class ESPRESSOexperiment:
         # distribute the files around the list of pods
         # zipf seems to represent the frequency rank, as its name implies - if it's set, 
         # use it to distribute the files
-        # TODO we know we want to place 1 file in each pod for the Aug-Sep 2024 experiments
+        # We know we want to place 1 file in each pod for the Aug-Sep 2024 experiments
         # so all we have to do is specify a number of files equal to the number of pods
         # each time and normaldistribute will handle it
         if zipf>0:
@@ -929,6 +931,7 @@ class ESPRESSOexperiment:
         thisfilelist=[fnode for fnode in self.image.subjects(self.namespace.Type,self.namespace.File) if str(self.image.value(fnode,self.namespace.Label))==filelabel]
         # get an integer representing the number of files for the requisite percentage
         # HO 03/10/2024 BEGIN *****************
+        # handles the case where there are no open files
         if (openperc > 0):
             # HO 03/10/2024 END *******************
             openn=floor(len(thisfilelist)*(openperc/100))
@@ -1120,6 +1123,7 @@ class ESPRESSOexperiment:
             # HO 25/09/2024 END ******************
             # if it didn't work, there isn't an ESPRESSO pod, so we have to create one
             if not res.ok:
+                print(f"get_file returned the following response: {res.status_code} {res.text}")
                 # display user message
                 print('Creating the ESPRESSO pod')
                 # register endpoint
@@ -1167,12 +1171,30 @@ class ESPRESSOexperiment:
     param: self
     """
     def podcreate(self):
+        # HO 16/10/2024 BEGIN *****************
+        if os.path.exists(self.podname + "couldntcreatepods.log"):
+            os.remove(self.podname + "couldntcreatepods.log")
+        if os.path.exists(self.podname + "couldntcleanuppods.log"):
+            os.remove(self.podname + "couldntcleanuppods.log")
+        # HO 16/10/2024 END *****************
         # For each server node
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             # for every pod on this server
+            # HO 16/10/2024 BEGIN *****************
+            podcounter = 0
+            resetatpod = 50
+            # HO 16/10/2024 END *****************
             for pnode in self.image.objects(snode,self.namespace.Contains):
+                # HO 16/10/2024 BEGIN *****************
+                podcounter += 1
+                if (podcounter >= resetatpod):
+                    podcounter = 0
+                    # make sure the CSS server doesn't get too many requests too fast
+                    print("Another " + str(resetatpod) + " pods created! Pausing for 30 seconds: ")
+                    time.sleep(30)
+                # HO 16/10/2024 END *****************
                 # get the pod address
                 podaddress=str(self.image.value(pnode,self.namespace.Address))
                 # get the pod name
@@ -1200,12 +1222,29 @@ class ESPRESSOexperiment:
                     # delete all the files in this pod
                     self.cleanuppod(snode, pnode)
                 else: # if it didn't work the pod isn't already there and we create it
-                    print('Creating '+podname+ ' at '+IDP,CSSaccess.podcreate(IDP,podname,email,self.password))
+                    # HO 15/10/2024 BEGIN **********
+                    try: 
+                        print('Creating '+podname+ ' at '+IDP,CSSaccess.podcreate(IDP,podname,email,self.password))
+                    except:
+                        print("Couldn't create " + podname + " at " + IDP + ", skipping")
+                        with open(self.podname + "couldntcreatepods.log", 'a') as f:
+                            f.write("Couldn't create " + podname + " at " + IDP + "\r\n")
+                            f.close()
+                        continue
+                     # HO 15/10/2024 END **********
         #print('self = ' + 'self')
 
                      
     """
     Same as podcreate, but threaded.
+    
+    This doesn't seem to work very reliably at the level of a single server, because CSS
+    becomes flaky if it receives too many requests at once. And the purpose of the threading
+    is to send the server too many requests at once. 
+    
+    What should reasonably work is to have one thread per server, so the pods are created on
+    multiple servers in parallel, but each server is receiving the pod creation requests sequentially
+    and at a sustainable pace.
     
     """
     def threadedpodcreate(self):
@@ -1240,12 +1279,21 @@ class ESPRESSOexperiment:
             # get the auth token from the client credentials
             t=CSSA.create_authtoken()
         except:
-            print("Couldn't create auth token, trying again: ")
-            CSSA=CSSaccess.CSSaccess(IDP, email, self.password)
-            # get the auth string containing the ID and secret
-            a=CSSA.create_authstring()
-            # get the auth token from the client credentials
-            t=CSSA.create_authtoken()
+            # HO 15/10/2024 BEGIN ****************
+            try:
+                print("Couldn't create auth token, trying again: ")
+                CSSA=CSSaccess.CSSaccess(IDP, email, self.password)
+                # get the auth string containing the ID and secret
+                a=CSSA.create_authstring()
+                # get the auth token from the client credentials
+                t=CSSA.create_authtoken()
+            except:
+                print("Couldn't create authtoken for " + podname + "on second attempt, skipping")
+                with open(self.podname + "couldntcleanuppods.log", 'a') as f:
+                    f.write("Couldn't create authtoken for " + podname + " at " + IDP + "\r\n")
+                    f.close()
+                return
+            # HO 15/10/2024 END ****************
         # HO 25/09/2024 END *******************
         # get the pod address
         podaddress=str(self.image.value(pnode,self.namespace.Address))
@@ -1274,8 +1322,15 @@ class ESPRESSOexperiment:
                 try: 
                     CSSA.create_authtoken()
                 except:
-                    print("Couldn't create auth token, trying again: ")
-                    CSSA.create_authtoken()
+                    try:
+                        print("Couldn't create auth token, trying again: ")
+                        CSSA.create_authtoken()
+                    except:
+                        print("Couldn't create auth token for " + podname + " on second attempt, skipping")
+                        with open(self.podname + "couldntcleanuppods.log", 'a') as f:
+                            f.write("Couldn't create authtoken for " + podname + " at " + IDP + "\r\n")
+                            f.close()
+                        continue
                 # HO 25/09/2024 BEGIN *******************
             # update the progress bar
             pbar.update(1)
@@ -1403,6 +1458,9 @@ class ESPRESSOexperiment:
 
     """
     Inserts the triples into the pods.
+    
+    Apparently this was needed for a specific purpose relating to RDF use cases, but isn't
+    routinely required otherwise.
     
     param: self
     """
@@ -1653,11 +1711,8 @@ class ESPRESSOexperiment:
                     # get the pod details
                     podaddress=str(self.image.value(pnode,self.namespace.Address))
                     podname=str(self.image.value(pnode,self.namespace.Name))
-                    # here we need to create a podword for this pod relative to the server
-                    # HO 01/10/2024 BEGIN ***************
-                    #podpath=podname+'/'+self.podindexdir
+                    # here we need to create a podword for this pod so the server index can map it
                     podpath=podname+'/'
-                    # HO 01/10/2024 END ***************
                     testservindex.addpod(podpath)
                     USERNAME=str(self.image.value(pnode,self.namespace.Email))
                     PASSWORD=self.password
@@ -1724,7 +1779,7 @@ class ESPRESSOexperiment:
                 executor.submit(PodIndexer.uploadaclindexwithbar, testservindex.index, metaindexaddress, CSSA)
 
         # quick-and-dirty tests for files known to be at the given hard-coded addresses
-        CSSA=CSSaccess.CSSaccess('https://srv04031.soton.ac.uk:3000', self.espressoemail, self.password)
+        """CSSA=CSSaccess.CSSaccess('https://srv04031.soton.ac.uk:3000', self.espressoemail, self.password)
         try: 
             CSSA.create_authstring()
             CSSA.create_authtoken()
@@ -1757,7 +1812,7 @@ class ESPRESSOexperiment:
             res = CSSA.get_file('https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/index.sum')
         
         print('Contents of https://srv04031.soton.ac.uk:3000/ESPRESSO/ardfhealthmetaindex/index.sum: ' + res)
-        print('===============')
+        print('===============')"""
 
     """
     Create and/or update the ACL metaindexes in the server-level ESPRESSO pods.
@@ -1765,6 +1820,10 @@ class ESPRESSOexperiment:
     param: self
     """ 
     def aclmetaindex(self): 
+        # HO 16/10/2024 BEGIN *****************
+        if os.path.exists(self.podname + "couldntcreateaclmetaindex.log"):
+            os.remove(self.podname + "couldntcreateaclmetaindex.log")
+        # HO 16/10/2024 END *****************
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
@@ -1791,12 +1850,21 @@ class ESPRESSOexperiment:
                 # get the auth token for the server-level ESPRESSO pod from the client credentials
                 CSSAe.create_authtoken()
             except:
+                # HO 16/10/2024 BEGIN **************
                 print("Couldn't create auth token. Trying again: ")
-                # instantiate a new CSSaccess object for the server-level ESPRESSO pod
-                CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-                CSSAe.create_authstring()
-                # get the auth token for the server-level ESPRESSO pod from the client credentials
-                CSSAe.create_authtoken()
+                try:
+                    # instantiate a new CSSaccess object for the server-level ESPRESSO pod
+                    CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                    CSSAe.create_authstring()
+                    # get the auth token for the server-level ESPRESSO pod from the client credentials
+                    CSSAe.create_authtoken()
+                except:
+                    print("Couldn't create auth token on second attempt. Skipping.")
+                    with open(self.podname + "couldntcreateaclmetaindex.log", 'a') as f:
+                        f.write("Couldn't create authtoken for " + IDP + "\r\n")
+                        f.close()
+                    continue
+                # HO 16/10/2024 END **************
             # HO 23/09/2024 END **************
             # PUT the new metaindex data out to the server-level ESPRESSO pod metaindex,
             # and display the identity provider and the server response to the PUT request
@@ -1807,7 +1875,16 @@ class ESPRESSOexperiment:
                 print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
             except:
                 print("Couldn't put to " + targurl + ", trying again: ")
-                print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+                # HO 16/10/2024 BEGIN **************
+                try:
+                    print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+                except:
+                    print("Couldn't put to " + targurl + " on second attempt. Skipping.")
+                    with open(self.podname + "couldntcreateaclmetaindex.log", 'a') as f:
+                        f.write("Couldn't put to " + targurl + " on " + IDP + "\r\n")
+                        f.close()
+                    continue
+                # HO 16/10/2024 END **************
             # HO 23/09/2024 END **************
         #print('self = ' + str(self))
 
@@ -1821,9 +1898,8 @@ class ESPRESSOexperiment:
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
-            # HO 17/09/2024 BEGIN ******
+            # instantiate the server-level metaindex
             testservindex=ServerIndex()
-            # HO 17/09/2024 END ********
             # for each pod on the server
             for pnode in self.image.objects(snode,self.namespace.Contains):
                 # get the pod details
@@ -1833,14 +1909,10 @@ class ESPRESSOexperiment:
                 PASSWORD=self.password
                 # display progress message
                 print("checking index of "+IDP+podname)
-                # HO 17/09/2024 BEGIN ************
-                # here we need to create a podword for this pod relative to the server
-                # HO 01/10/2024 BEGIN ***************
-                #podpath=podname+'/'+self.podindexdir
+                # here we need to create a podword for this pod so the server index can find it
                 podpath=podname+'/'
-                # HO 01/10/2024 END ***************
+                # let the server index know about the pod
                 testservindex.addpod(podpath)
-                # HO 17/09/2024 END **************
                 # construct the client credentials
                 CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
                 # HO 25/09/2024 BEGIN ******
@@ -1856,29 +1928,31 @@ class ESPRESSOexperiment:
                 # get the index address
                 indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                 # get the list of files at the given index address
-                # HO 17/09/2024 BEGIN *****************
                 n=PodIndexer.crawllist(indexaddress, CSSA)
-                # HO 17/09/2024 END *****************
 
                 print('currently in index of ' +IDP+podname +':' +str(len(n)))
                 # crawl the container at the pod address and get back a list of file tuples
                 d=PodIndexer.aclcrawlwebidnew(podaddress, podaddress,CSSA)
-                # HO 17/09/2024 BEGIN **********
+                # list the WebIDs for the server-level index
                 for (id,text,webidlist) in d:
-                    # Sequentially number the WebIDs            
+                    # Sequentially number the WebIDs at server level          
                     testservindex.addwebids(podpath, webidlist) 
                 
                 # construct an LdpIndex from the list of file tuples
                 podlevel_index=dict()
+                # similar tuples for the server-level index
                 servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(d, podpath, testservindex)
+                # keep a running total of the files at server level, same as we do at pod level
                 if (servtuples is not None):
                     runningsum=0
                     if (len(servtuples) >= 1):
+                        # the pod level index
                         podlevel_index = servtuples[0]
                             
                         if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
                             runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
                     if (len(servtuples) >= 2):
+                        # the server-level index
                         testservindex = servtuples[1]
                         testservindex.indexsum=testservindex.indexsum+int(runningsum)
                 
@@ -1888,10 +1962,10 @@ class ESPRESSOexperiment:
                 # files from the list of files we got from the indexaddress, remove them one by one
                 compareindexes(podaddress, self.podindexdir, n, podlevel_index)
 
-                # populate the files
+                # populate the pod index files
                 PodIndexer.uploadaclindexwithbar(podlevel_index, indexaddress, CSSA)
-                # HO 17/09/2024 END **************
-            #HO 17/09/2024 BEGIN ****************
+
+            # unwind the server-level index for writing
             testservindex.buildservermetaindex_simple()
             # find the ESPRESSO pod to write to
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
@@ -1908,7 +1982,7 @@ class ESPRESSOexperiment:
                 CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
                 CSSA.create_authstring()
                 CSSA.create_authtoken()
-            # HO 25/09/2024 BEGIN ***********
+
             # get the list of files at the given metaindex address
             n=PodIndexer.crawllist(metaindexaddress, CSSA)
             print('currently in index of ' +IDP+esppodname +':' +str(len(n)))
@@ -1917,7 +1991,6 @@ class ESPRESSOexperiment:
             compareindexes('', metaindexaddress, n, testservindex.index)
                     
             PodIndexer.uploadaclindexwithbar(testservindex.index, metaindexaddress, CSSA)
-            #HO 17/09/2024 END ******************
 
     # HO 14/08/2024 appears not to be in use
     def indexfixerthreaded(self):
@@ -1957,14 +2030,29 @@ class ESPRESSOexperiment:
     param: self   
     """
     def indexpub(self):
+        # HO 16/10/2024 BEGIN *****************
+        if os.path.exists(self.podname + "couldntindexpub.log"):
+            os.remove(self.podname + "couldntindexpub.log")
+        # HO 16/10/2024 END *****************
         # for every server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             # display progress message
             print('opening indexes for '+ IDP)
+            # HO 16/10/2024 BEGIN **************
+            podcounter = 0
+            maxpods = 50
+            # HO 16/10/2024 END **************
             # for every pod on the server
             for pnode in self.image.objects(snode,self.namespace.Contains):
+                # HO 16/10/2024 BEGIN **************
+                podcounter += 1
+                if (podcounter >= maxpods):
+                    podcounter = 0
+                    print("Opened indexes for another " + str(maxpods) + " pods. Resting for 30 seconds:")
+                    time.sleep(30)
+                # HO 16/10/2024 END **************
                 # get the pod index address
                 podindexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                 # get the pod account username (email)
@@ -1981,13 +2069,22 @@ class ESPRESSOexperiment:
                     # get the pod auth token from the client credentials
                     CSSA.create_authtoken()
                 except:
+                    # HO 16/10/2024 BEGIN **************
                     # try one more time
-                    # create a CSSaccess object with the identity provider, username and password
-                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                    # get the auth string containing the pod ID and secret
-                    CSSA.create_authstring()
-                    # get the pod auth token from the client credentials
-                    CSSA.create_authtoken()
+                    try:
+                        # create a CSSaccess object with the identity provider, username and password
+                        CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                        # get the auth string containing the pod ID and secret
+                        CSSA.create_authstring()
+                        # get the pod auth token from the client credentials
+                        CSSA.create_authtoken()
+                    except:
+                        print("Couldn't create auth token for " + podindexaddress + " on " + IDP + ", skipping")
+                        with open(self.podname + "couldntindexpub.log", 'a') as f:
+                            f.write("Couldn't create auth token for " + podindexaddress + " on " + IDP + "\r\n")
+                            f.close()
+                        continue
+                    # HO 16/10/2024 END **************
                 # HO 22/09/2024 END ************
                 
                 # construct the target URL for an .acl file for the pod index address
@@ -2002,8 +2099,17 @@ class ESPRESSOexperiment:
                     #res= requests.put(targetUrl,headers=headers,data=acldefopen)
                     res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
                 except:
-                    print("Couldn't do a put to " + targetUrl + ", trying again: ")
-                    res= requests.put(targetUrl,headers=headers,data=acldefopen,timeout=5000)
+                    # HO 16/10/2024 BEGIN **************
+                    try:
+                        print("Couldn't do a put to " + targetUrl + ", trying again: ")
+                        res= requests.put(targetUrl,headers=headers,data=acldefopen,timeout=5000)
+                    except:
+                        print("Couldn't do a put to " + targetUrl + ", skipping")
+                        with open(self.podname + "couldntindexpub.log", 'a') as f:
+                            f.write("Couldn't do a put to " + targetUrl + "\r\n")
+                            f.close()
+                        continue
+                    # HO 16/10/2024 END **************
                 # HO 22/09/2024 END ************
                 # display the .acl file URL and the server response to the PUT request
                 print(targetUrl,res)
@@ -2022,7 +2128,7 @@ class ESPRESSOexperiment:
                 executor.submit(seriespub,IDP,podlist,addresstemplate,self.podemail,self.password)
                 
     # HO 26/09/2024 BEGIN
-    # was called in previous experiments, but we should use indexpubthreaded
+    # was called in previous experiments, but we should use indexpubthreaded (or not, see comments on that function)
     def indexpubthreaded2(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
             
@@ -2040,6 +2146,10 @@ class ESPRESSOexperiment:
     param: self
     """
     def metaindexpub(self):
+        # HO 16/10/2024 BEGIN *****************
+        if os.path.exists(self.podname + "couldntmetaindexpub.log"):
+            os.remove(self.podname + "couldntmetaindexpub.log")
+        # HO 16/10/2024 END *****************
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
             print('Making the metaindex for ' + snode + ' accessible to the experiment')
@@ -2056,21 +2166,42 @@ class ESPRESSOexperiment:
                 a=CSSA.create_authstring()
                 # get the ESPRESSO pod auth token from the client credentials
                 t=CSSA.create_authtoken()
-            except: 
-                print("Couldn't create auth token. Trying again: ")
-                CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-                # get the auth string containing the ESPRESSO pod ID and secret
-                a=CSSA.create_authstring()
-                # get the ESPRESSO pod auth token from the client credentials
-                t=CSSA.create_authtoken()
+            except:
+                # HO 16/10/2024 BEGIN ********** 
+                try:
+                    print("Couldn't create auth token. Trying again: ")
+                    CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                    # get the auth string containing the ESPRESSO pod ID and secret
+                    a=CSSA.create_authstring()
+                    # get the ESPRESSO pod auth token from the client credentials
+                    t=CSSA.create_authtoken()
+                except:
+                    print("Couldn't create auth token for " + IDP + " on second attempt, skipping")
+                    with open(self.podname + "couldntmetaindexpub.log", 'a') as f:
+                        f.write("Couldn't create auth token for " + IDP + " on second attempt, skipping\r\n")
+                        f.close()
+                    continue
+                # HO 16/10/2024 END **********
             # make the ESPRESSO index file accessible
             # we do need to make the whole metaindex folder accessible to the experiment
             # not just the metaindex file
             try:
+                print("Making " + self.espressoindexdir + " accessible: ")
                 res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
             except:
-                print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
-                res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                # HO 16/10/2024 BEGIN **********
+                try:
+                    print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
+                    res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                except:
+                    print("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping ")
+                    print(res)
+                    with open(self.podname + "couldntmetaindexpub.log", 'a') as f:
+                        f.write("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping\r\n")
+                        f.write("res: " + res + "\r\n")
+                        f.close()
+                    continue
+                # HO 16/10/2024 END **********
             #HO 23/09/2024 END ******************
 
             # display the server response
@@ -2274,12 +2405,9 @@ class ESPRESSOexperiment:
                 # get the pod address
                 podaddress=str(self.image.value(pnode,self.namespace.Address))
 
-                # here we need to create a podword for this pod relative to the server
+                # here we need to create a podword for this pod so the server index can find it
                 podname=str(self.image.value(pnode,self.namespace.Name))
-                # HO 01/10/2024 BEGIN ******************
-                #podpath=podname+'/'+self.podindexdir
                 podpath=podname+'/'
-                # HO 01/10/2024 END ******************
                 testservindex.addpod(podpath)
 
                 # create an empty list for the file tuples
@@ -2318,6 +2446,7 @@ class ESPRESSOexperiment:
                 servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex)
 
                 if (servtuples is not None):
+                    # keep a running total of the files at server level
                     runningsum=0
                     if (len(servtuples) >= 1):
                         podlevel_index = servtuples[0]
@@ -2327,7 +2456,7 @@ class ESPRESSOexperiment:
                         testservindex = servtuples[1]
                         testservindex.indexsum=testservindex.indexsum+int(runningsum)
                 
-                # work out how many .ndx files there are?
+                # work out how many .ndx files there are
                 n=len(podlevel_index.keys())
                 print('About to write podlevel_index')
 
@@ -2352,7 +2481,7 @@ class ESPRESSOexperiment:
                 # close the pod index zip file
                 podindexzip.close()
 
-            # webid files first
+            # unwind the server-level metaindex into a writable state
             testservindex.buildservermetaindex_simple()
 
             n=len(testservindex.index.keys())
@@ -2450,7 +2579,15 @@ def loadexp(filename):
         experiment.loadexp(filename)
         return experiment
 
-# HO 14/08/2024 appears not to be in use
+"""
+Used by threadedpodcreate. Note that seriespodcreate does not clean up already-existing pods,
+nor does it have the guards that have been applied in podcreate.
+
+param: IDP, the IDP
+param: podlist, the list of pods to create
+param: podemail, the account email
+param: password, the password (always the same)
+"""
 def seriespodcreate(IDP,podlist,podemail,password):
     pbar=tqdm.tqdm(total=len(podlist))
     for podname in podlist:
@@ -2459,8 +2596,10 @@ def seriespodcreate(IDP,podlist,podemail,password):
         pbar.update(1)
     pbar.close(1)
 
-# HO 14/08/2024 appears not to be in use
-# HO 26/09/2024 is called by indexpubthreaded2, which was used in the last set of experiments
+"""
+Called by indexpubthreaded. Note that it doesn't have the guards that have been applied in indexpub.
+
+"""
 def seriespub(IDP,podlist,addresstemplate,podemail,password):
     pbar=tqdm.tqdm(total=len(podlist))
     for podname in podlist:
