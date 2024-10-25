@@ -1,12 +1,14 @@
+# HO 23/10/2024 BEGIN ***********
+import sys
+import os
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
 # handles the DPOP preparations
-# HO 15/08/2024 BEGIN ***********
-# HO 11/10/2024 BEGIN *********************
-# this was an unmarked change introduced to accommodate the tests,
-# but it breaks the actual run. Reverting
-# from Automation.CSSAccess import dpop_utils
-import dpop_utils
-# HO 11/10/2024 END *********************
-# HO 15/08/2024 END ***********
+#import dpop_utils
+from Automation.CSSAccess import dpop_utils
+# HO 23/10/2024 END *************
+
 # json: https://docs.python.org/3/library/json.html
 # requests: https://pypi.org/project/requests/
 # urllib.parse: https://docs.python.org/3/library/urllib.parse.html
@@ -377,11 +379,7 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             # create DPOP headers 
             headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
             # update the target .acl file to grant c:me full access
-            print("In makemetaindexaccessible.")
-            print("targetUrl = " + targetUrl)
-            print("headers: ")
             print(headers)
-            print("data = " + datadef)
 
             res= requests.put(targetUrl,
                headers=headers,
@@ -392,10 +390,6 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             # create the headers for a SPARQL update PATCH request
             headers={ "Content-Type": "application/sparql-update",'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PATCH", self.dpopKey)}
             # insert a triple giving full access to an Agent
-            print("patching: ")
-            print("targetUrl = " + targetUrl)
-            print("headers: ")
-            print(headers)
             res= requests.patch(targetUrl,
                headers=headers,
                 data="INSERT DATA { <#ControlReadWrite> <acl:agentClass> <foaf:Agent> }"

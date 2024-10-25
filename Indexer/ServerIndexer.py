@@ -43,8 +43,11 @@ class ServerIndex:
         self.webidwords_dict = dict()
         # running sum of all the files held on the server
         self.indexsum=0
-        # name of the pod handle lookup file
+        # name of the pod handle lookup file (if using JSON format)
         self.podlookupfilename='podlookup.json'
+        # HO 25/10/2024 BEGIN **************
+        self.keyword_abs_frequencies = dict()
+        # HO 25/10/2024 END **************
         
     def __repr__(self):
         """
@@ -359,6 +362,13 @@ class ServerIndex:
                         for(pidkey, freq) in piddict.items():
                             servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
                             
+        # HO 25/10/2024 BEGIN **************
+        # now the absolute keyword count file
+        servidx[config.KEYWORD_ABS_COUNT_FILENAME] = ''
+        for (term, freq) in self.keyword_abs_frequencies.items():
+            servidx[config.KEYWORD_ABS_COUNT_FILENAME] = servidx[config.KEYWORD_ABS_COUNT_FILENAME] + term + ',' + str(freq) + '\r\n'
+        # HO 25/10/2024 END **************
+            
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
 

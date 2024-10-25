@@ -2097,10 +2097,6 @@ class ESPRESSOexperiment:
                 # HO 22/09/2024 BEGIN ************
                 try:
                     #res= requests.put(targetUrl,headers=headers,data=acldefopen)
-                    print("targetUrl = " + targetUrl)
-                    print("headers: ")
-                    print(headers)
-                    print("data = " + acldefopen)
                     res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
                 except:
                     # HO 16/10/2024 BEGIN **************

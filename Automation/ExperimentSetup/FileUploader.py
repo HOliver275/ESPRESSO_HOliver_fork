@@ -4,19 +4,15 @@ import requests
 # json: https://docs.python.org/3/library/json.html
 import os, json
 # handles the client credentials for Community Solid Server
-# HO 15/08/2024 BEGIN *********************
+
 import sys
-sys.path.append('../CSSAccess')
-# HO 11/10/2024 BEGIN *********************
-# this was an unmarked change introduced to accommodate the tests,
-# but it breaks the actual run. Reverting
-#from Automation.CSSAccess import CSSaccess
-import CSSaccess
-# HO 11/10/2024 END *********************
-#from Automation.CSSAccess import CSSaccess
-#import ..Automation
-#from .Automation.CSSAccess import CSSaccess
-# HO 15/08/2024 END *********************
+# HO 23/10/2024 BEGIN ************
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+#sys.path.append('../CSSAccess')
+#import CSSaccess
+from Automation.CSSAccess import CSSaccess
+# HO 23/10/2024 END ************
+
 # tqdm: https://tqdm.github.io/
 import tqdm
 

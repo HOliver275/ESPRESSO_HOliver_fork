@@ -658,8 +658,10 @@ class LdpIndex:
         # and keep a running total of the number of times it appears in this file
         for term in terms:
             if len(term)<50:
-                # HO 04/10/2024 BEGIN ***************
-                #termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
+                # HO 25/10/2024 BEGIN **************
+                serverlevel_abs_frequency = testservindex.keyword_abs_frequencies[term] if term in testservindex.keyword_abs_frequencies else 0
+                testservindex.keyword_abs_frequencies[term] = serverlevel_abs_frequency + 1
+                # HO 25/10/2024 END **************
                 # HO 22/10/2024 BEGIN ***************
                 #if (b_hierarchical):
                 if (config.HIERARCHICAL_POD_INDEXES == 'True'):
@@ -672,7 +674,6 @@ class LdpIndex:
                     server_termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
                 else:
                     server_termword = term + config.KEYWORD_INDEX_FILEXTN
-                # HO 04/10/2024 END ***************
                 # HO 22/10/2024 BEGIN ***************
                 #term_frequency = filelevel_appearances_dict[termword] if termword in filelevel_appearances_dict else 0
                 term_frequency = filelevel_appearances_dict[pod_termword] if pod_termword in filelevel_appearances_dict else 0
