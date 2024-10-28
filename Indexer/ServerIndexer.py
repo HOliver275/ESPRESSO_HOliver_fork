@@ -51,6 +51,7 @@ class ServerIndex:
         # HO 25/10/2024 BEGIN **************
         self.collection_length = 0
         self.pod_lengths = dict()
+        self.pod_term_freqs = dict()
         # HO 25/10/2024 END **************
         
     def __repr__(self):
@@ -365,6 +366,11 @@ class ServerIndex:
                     for(ppathkey, piddict) in poddict.items():
                         for(pidkey, freq) in piddict.items():
                             servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
+        
+        # HO 28/10/2024 BEGIN **************
+        for servkey in self.pod_term_freqs.keys():
+            servidx[servkey] = servidx[servkey] + self.pod_term_freqs[servkey]
+        # HO 28/10/2024 END **************
                             
         # HO 25/10/2024 BEGIN **************
         # now the absolute keyword count file
