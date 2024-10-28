@@ -408,8 +408,12 @@ class LdpIndex:
         self.index = dict()
         self.f=0
         # HO 28/10/2024 BEGIN ***************
+        # pod length running total
         self.pod_length = 0
+        # pod distinct length running total
         self.pod_distinct_length = 0
+        # pod term frequency count dictionary
+        self.podlevel_appearances_dict = dict()
         # HO 28/10/2024 END ***************
         
     def __repr__(self):
@@ -656,6 +660,7 @@ class LdpIndex:
         # cleans the text for NLP processing
         terms=myclean(text)
         # HO 28/10/2024 END ***************
+        # pod length count
         self.pod_length = self.pod_length + len(terms)
         # HO 28/10/2024 END ***************
         # Dictionary with each term and the frequency it appears in the text.
@@ -678,6 +683,8 @@ class LdpIndex:
                     server_termword = term + config.KEYWORD_INDEX_FILEXTN
                 term_frequency = filelevel_appearances_dict[pod_termword] if pod_termword in filelevel_appearances_dict else 0
                 # HO 28/10/2024 BEGIN *************
+                pod_term_frequency = self.podlevel_appearances_dict[pod_termword] if pod_termword in self.podlevel_appearances_dict else 0
+                self.podlevel_appearances_dict[pod_termword] =  pod_term_frequency + 1
                 # count the new unique term
                 if (term_frequency == 0):
                     self.pod_distinct_length += 1
@@ -828,6 +835,11 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     ldpindex.index[config.POD_DISTINCT_LEN_FILENAME] = str(ldpindex.pod_distinct_length) + '\r\n'
     # Pod length.
     ldpindex.index[config.POD_LEN_FILENAME] = str(ldpindex.pod_length) + '\r\n'
+    # pod term frequency
+    for term in ldpindex.podlevel_appearances_dict:
+        if term in ldpindex.podlevel_appearances_dict:
+            pod_term_freq = ldpindex.podlevel_appearances_dict[term]
+            ldpindex.index[term] = ldpindex.index[term] + str(pod_term_freq) + '\r\n'
     # running total of the collection length
     testservindex.collection_length = testservindex.collection_length + ldpindex.pod_length
     # HO 28/10/2024 END ***************
