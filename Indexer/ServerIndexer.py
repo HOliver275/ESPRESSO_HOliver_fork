@@ -370,6 +370,9 @@ class ServerIndex:
         # HO 28/10/2024 BEGIN **************
         for servkey in self.pod_term_freqs.keys():
             servidx[servkey] = servidx[servkey] + self.pod_term_freqs[servkey]
+            # pod frequency
+            podsfound = self.pod_term_freqs[servkey].count('\r\n')
+            servidx[servkey] = servidx[servkey] + 'pod frequency,' + str(podsfound) + '\r\n'
         # HO 28/10/2024 END **************
                             
         # HO 25/10/2024 BEGIN **************

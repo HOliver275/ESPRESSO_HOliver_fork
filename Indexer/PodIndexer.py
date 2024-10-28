@@ -845,7 +845,6 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
             if term not in testservindex.pod_term_freqs:
                 testservindex.pod_term_freqs[term] = ''
             testservindex.pod_term_freqs[term] = testservindex.pod_term_freqs[term] + testservindex.podword_lookup[podpath] + ',' + str(pod_term_freq) + '\r\n'
-            print('testservindex.pod_term_freqs[term] = ' + testservindex.pod_term_freqs[term])
     # running total of the collection length
     testservindex.collection_length = testservindex.collection_length + ldpindex.pod_length
     # HO 28/10/2024 END ***************
