@@ -50,6 +50,7 @@ class ServerIndex:
         # HO 25/10/2024 END **************
         # HO 25/10/2024 BEGIN **************
         self.collection_length = 0
+        self.pod_distinct_lengths = dict()
         self.pod_lengths = dict()
         self.pod_term_freqs = dict()
         # HO 25/10/2024 END **************
@@ -387,6 +388,10 @@ class ServerIndex:
         servidx[config.POD_LEN_FILENAME] = ''
         for podpath in self.pod_lengths.keys():
             servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + podpath + ',' + self.pod_lengths[podpath]
+        # now the pod distinct lengths file
+        servidx[config.POD_DISTINCT_LEN_FILENAME] = ''
+        for podpath in self.pod_distinct_lengths.keys():
+            servidx[config.POD_DISTINCT_LEN_FILENAME] = servidx[config.POD_DISTINCT_LEN_FILENAME] + podpath + ',' + self.pod_distinct_lengths[podpath]
         # now the collection length file
         servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
         # HO 28/10/2024 END **************

@@ -833,6 +833,8 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     # HO 28/10/2024 BEGIN ***************
     # Pod distinct length.
     ldpindex.index[config.POD_DISTINCT_LEN_FILENAME] = str(ldpindex.pod_distinct_length) + '\r\n'
+    if podpath not in testservindex.pod_distinct_lengths:
+        testservindex.pod_distinct_lengths[podpath] = str(ldpindex.pod_distinct_length) + '\r\n'
     # Pod length.
     ldpindex.index[config.POD_LEN_FILENAME] = str(ldpindex.pod_length) + '\r\n'
     if podpath not in testservindex.pod_lengths:
