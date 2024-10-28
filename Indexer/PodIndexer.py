@@ -407,6 +407,10 @@ class LdpIndex:
     def __init__(self):
         self.index = dict()
         self.f=0
+        # HO 28/10/2024 BEGIN ***************
+        self.pod_length = 0
+        self.pod_distinct_length = 0
+        # HO 28/10/2024 END ***************
         
     def __repr__(self):
         """
@@ -651,6 +655,9 @@ class LdpIndex:
             
         # cleans the text for NLP processing
         terms=myclean(text)
+        # HO 28/10/2024 END ***************
+        self.pod_length = self.pod_length + len(terms)
+        # HO 28/10/2024 END ***************
         # Dictionary with each term and the frequency it appears in the text.
         filelevel_appearances_dict = dict()
         # if a word is less than 50 characters long [TODO why this restriction?]
@@ -658,14 +665,9 @@ class LdpIndex:
         # and keep a running total of the number of times it appears in this file
         for term in terms:
             if len(term)<50:
-                # HO 25/10/2024 BEGIN **************
                 serverlevel_abs_frequency = testservindex.keyword_abs_frequencies[term] if term in testservindex.keyword_abs_frequencies else 0
                 testservindex.keyword_abs_frequencies[term] = serverlevel_abs_frequency + 1
-                # HO 25/10/2024 END **************
-                # HO 22/10/2024 BEGIN ***************
-                #if (b_hierarchical):
                 if (config.HIERARCHICAL_POD_INDEXES == 'True'):
-                # HO 22/10/2024 END *****************
                     pod_termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
                 else:
                     pod_termword = term + config.KEYWORD_INDEX_FILEXTN
@@ -674,11 +676,14 @@ class LdpIndex:
                     server_termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
                 else:
                     server_termword = term + config.KEYWORD_INDEX_FILEXTN
-                # HO 22/10/2024 BEGIN ***************
-                #term_frequency = filelevel_appearances_dict[termword] if termword in filelevel_appearances_dict else 0
                 term_frequency = filelevel_appearances_dict[pod_termword] if pod_termword in filelevel_appearances_dict else 0
+                # HO 28/10/2024 BEGIN *************
+                # count the new unique term
+                if (term_frequency == 0):
+                    self.pod_distinct_length += 1
+                # HO 28/10/2024 END *************
                 filelevel_appearances_dict[pod_termword] =  term_frequency + 1
-                # HO 22/10/2024 END ***************
+
                 # At the same time as we are building the file-level keyword dictionary,
                 # we are building the server-level keyword dictionary,
                 # which has the following structure
@@ -721,6 +726,7 @@ class LdpIndex:
         # updating the index dictionary entry 'index.sum'
         # with a running total of the number of files
         self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
+        
         # now go through the word counts
         for (key, freq) in filelevel_appearances_dict.items():
             # if this word isn't already being counted, add it
@@ -806,6 +812,7 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
 
     # set up the progress bar
     pbar=tqdm.tqdm(total=len(filetuples))
+    print(str(len(filetuples)) + " filetuples")
     # for each file
     for (id,text,webidlist) in filetuples:
         # Update the inverted index with the index file path structure, file ID, text of file, and the list
@@ -815,6 +822,13 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
         pbar.update(1)
     # close the progress bar
     pbar.close()
+    print("ldpindex.index: ")
+    # HO 28/10/2024 BEGIN ***************
+    # Pod distinct length.
+    ldpindex.index[config.POD_DISTINCT_LEN_FILENAME] = str(ldpindex.pod_distinct_length) + '\r\n'
+    # Pod length.
+    ldpindex.index[config.POD_LEN_FILENAME] = str(ldpindex.pod_length) + '\r\n'
+    # HO 28/10/2024 END ***************
     # return the index created over the file tuples
     servtuples.append(ldpindex.index)
     # return the on-running server-level index

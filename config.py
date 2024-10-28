@@ -16,10 +16,12 @@ OPENACCESS_SYMBOL= '*'
 OPENACCESS_FILENAME = 'openaccess.webid'
 # designated WebID filename for open access WebID files
 OPENACCESS_WEBIDWORD = 'openaccess'
-# HO 01/10/2024 BEGIN ***********
 # short WebID handle for open access
 OPENACCESS_WIDWORD= '*'
-# HO 01/10/2024 END ***********
+# pod distinct length filename
+POD_DISTINCT_LEN_FILENAME = 'pod_distinct_len.sum'
+# pod length filename
+POD_LEN_FILENAME = 'pod_len.sum'
 # file extension for WebID files
 WEBID_FILEXTN = '.webid'
 # prefix for a sequentially-numbered short WebID handle
