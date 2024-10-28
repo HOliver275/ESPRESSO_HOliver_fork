@@ -50,6 +50,7 @@ class ServerIndex:
         # HO 25/10/2024 END **************
         # HO 25/10/2024 BEGIN **************
         self.collection_length = 0
+        self.collection_distinct_length = 0
         self.pod_distinct_lengths = dict()
         self.pod_lengths = dict()
         self.pod_term_freqs = dict()
@@ -355,7 +356,14 @@ class ServerIndex:
                 for(ppath, pid) in poddict.items():
                     servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
         
-        # now the keyword files                
+        # now the keyword files 
+        # HO 28/10/2024 BEGIN **************
+        distkeys = self.keywords_dict.keys()
+        self.collection_distinct_length = len(distkeys)
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = ''
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = str(self.collection_distinct_length) + '\r\n'
+        # HO 28/10/2024 END **************
+                       
         for (servkey, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 for(widkey, poddict) in widdict.items():

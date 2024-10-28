@@ -1,3 +1,5 @@
+# collection distinct length filename
+COLLECTION_DISTINCT_LEN_FILENAME = 'collection_distinct_len.sum'
 # collection length filename
 COLLECTION_LEN_FILENAME = 'collection_len.sum'
 # flag whether the pod index file structure is hierarchical
