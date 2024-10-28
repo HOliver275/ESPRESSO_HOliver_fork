@@ -828,6 +828,8 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     ldpindex.index[config.POD_DISTINCT_LEN_FILENAME] = str(ldpindex.pod_distinct_length) + '\r\n'
     # Pod length.
     ldpindex.index[config.POD_LEN_FILENAME] = str(ldpindex.pod_length) + '\r\n'
+    # running total of the collection length
+    testservindex.collection_length = testservindex.collection_length + ldpindex.pod_length
     # HO 28/10/2024 END ***************
     # return the index created over the file tuples
     servtuples.append(ldpindex.index)

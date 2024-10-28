@@ -48,6 +48,9 @@ class ServerIndex:
         # HO 25/10/2024 BEGIN **************
         self.keyword_abs_frequencies = dict()
         # HO 25/10/2024 END **************
+        # HO 25/10/2024 BEGIN **************
+        self.collection_length = 0
+        # HO 25/10/2024 END **************
         
     def __repr__(self):
         """
@@ -368,6 +371,11 @@ class ServerIndex:
         for (term, freq) in self.keyword_abs_frequencies.items():
             servidx[config.KEYWORD_ABS_COUNT_FILENAME] = servidx[config.KEYWORD_ABS_COUNT_FILENAME] + term + ',' + str(freq) + '\r\n'
         # HO 25/10/2024 END **************
+        
+        # HO 28/10/2024 BEGIN **************
+        # now the collection length file
+        servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
+        # HO 28/10/2024 END **************
             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx

@@ -1,3 +1,5 @@
+# collection length filename
+COLLECTION_LEN_FILENAME = 'collection_len.sum'
 # flag whether the pod index file structure is hierarchical
 HIERARCHICAL_POD_INDEXES = 'False'
 # flag whether the server index file structure is hierarchical
