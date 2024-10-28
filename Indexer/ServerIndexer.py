@@ -50,6 +50,7 @@ class ServerIndex:
         # HO 25/10/2024 END **************
         # HO 25/10/2024 BEGIN **************
         self.collection_length = 0
+        self.pod_lengths = dict()
         # HO 25/10/2024 END **************
         
     def __repr__(self):
@@ -373,6 +374,10 @@ class ServerIndex:
         # HO 25/10/2024 END **************
         
         # HO 28/10/2024 BEGIN **************
+        # now the pod lengths file
+        servidx[config.POD_LEN_FILENAME] = ''
+        for podpath in self.pod_lengths.keys():
+            servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + podpath + ',' + self.pod_lengths[podpath]
         # now the collection length file
         servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
         # HO 28/10/2024 END **************

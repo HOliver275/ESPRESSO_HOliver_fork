@@ -835,6 +835,8 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     ldpindex.index[config.POD_DISTINCT_LEN_FILENAME] = str(ldpindex.pod_distinct_length) + '\r\n'
     # Pod length.
     ldpindex.index[config.POD_LEN_FILENAME] = str(ldpindex.pod_length) + '\r\n'
+    if podpath not in testservindex.pod_lengths:
+        testservindex.pod_lengths[podpath] = str(ldpindex.pod_length) + '\r\n'
     # pod term frequency
     for term in ldpindex.podlevel_appearances_dict:
         if term in ldpindex.podlevel_appearances_dict:
