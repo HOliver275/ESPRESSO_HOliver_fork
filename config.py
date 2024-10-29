@@ -22,6 +22,10 @@ OPENACCESS_FILENAME = 'openaccess.webid'
 OPENACCESS_WEBIDWORD = 'openaccess'
 # short WebID handle for open access
 OPENACCESS_WIDWORD= '*'
+# error log if couldn't clean up pods
+POD_CLEANUP_ERR_LOGFILE = 'couldntcleanuppods.log'
+# error log if couldn't create pods
+POD_CREATE_ERR_LOGFILE = 'couldntcreatepods.log'
 # pod distinct length filename
 POD_DISTINCT_LEN_FILENAME = 'pod_distinct_len.sum'
 # pod length filename

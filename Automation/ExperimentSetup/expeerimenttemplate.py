@@ -23,32 +23,20 @@ param: experiment, a flexexperiment.ESPRESSOexperiment
 """
 def deployexperiment(experiment):
     # Create the ESPRESSO pods, if they haven't already been created.
-    # HO 26/09/2024 - not called in previous experiments, but we should call it
     experiment.ESPRESSOcreate()
     # display progress message
     print('ESPRESSO checked')
     
     # Create the normal pods, unless they're already there in which case, wipe the contents
-    # HO 26/09/2024 - not called in previous experiments, call threadedpodcreate instead
-    # HO 11/10/2024 - no! threads bad? or are they?
     experiment.podcreate()
-    #print('Pods created')
-    
-    # Insert the triples into the pods.
-    # HO 26/09/2024 - not called in previous experiments, MR confirms we don't need it
-    #experiment.inserttriples()
-    # display progress message
-    #print('Triples inserted')
+    print('Pods created')
     
     # Create the server-level metaindexes.
-    # HO 26/09/2024 - not called in previous experiments
-    experiment.aclmetaindex()
+    """experiment.aclmetaindex()
     # display progress message
     print('metaindexes created')
     
     # Make all the pod indexes open access.
-    # HO 26/09/2024 - we call indexpubthreaded below instead.
-    # HO 11/10/2024 - no! threads bad? or are they?
     experiment.indexpub()
     # display progress message
     print('indexes opened')
@@ -56,15 +44,7 @@ def deployexperiment(experiment):
     # Make the metaindexes accessible to the experiment
     experiment.metaindexpub()
     # display progress message
-    print('metaindexes made accessible to the experiment')
-    
-    # HO 27/09/2024 BEGIN - do it the threaded way
-    # HO 11/10/2024 - no! threads bad? or are they?
-    #experiment.threadedpodcreate()
-    #print('Pods created')
-    #experiment.indexpubthreaded()
-    #print('Indexes open')
-    # HO 27/09/2024 END - do it the threaded way
+    print('metaindexes made accessible to the experiment')"""
 
 """
 Step 3. 
@@ -133,13 +113,13 @@ podlab3 = 'pod3'
 # server lists
 #serverlist1=['https://srv04031.soton.ac.uk:3000/']
 serverlist1=['http://localhost:3001/']
-#serverlist2=['http://localhost:3002/']
-#serverlist3=['http://localhost:3003/']
+serverlist2=['http://localhost:3002/']
+serverlist3=['http://localhost:3003/']
 # source directories for data
 #sourcedir1='../DatasetSplitter/sourcedir1/'
-sourcedir1='../DatasetSplitter/testsource/'
-#sourcedir2='../DatasetSplitter/sourcedir2/'
-#sourcedir3='../DatasetSplitter/sourcedir3/'
+sourcedir1='../DatasetSplitter/testsource1/'
+sourcedir2='../DatasetSplitter/testsource2/'
+sourcedir3='../DatasetSplitter/testsource3/'
 #numfiles = 9500
 numfiles = 10
 
@@ -211,33 +191,28 @@ def createexperiment(podname):
     # Server list loading
     experiment.loadserverlist(serverlist1, servlab1)
 
-    #experiment.loadserverlist(serverlist2, servlab2)
+    experiment.loadserverlist(serverlist2, servlab2)
 
-    #experiment.loadserverlist(serverlist3, servlab3)
+    experiment.loadserverlist(serverlist3, servlab3)
 
     # user message
     print('serverlist loaded')
-    
-    # Creating connected pod pairs 
-    #experiment.createlogicalpairedpods(numberofpods=numpods,serverdisp=0,serverlabel1=servlab1,serverlabel2=servlab2,podlabel1=podlab1,podlabel2=podlab2,conpred=URIRef('http://espresso.org/haspersonalWebID'))
-    #print('logical paired pods created ')
+
+    # create pods
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
+    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab2,podlabel=podlab2)
+    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab3,podlabel=podlab3)
     print('logical pods created ')
 
     experiment.loaddirtopool(sourcedir1, filelab1)
 
-    #experiment.loaddirtopool(sourcedir2, filelab2)
+    experiment.loaddirtopool(sourcedir2, filelab2)
 
-    #experiment.loaddirtopool(sourcedir3, filelab3)
+    experiment.loaddirtopool(sourcedir3, filelab3)
     print('loaded source dirs to pool')
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab1,podlabel=podlab1,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    #experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab3,podlabel=podlab3,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    
-    # the purpose of this appears to be distributing batches of files, it has no discernibly different effect if you run it straight after logicaldistfilestopodsfrompool
-    #TODO will probably need to use this when deploying to the VMs
-#experiment.distributebundles(numberofbundles=10,bundlesource=sourcedir3,filetype='text/turtle',filelabel=filelab3,subdir='file',podlabel=podlab3,predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),hashliststring='')
-    #print('Back from flexexperiment.distributebundles')
+    experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
+    experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab3,podlabel=podlab3,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
 
     print('files distributed')
     
@@ -251,22 +226,22 @@ def createexperiment(podname):
     
     print('special agent nodes initialized')
 
-    #experiment.imagineaclnormal(openperc=100,mean=(floor(numwebids/themean)), disp=0,filelabel=filelab1)
+    experiment.imagineaclnormal(openperc=100,mean=themean, disp=0,filelabel=filelab1)
 
-    #experiment.imagineaclnormal(openperc=50,mean=(floor(numwebids/themean)), disp=0,filelabel=filelab2)
+    experiment.imagineaclnormal(openperc=50,mean=themean, disp=0,filelabel=filelab2)
 
     # HO 27/09/2024 BEGIN ******************
-    #experiment.imagineaclnormal(openperc=10,mean=floor(numwebids/themean), disp=0,filelabel=filelab3)
-    experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab1)
+    #experiment.imagineaclnormal(openperc=10,mean=themean, disp=0,filelabel=filelab3)
+    experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab3)
     # HO 27/09/2024 END ********************
     
     print('Normal ACLs distributed')
 
     experiment.imagineaclspecial(filelab1)
 
-    #experiment.imagineaclspecial(filelab2)
+    experiment.imagineaclspecial(filelab2)
 
-    #experiment.imagineaclspecial(filelab3)
+    experiment.imagineaclspecial(filelab3)
     
     print('Special agent ACLs distributed')
     
@@ -308,11 +283,11 @@ print('===================')
 
 
 # Uploading of the files and corresponding acls
-uploadexperiment(experiment)
+"""uploadexperiment(experiment)
 print('Experiment uploaded')
 print('===================')
 
 #Indexing of the experiment
 indexexperiment(experiment)
 print('Experiment indexed')
-print('===================')
+print('===================')"""

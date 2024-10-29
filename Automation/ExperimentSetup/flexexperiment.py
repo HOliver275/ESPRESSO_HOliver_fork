@@ -1171,70 +1171,120 @@ class ESPRESSOexperiment:
     param: self
     """
     def podcreate(self):
-        # HO 16/10/2024 BEGIN *****************
-        if os.path.exists(self.podname + "couldntcreatepods.log"):
-            os.remove(self.podname + "couldntcreatepods.log")
-        if os.path.exists(self.podname + "couldntcleanuppods.log"):
-            os.remove(self.podname + "couldntcleanuppods.log")
-        # HO 16/10/2024 END *****************
-        # For each server node
-        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-            # get the identity provider
-            IDP=str(self.image.value(snode,self.namespace.Address))
-            # for every pod on this server
-            # HO 16/10/2024 BEGIN *****************
-            podcounter = 0
-            resetatpod = 50
-            # HO 16/10/2024 END *****************
-            for pnode in self.image.objects(snode,self.namespace.Contains):
-                # HO 16/10/2024 BEGIN *****************
-                podcounter += 1
-                if (podcounter >= resetatpod):
-                    podcounter = 0
-                    # make sure the CSS server doesn't get too many requests too fast
-                    print("Another " + str(resetatpod) + " pods created! Pausing for 30 seconds: ")
-                    time.sleep(30)
-                # HO 16/10/2024 END *****************
-                # get the pod address
-                podaddress=str(self.image.value(pnode,self.namespace.Address))
-                # get the pod name
-                podname=str(self.image.value(pnode,self.namespace.Name))
-                # get the pod email
-                email=str(self.image.value(pnode,self.namespace.Email))
-                # get the WebID
-                webid=str(self.image.value(pnode,self.namespace.WebID))
-                # get the triple string
-                triplestring=str(self.image.value(pnode,self.namespace.TripleString))
-                # access the pod and display the response text
-                # HO 25/09/2024 BEGIN *****************
-                #try: 
-                res=CSSaccess.get_file(podaddress)
-                #except:
-                    #print("podcreate: Couldn't get file at " + podaddress + ", trying again.")
-                    #res=CSSaccess.get_file(podaddress)
-                # HO 25/09/2024 END *****************
+        # error logging
+        if os.path.exists(self.podname + config.POD_CREATE_ERR_LOGFILE):
+            os.remove(self.podname + config.POD_CREATE_ERR_LOGFILE)
+        if os.path.exists(self.podname + config.POD_CLEANUP_ERR_LOGFILE):
+            os.remove(self.podname + config.POD_CLEANUP_ERR_LOGFILE)
+        # HO 29/10/2024 BEGIN ******************
+        # execute these calls asynchronously
+        with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
+            # For each server node
+            for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+                executor.submit(self.podcreateperserver, snode)
+                """# get the identity provider
+                IDP=str(self.image.value(snode,self.namespace.Address))
+                # for every pod on this server
+                podcounter = 0
+                resetatpod = 50
+                for pnode in self.image.objects(snode,self.namespace.Contains):
+                    podcounter += 1
+                    if (podcounter >= resetatpod):
+                        podcounter = 0
+                        # make sure the CSS server doesn't get too many requests too fast
+                        print("Another " + str(resetatpod) + " pods created! Pausing for 30 seconds: ")
+                        time.sleep(30)
+                    # get the pod address
+                    podaddress=str(self.image.value(pnode,self.namespace.Address))
+                    # get the pod name
+                    podname=str(self.image.value(pnode,self.namespace.Name))
+                    # get the pod email
+                    email=str(self.image.value(pnode,self.namespace.Email))
+                    # get the WebID
+                    webid=str(self.image.value(pnode,self.namespace.WebID))
+                    # get the triple string
+                    triplestring=str(self.image.value(pnode,self.namespace.TripleString))
+                    # access the pod and display the response text
+                    # HO 25/09/2024 BEGIN *****************
+                    #try: 
+                    res=CSSaccess.get_file(podaddress)
+                    #except:
+                        #print("podcreate: Couldn't get file at " + podaddress + ", trying again.")
+                        #res=CSSaccess.get_file(podaddress)
+                    # HO 25/09/2024 END *****************
                 
-                # if it worked
-                if res.ok:
-                    # then say the pod is already there and we're going to 
-                    # wipe it and start again.
-                    print('Pod '+podname+ ' at '+IDP +' exists. Deleting.')
-                    # delete all the files in this pod
-                    self.cleanuppod(snode, pnode)
-                else: # if it didn't work the pod isn't already there and we create it
-                    # HO 15/10/2024 BEGIN **********
-                    try: 
+                    # if it worked
+                    if res.ok:
+                        # then say the pod is already there and we're going to 
+                        # wipe it and start again.
+                        print('Pod '+podname+ ' at '+IDP +' exists. Deleting.')
+                        # delete all the files in this pod
+                        self.cleanuppod(snode, pnode)
+                    else: # if it didn't work the pod isn't already there and we create it
+                        try: 
                         print('Creating '+podname+ ' at '+IDP,CSSaccess.podcreate(IDP,podname,email,self.password))
-                    except:
-                        print("Couldn't create " + podname + " at " + IDP + ", skipping")
-                        with open(self.podname + "couldntcreatepods.log", 'a') as f:
-                            f.write("Couldn't create " + podname + " at " + IDP + "\r\n")
-                            f.close()
-                        continue
-                     # HO 15/10/2024 END **********
-        #print('self = ' + 'self')
+                        except:
+                            print("Couldn't create " + podname + " at " + IDP + ", skipping")
+                            with open(self.podname + "couldntcreatepods.log", 'a') as f:
+                                f.write("Couldn't create " + podname + " at " + IDP + "\r\n")
+                                f.close()
+                            continue"""
+             # HO 29/10/2024 END ******************
+             #print('self = ' + 'self')
 
-                     
+    """ 
+    Moves the per-server steps of podcreate into their own function so each server can be called asynchronously.
+    
+    param: snode, the server node on which to create pods
+    """
+    def podcreateperserver(self, snode):
+        # get the identity provider
+        IDP=str(self.image.value(snode,self.namespace.Address))
+        # for every pod on this server
+        podcounter = 0
+        resetatpod = 50
+        for pnode in self.image.objects(snode,self.namespace.Contains):
+            podcounter += 1
+            if (podcounter >= resetatpod):
+                podcounter = 0
+                # make sure the CSS server doesn't get too many requests too fast
+                print("Another " + str(resetatpod) + " pods created! Pausing for 30 seconds: ")
+                time.sleep(30)
+            # get the pod address
+            podaddress=str(self.image.value(pnode,self.namespace.Address))
+            # get the pod name
+            podname=str(self.image.value(pnode,self.namespace.Name))
+            # get the pod email
+            email=str(self.image.value(pnode,self.namespace.Email))
+            # get the WebID
+            webid=str(self.image.value(pnode,self.namespace.WebID))
+            # get the triple string
+            triplestring=str(self.image.value(pnode,self.namespace.TripleString))
+            # access the pod and display the response text
+            # HO 25/09/2024 BEGIN *****************
+            #try: 
+            res=CSSaccess.get_file(podaddress)
+            #except:
+                #print("podcreate: Couldn't get file at " + podaddress + ", trying again.")
+                #res=CSSaccess.get_file(podaddress)
+            # HO 25/09/2024 END *****************
+                
+            # if it worked
+            if res.ok:
+                # then say the pod is already there and we're going to 
+                # wipe it and start again.
+                print('Pod '+podname+ ' at '+IDP +' exists. Deleting.')
+                # delete all the files in this pod
+                self.cleanuppod(snode, pnode)
+            else: # if it didn't work the pod isn't already there and we create it
+                try: 
+                    print('Creating '+podname+ ' at '+IDP,CSSaccess.podcreate(IDP,podname,email,self.password))
+                except:
+                    print("Couldn't create " + podname + " at " + IDP + ", skipping")
+                    with open(self.podname + config.POD_CREATE_ERR_LOGFILE, 'a') as f:
+                        f.write("Couldn't create " + podname + " at " + IDP + "\r\n")
+                        f.close()
+                    continue                     
     """
     Same as podcreate, but threaded.
     
