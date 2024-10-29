@@ -2342,13 +2342,17 @@ class ESPRESSOexperiment:
     param: self
     """
     def metaindexpub(self):
-        # HO 16/10/2024 BEGIN *****************
-        if os.path.exists(self.podname + "couldntmetaindexpub.log"):
-            os.remove(self.podname + "couldntmetaindexpub.log")
-        # HO 16/10/2024 END *****************
-        # for each server
-        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-            print('Making the metaindex for ' + snode + ' accessible to the experiment')
+        # recreate the error log file
+        if os.path.exists(self.podname + config.METAINDEXPUB_ERR_LOGFILE):
+            os.remove(self.podname + config.METAINDEXPUB_ERR_LOGFILE)
+
+        # HO 29/10/2024 BEGIN *************
+        # execute these calls asynchronously
+        with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
+            # for each server
+            for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+                executor.submit(self.metaindexpubperserver, snode)
+            """print('Making the metaindex for ' + snode + ' accessible to the experiment')
             # get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             # display progress message
@@ -2363,7 +2367,6 @@ class ESPRESSOexperiment:
                 # get the ESPRESSO pod auth token from the client credentials
                 t=CSSA.create_authtoken()
             except:
-                # HO 16/10/2024 BEGIN ********** 
                 try:
                     print("Couldn't create auth token. Trying again: ")
                     CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
@@ -2373,11 +2376,10 @@ class ESPRESSOexperiment:
                     t=CSSA.create_authtoken()
                 except:
                     print("Couldn't create auth token for " + IDP + " on second attempt, skipping")
-                    with open(self.podname + "couldntmetaindexpub.log", 'a') as f:
+                    with open(self.podname + config.METAINDEXPUB_ERR_LOGFILE, 'a') as f:
                         f.write("Couldn't create auth token for " + IDP + " on second attempt, skipping\r\n")
                         f.close()
                     continue
-                # HO 16/10/2024 END **********
             # make the ESPRESSO index file accessible
             # we do need to make the whole metaindex folder accessible to the experiment
             # not just the metaindex file
@@ -2388,7 +2390,6 @@ class ESPRESSOexperiment:
                 res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
                 # HO 22/10/2024 END ************
             except:
-                # HO 16/10/2024 BEGIN **********
                 try:
                     print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
                     # HO 22/10/2024 BEGIN ************
@@ -2397,17 +2398,80 @@ class ESPRESSOexperiment:
                     # HO 22/10/2024 END ************
                 except:
                     print("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping ")
-                    with open(self.podname + "couldntmetaindexpub.log", 'a') as f:
+                    with open(self.podname + config.METAINDEXPUB_ERR_LOGFILE, 'a') as f:
                         f.write("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping\r\n")
                         f.write("res: " + res + "\r\n")
                         f.close()
                     continue
-                # HO 16/10/2024 END **********
             #HO 23/09/2024 END ******************
 
             # display the server response
-            print(res)
+            print(res)"""
+       # HO 29/10/2024 END *************
        #print('self = ' + str(self))
+       
+    """
+    Carries out all the steps of metaindexpub, but for one server at a time.
+    
+    param: self
+    param: snode, the server node
+    """
+    def metaindexpubperserver(self, snode):
+        print('Making the metaindex for ' + snode + ' accessible to the experiment')
+        # get the identity provider
+        IDP=str(self.image.value(snode,self.namespace.Address))
+        # display progress message
+        print('Making the metaindex for '+IDP+' accessible to the experiment')
+        # create a CSSaccess object for this identity provider, the ESPRESSO
+        # pod email, and the ESPRESSO pod password
+        CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+        #HO 23/09/2024 BEGIN ******************
+        try:
+            # get the auth string containing the ESPRESSO pod ID and secret
+            a=CSSA.create_authstring()
+            # get the ESPRESSO pod auth token from the client credentials
+            t=CSSA.create_authtoken()
+        except:
+            try:
+                print("Couldn't create auth token. Trying again: ")
+                CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                # get the auth string containing the ESPRESSO pod ID and secret
+                a=CSSA.create_authstring()
+                # get the ESPRESSO pod auth token from the client credentials
+                t=CSSA.create_authtoken()
+            except:
+                print("Couldn't create auth token for " + IDP + " on second attempt, skipping")
+                with open(self.podname + config.METAINDEXPUB_ERR_LOGFILE, 'a') as f:
+                    f.write("Couldn't create auth token for " + IDP + " on second attempt, skipping\r\n")
+                    f.close()
+                return
+        # make the ESPRESSO index file accessible
+        # we do need to make the whole metaindex folder accessible to the experiment
+        # not just the metaindex file
+        try:
+            print("Making " + self.espressoindexdir + " accessible: ")
+            # HO 22/10/2024 BEGIN ************
+            #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+            res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
+            # HO 22/10/2024 END ************
+        except:
+            try:
+                print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
+                # HO 22/10/2024 BEGIN ************
+                #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
+                res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
+                # HO 22/10/2024 END ************
+            except:
+                print("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping ")
+                with open(self.podname + config.METAINDEXPUB_ERR_LOGFILE, 'a') as f:
+                    f.write("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping\r\n")
+                    f.write("res: " + res + "\r\n")
+                    f.close()
+                return
+        #HO 23/09/2024 END ******************
+
+        # display the server response
+        print(res)
 
     """
     Stores all the files in zip files locally.

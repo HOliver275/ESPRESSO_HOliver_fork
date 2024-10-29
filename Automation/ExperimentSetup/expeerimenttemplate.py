@@ -42,9 +42,9 @@ def deployexperiment(experiment):
     print('indexes opened')
     
     # Make the metaindexes accessible to the experiment
-    """experiment.metaindexpub()
+    experiment.metaindexpub()
     # display progress message
-    print('metaindexes made accessible to the experiment')"""
+    print('metaindexes made accessible to the experiment')
 
 """
 Step 3. 

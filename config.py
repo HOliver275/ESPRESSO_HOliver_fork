@@ -18,6 +18,8 @@ JSON_SERVER_INDEXES = 'False'
 KEYWORD_ABS_COUNT_FILENAME = 'keyword_abs_count.sum'
 # file extension for keyword index files
 KEYWORD_INDEX_FILEXTN = '.ndx'
+# error log if couldn't open metaindexes
+METAINDEXPUB_ERR_LOGFILE = 'couldntmetaindexpub.log'
 # programmatic symbol used to denote open access
 OPENACCESS_SYMBOL= '*'
 # designated filename for open access WebID files
