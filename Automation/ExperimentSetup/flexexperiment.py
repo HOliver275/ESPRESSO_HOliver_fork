@@ -1879,7 +1879,7 @@ class ESPRESSOexperiment:
         with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
             # for each server
             for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-                self.aclmetaindexperserver(snode)
+                executor.submit(self.aclmetaindexperserver, snode)
             """# get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             print('IDP=' + IDP)
