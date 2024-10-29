@@ -10,6 +10,8 @@ HIERARCHICAL_POD_INDEXES = 'False'
 HIERARCHICAL_SERVER_INDEXES = 'False'
 # filename for index file containing total number of files indexed
 INDEX_FILECOUNT_FILENAME = 'index.sum'
+# error log if couldn't open indexes
+INDEXPUB_ERR_LOGFILE = 'couldntindexpub.log'
 # flag whether the server index should be written in JSON
 JSON_SERVER_INDEXES = 'False'
 # absolute keyword count filename

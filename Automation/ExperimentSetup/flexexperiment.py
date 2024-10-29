@@ -2147,29 +2147,32 @@ class ESPRESSOexperiment:
     param: self   
     """
     def indexpub(self):
-        # HO 16/10/2024 BEGIN *****************
-        if os.path.exists(self.podname + "couldntindexpub.log"):
-            os.remove(self.podname + "couldntindexpub.log")
-        # HO 16/10/2024 END *****************
-        # for every server
-        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-            # get the identity provider
+        # recreate error log
+        if os.path.exists(self.podname + config.INDEXPUB_ERR_LOGFILE):
+            os.remove(self.podname + config.INDEXPUB_ERR_LOGFILE)
+
+        # HO 29/10/2024 BEGIN *************
+        # execute these calls asynchronously
+        with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
+            # for every server
+            for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+                executor.submit(self.indexpubperserver, snode)
+            """# get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             # display progress message
             print('opening indexes for '+ IDP)
-            # HO 16/10/2024 BEGIN **************
+
             podcounter = 0
             maxpods = 50
-            # HO 16/10/2024 END **************
+
             # for every pod on the server
             for pnode in self.image.objects(snode,self.namespace.Contains):
-                # HO 16/10/2024 BEGIN **************
                 podcounter += 1
                 if (podcounter >= maxpods):
                     podcounter = 0
                     print("Opened indexes for another " + str(maxpods) + " pods. Resting for 30 seconds:")
                     time.sleep(30)
-                # HO 16/10/2024 END **************
+
                 # get the pod index address
                 podindexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
                 # get the pod account username (email)
@@ -2186,7 +2189,6 @@ class ESPRESSOexperiment:
                     # get the pod auth token from the client credentials
                     CSSA.create_authtoken()
                 except:
-                    # HO 16/10/2024 BEGIN **************
                     # try one more time
                     try:
                         # create a CSSaccess object with the identity provider, username and password
@@ -2197,11 +2199,10 @@ class ESPRESSOexperiment:
                         CSSA.create_authtoken()
                     except:
                         print("Couldn't create auth token for " + podindexaddress + " on " + IDP + ", skipping")
-                        with open(self.podname + "couldntindexpub.log", 'a') as f:
+                        with open(self.podname + config.INDEXPUB_ERR_LOGFILE, 'a') as f:
                             f.write("Couldn't create auth token for " + podindexaddress + " on " + IDP + "\r\n")
                             f.close()
                         continue
-                    # HO 16/10/2024 END **************
                 # HO 22/09/2024 END ************
                 
                 # construct the target URL for an .acl file for the pod index address
@@ -2216,22 +2217,100 @@ class ESPRESSOexperiment:
                     #res= requests.put(targetUrl,headers=headers,data=acldefopen)
                     res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
                 except:
-                    # HO 16/10/2024 BEGIN **************
                     try:
                         print("Couldn't do a put to " + targetUrl + ", trying again: ")
                         res= requests.put(targetUrl,headers=headers,data=acldefopen,timeout=5000)
                     except:
                         print("Couldn't do a put to " + targetUrl + ", skipping")
-                        with open(self.podname + "couldntindexpub.log", 'a') as f:
+                        with open(self.podname + config.INDEXPUB_ERR_LOGFILE, 'a') as f:
                             f.write("Couldn't do a put to " + targetUrl + "\r\n")
                             f.close()
                         continue
-                    # HO 16/10/2024 END **************
                 # HO 22/09/2024 END ************
                 # display the .acl file URL and the server response to the PUT request
-                print(targetUrl,res)
+                print(targetUrl,res)"""
+        # HO 29/10/2024 END *************
         #print('self = ' + str(self))
-        
+
+    """
+    Does all the steps of indexpub, but for a single server.
+    
+    param: self
+    param: snode, the server node
+    """
+    def indexpubperserver(self, snode):
+        # get the identity provider
+        IDP=str(self.image.value(snode,self.namespace.Address))
+        # display progress message
+        print('opening indexes for '+ IDP)
+
+        podcounter = 0
+        maxpods = 50
+
+        # for every pod on the server
+        for pnode in self.image.objects(snode,self.namespace.Contains):
+            podcounter += 1
+            if (podcounter >= maxpods):
+                podcounter = 0
+                print("Opened indexes for another " + str(maxpods) + " pods. Resting for 30 seconds:")
+                time.sleep(30)
+
+            # get the pod index address
+            podindexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
+            # get the pod account username (email)
+            USERNAME=str(self.image.value(pnode,self.namespace.Email))
+            # get the pod account password
+            PASSWORD=self.password
+            # create a CSSaccess object with the identity provider, username and password
+            CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+            
+            # HO 22/09/2024 BEGIN ************
+            try: 
+                # get the auth string containing the pod ID and secret
+                CSSA.create_authstring()
+                # get the pod auth token from the client credentials
+                CSSA.create_authtoken()
+            except:
+                # try one more time
+                try:
+                    # create a CSSaccess object with the identity provider, username and password
+                    CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
+                    # get the auth string containing the pod ID and secret
+                    CSSA.create_authstring()
+                    # get the pod auth token from the client credentials
+                    CSSA.create_authtoken()
+                except:
+                    print("Couldn't create auth token for " + podindexaddress + " on " + IDP + ", skipping")
+                    with open(self.podname + config.INDEXPUB_ERR_LOGFILE, 'a') as f:
+                        f.write("Couldn't create auth token for " + podindexaddress + " on " + IDP + "\r\n")
+                        f.close()
+                    continue
+            # HO 22/09/2024 END ************
+                
+            # construct the target URL for an .acl file for the pod index address
+            targetUrl=podindexaddress+'.acl'
+            # construct the authorization headers for a turtle file
+            headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+CSSA.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", CSSA.dpopKey)}
+            # do a PUT request with the acldefopen query
+            # which makes c.me (the experiment) the owner of the .acl file
+            # and makes the .acl file open access 
+            # HO 22/09/2024 BEGIN ************
+            try:
+                #res= requests.put(targetUrl,headers=headers,data=acldefopen)
+                res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
+            except:
+                try:
+                    print("Couldn't do a put to " + targetUrl + ", trying again: ")
+                    res= requests.put(targetUrl,headers=headers,data=acldefopen,timeout=5000)
+                except:
+                    print("Couldn't do a put to " + targetUrl + ", skipping")
+                    with open(self.podname + config.INDEXPUB_ERR_LOGFILE, 'a') as f:
+                        f.write("Couldn't do a put to " + targetUrl + "\r\n")
+                        f.close()
+                    continue
+            # HO 22/09/2024 END ************
+            # display the .acl file URL and the server response to the PUT request
+            print(targetUrl,res)
 
     # HO 14/08/2024 appears not to be in use
     def indexpubthreaded(self):

@@ -37,12 +37,12 @@ def deployexperiment(experiment):
     print('metaindexes created')
     
     # Make all the pod indexes open access.
-    """experiment.indexpub()
+    experiment.indexpub()
     # display progress message
     print('indexes opened')
     
     # Make the metaindexes accessible to the experiment
-    experiment.metaindexpub()
+    """experiment.metaindexpub()
     # display progress message
     print('metaindexes made accessible to the experiment')"""
 
