@@ -1,3 +1,5 @@
+# error log if couldn't create .acl metaindex
+ACL_METAINDEX_CREATE_ERR_LOGFILE = 'couldntcreateaclmetaindex.log'
 # collection distinct length filename
 COLLECTION_DISTINCT_LEN_FILENAME = 'collection_distinct_len.sum'
 # collection length filename

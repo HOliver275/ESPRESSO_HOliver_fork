@@ -32,12 +32,12 @@ def deployexperiment(experiment):
     print('Pods created')
     
     # Create the server-level metaindexes.
-    """experiment.aclmetaindex()
+    experiment.aclmetaindex()
     # display progress message
     print('metaindexes created')
     
     # Make all the pod indexes open access.
-    experiment.indexpub()
+    """experiment.indexpub()
     # display progress message
     print('indexes opened')
     

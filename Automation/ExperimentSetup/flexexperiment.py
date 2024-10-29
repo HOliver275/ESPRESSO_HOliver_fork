@@ -1869,14 +1869,18 @@ class ESPRESSOexperiment:
     
     param: self
     """ 
-    def aclmetaindex(self): 
-        # HO 16/10/2024 BEGIN *****************
-        if os.path.exists(self.podname + "couldntcreateaclmetaindex.log"):
-            os.remove(self.podname + "couldntcreateaclmetaindex.log")
-        # HO 16/10/2024 END *****************
-        # for each server
-        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-            # get the identity provider
+    def aclmetaindex(self):
+        # recreate error log file 
+        if os.path.exists(self.podname + config.ACL_METAINDEX_CREATE_ERR_LOGFILE):
+            os.remove(self.podname + config.ACL_METAINDEX_CREATE_ERR_LOGFILE)
+
+        # HO 29/10/2024 BEGIN *************
+        # execute these calls asynchronously
+        with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
+            # for each server
+            for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+                self.aclmetaindexperserver(snode)
+            """# get the identity provider
             IDP=str(self.image.value(snode,self.namespace.Address))
             print('IDP=' + IDP)
             # initialize an output string for the metaindex data
@@ -1925,19 +1929,82 @@ class ESPRESSOexperiment:
                 print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
             except:
                 print("Couldn't put to " + targurl + ", trying again: ")
-                # HO 16/10/2024 BEGIN **************
                 try:
                     print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
                 except:
                     print("Couldn't put to " + targurl + " on second attempt. Skipping.")
-                    with open(self.podname + "couldntcreateaclmetaindex.log", 'a') as f:
+                    with open(self.podname + config.ACL_METAINDEX_CREATE_ERR_LOGFILE, 'a') as f:
                         f.write("Couldn't put to " + targurl + " on " + IDP + "\r\n")
                         f.close()
                     continue
-                # HO 16/10/2024 END **************
-            # HO 23/09/2024 END **************
+            # HO 23/09/2024 END **************"""
+        # HO 29/10/2024 END *************
         #print('self = ' + str(self))
 
+    """
+    Do all the steps of aclmetaindex for just one server.
+    
+    param: self
+    param: snode, the server node
+    """ 
+    def aclmetaindexperserver(self, snode):
+        # get the identity provider
+        IDP=str(self.image.value(snode,self.namespace.Address))
+        print('IDP=' + IDP)
+        # initialize an output string for the metaindex data
+        metaindexpodlist=''
+        
+        # for each pod on the server
+        for pnode in self.image.objects(snode,self.namespace.Contains):
+            # get the pod index address
+            indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
+            # append a newline to the pod index address to prepare it for writing to a file
+            addstring=indexaddress+'\r\n'
+            # append the current pod index address to the output string
+            metaindexpodlist+=addstring    
+            
+        # instantiate a new CSSaccess object for the server-level ESPRESSO pod
+        CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+        # HO 23/09/2024 BEGIN **************
+        # get the auth string containing the ID and secret for the server-level ESPRESSO pod
+        try: 
+            CSSAe.create_authstring()
+            # get the auth token for the server-level ESPRESSO pod from the client credentials
+            CSSAe.create_authtoken()
+        except:
+            print("Couldn't create auth token. Trying again: ")
+            try:
+                # instantiate a new CSSaccess object for the server-level ESPRESSO pod
+                CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
+                CSSAe.create_authstring()
+                # get the auth token for the server-level ESPRESSO pod from the client credentials
+                CSSAe.create_authtoken()
+            except:
+                print("Couldn't create auth token on second attempt. Skipping.")
+                with open(self.podname + config.ACL_METAINDEX_CREATE_ERR_LOGFILE , 'a') as f:
+                    f.write("Couldn't create authtoken for " + IDP + "\r\n")
+                    f.close()
+                return
+        # HO 23/09/2024 END **************
+        # PUT the new metaindex data out to the server-level ESPRESSO pod metaindex,
+        # and display the identity provider and the server response to the PUT request
+        enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
+        targurl = str(self.image.value(enode,self.namespace.MetaindexFile))
+        # HO 23/09/2024 BEGIN **************
+        try:
+            print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+        except:
+            print("Couldn't put to " + targurl + ", trying again: ")
+            try:
+                print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
+            except:
+                print("Couldn't put to " + targurl + " on second attempt. Skipping.")
+                with open(self.podname + config.ACL_METAINDEX_CREATE_ERR_LOGFILE, 'a') as f:
+                    f.write("Couldn't put to " + targurl + " on " + IDP + "\r\n")
+                    f.close()
+                return
+        # HO 23/09/2024 END **************
+    
     """
     Suitable for smaller experiments.
     
