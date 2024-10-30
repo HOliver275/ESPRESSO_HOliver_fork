@@ -14,8 +14,6 @@ INDEX_FILECOUNT_FILENAME = 'index.sum'
 INDEXPUB_ERR_LOGFILE = 'couldntindexpub.log'
 # flag whether the server index should be written in JSON
 JSON_SERVER_INDEXES = 'False'
-# absolute keyword count filename
-KEYWORD_ABS_COUNT_FILENAME = 'keyword_abs_count.sum'
 # file extension for keyword index files
 KEYWORD_INDEX_FILEXTN = '.ndx'
 # error log if couldn't open metaindexes
@@ -36,6 +34,8 @@ POD_CREATE_ERR_LOGFILE = 'couldntcreatepods.log'
 POD_DISTINCT_LEN_FILENAME = 'pod_distinct_len.sum'
 # pod length filename
 POD_LEN_FILENAME = 'pod_len.sum'
+# pod term frequencies filename
+POD_TERM_FREQUENCIES_FILENAME = 'pod_term_frequencies.sum'
 # file extension for WebID files
 WEBID_FILEXTN = '.webid'
 # prefix for a sequentially-numbered short WebID handle

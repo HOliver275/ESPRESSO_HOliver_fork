@@ -354,7 +354,6 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
         # return the response
         return res
         
-# HO 22/10/2024 BEGIN *******************
     """
     Makes a file accessible to the experiment through its .acl file.
     
@@ -379,8 +378,6 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             # create DPOP headers 
             headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+self.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", self.dpopKey)}
             # update the target .acl file to grant c:me full access
-            print(headers)
-
             res= requests.put(targetUrl,
                headers=headers,
                 data=datadef
@@ -396,7 +393,6 @@ acl:mode acl:Control, acl:Read, acl:Write.'''
             )
         # return the response
         return res
-# HO 22/10/2024 END *********************
 
     def makeurlaccessible(self,url,filename):
         targetUrl=url+'.acl'

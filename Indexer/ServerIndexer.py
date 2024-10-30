@@ -46,9 +46,6 @@ class ServerIndex:
         # name of the pod handle lookup file (if using JSON format)
         self.podlookupfilename='podlookup.json'
         # HO 25/10/2024 BEGIN **************
-        self.keyword_abs_frequencies = dict()
-        # HO 25/10/2024 END **************
-        # HO 25/10/2024 BEGIN **************
         self.collection_length = 0
         self.collection_distinct_length = 0
         self.pod_distinct_lengths = dict()
@@ -86,14 +83,9 @@ class ServerIndex:
     def addwebids(self, podpath, webidlist):
         # the WebID becomes the filename for a .webid file
         for webid in webidlist:
-            # HO 01/10/2024 BEGIN ****************
-            #if webid==config.OPENACCESS_SYMBOL:
-                #widword=config.OPENACCESS_WEBIDWORD
-                #webidword=config.OPENACCESS_FILENAME
             if webid==config.OPENACCESS_SYMBOL:
                 widword=config.OPENACCESS_WIDWORD
                 webidword=config.OPENACCESS_FILENAME
-            # HO 01/10/2024 END ****************
 
                 if webidword not in self.widword_lookup.keys():
                     # add this webidword:widword mapping to the lookup
@@ -145,13 +137,7 @@ class ServerIndex:
                 servidx[webidfile] = ''
             for(wid, poddict) in widdict.items():
                 for(ppath, pid) in poddict.items():
-                    # HO 01/10/2024 BEGIN ***************
-                    #if(wid==config.OPENACCESS_WIDWORD):
-                        #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
-                    #else:
-                        #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
                     servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
-                    # HO 01/10/2024 END ***************
         
         # now the keyword files                
         for (key, wworddict) in self.keywords_dict.items():
@@ -191,13 +177,7 @@ class ServerIndex:
                 for(ppath, pid) in poddict.items():
                     # The open access symbol is an asterisk, can't be used as filename
                     # Anyway, add the short wid handle, the short pod handle, and the path to the pod index as a line in the .webid file
-                    # HO 01/10/2024 BEGIN *************
-                    #if(wid==config.OPENACCESS_WIDWORD):
-                        #servidx[webidfile]=servidx[webidfile] + config.OPENACCESS_WEBIDWORD + ',' + pid + ',' + ppath + '\r\n'
-                    #else:
-                        #servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
                     servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
-                    # HO 01/10/2024 END *************
                         
         # k/e/y/w/o/r/d.ndx filename as key, dictionary with webidwords for keys
         for (key, wworddict) in self.keywords_dict.items():
@@ -224,7 +204,6 @@ class ServerIndex:
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
         
-    # HO 07/10/2024 BEGIN ************
     """
     Prepares the pod lookup to be output as a JSON file.
     
@@ -247,9 +226,7 @@ class ServerIndex:
         servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + ' }\r\n'
         # return the dictionary with the JSON pod lookup
         return servidx
-    # HO 07/10/2024 END ************
     
-    # HO 07/10/2024 BEGIN ************
     """
     Prepares the .webid file contents to be output as JSON.
     
@@ -277,9 +254,7 @@ class ServerIndex:
                 servidx[webidfile] = servidx[webidfile] + '] }\r\n'
             
         return servidx
-    # HO 07/10/2024 END ************
     
-    # HO 07/10/2024 BEGIN ******************
     """
     Prepares the .ndx files to be output as JSON.
     
@@ -305,23 +280,19 @@ class ServerIndex:
                         servidx[servkey]=servidx[servkey][:-2]
                     servidx[servkey]=servidx[servkey] + ' }'
                 # end the wid, end the row
-                #servidx[servkey] = servidx[servkey] + ' },\r\n'
                 servidx[servkey] = servidx[servkey] + ', \r\n'
-                #servidx[servkey] = servidx[servkey] + ', '
             
             if(servidx[servkey].endswith(', \r\n')):
                 servidx[servkey] = servidx[servkey][:-4]  
                 servidx[servkey] = servidx[servkey] + ' }\r\n'
             
         return servidx
-    # HO 07/10/2024 END ********************
 
     """
     Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file. All server-level index files are in JSON format.
 
     """
     def buildservermetaindex_simple_json(self):
-        # HO 07/10/2024 BEGIN ************    
         servidx = dict()
         # write the pod lookup file
         servidx = self.jsonify_podlookup(servidx)
@@ -329,7 +300,6 @@ class ServerIndex:
         servidx = self.jsonify_webidfiles(servidx)
         # and the .ndx files
         servidx = self.jsonify_ndxfiles(servidx)
-        # HO 07/10/2024 END ************
         
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
         self.index = servidx
@@ -339,11 +309,9 @@ class ServerIndex:
 
     """
     def buildservermetaindex_simple(self):
-        # HO 22/10/2024 BEGIN **************
         if(config.JSON_SERVER_INDEXES == 'True'):
             self.buildservermetaindex_simple_json()
             return
-        # HO 22/10/2024 END **************
         
         servidx = dict()
         # webid files first
@@ -356,7 +324,7 @@ class ServerIndex:
                 for(ppath, pid) in poddict.items():
                     servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
         
-        # now the keyword files 
+        # collection distinct length
         # HO 28/10/2024 BEGIN **************
         distkeys = self.keywords_dict.keys()
         self.collection_distinct_length = len(distkeys)
@@ -377,29 +345,21 @@ class ServerIndex:
                             servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
         
         # HO 28/10/2024 BEGIN **************
+        # pod term frequency
+        servidx[config.POD_TERM_FREQUENCIES_FILENAME] = ''
         for servkey in self.pod_term_freqs.keys():
-            servidx[servkey] = servidx[servkey] + self.pod_term_freqs[servkey]
-            # pod frequency
-            podsfound = self.pod_term_freqs[servkey].count('\r\n')
-            servidx[servkey] = servidx[servkey] + 'pod frequency,' + str(podsfound) + '\r\n'
+            servidx[config.POD_TERM_FREQUENCIES_FILENAME] = servidx[config.POD_TERM_FREQUENCIES_FILENAME] + self.pod_term_freqs[servkey]
         # HO 28/10/2024 END **************
-                            
-        # HO 25/10/2024 BEGIN **************
-        # now the absolute keyword count file
-        servidx[config.KEYWORD_ABS_COUNT_FILENAME] = ''
-        for (term, freq) in self.keyword_abs_frequencies.items():
-            servidx[config.KEYWORD_ABS_COUNT_FILENAME] = servidx[config.KEYWORD_ABS_COUNT_FILENAME] + term + ',' + str(freq) + '\r\n'
-        # HO 25/10/2024 END **************
         
         # HO 28/10/2024 BEGIN **************
         # now the pod lengths file
         servidx[config.POD_LEN_FILENAME] = ''
         for podpath in self.pod_lengths.keys():
-            servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + podpath + ',' + self.pod_lengths[podpath]
+            servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_lengths[podpath]
         # now the pod distinct lengths file
         servidx[config.POD_DISTINCT_LEN_FILENAME] = ''
         for podpath in self.pod_distinct_lengths.keys():
-            servidx[config.POD_DISTINCT_LEN_FILENAME] = servidx[config.POD_DISTINCT_LEN_FILENAME] + podpath + ',' + self.pod_distinct_lengths[podpath]
+            servidx[config.POD_DISTINCT_LEN_FILENAME] = servidx[config.POD_DISTINCT_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_distinct_lengths[podpath]
         # now the collection length file
         servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
         # HO 28/10/2024 END **************

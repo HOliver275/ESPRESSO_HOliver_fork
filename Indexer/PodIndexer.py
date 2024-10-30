@@ -623,10 +623,7 @@ class LdpIndex:
     param: testservindex, the server-level index that we are building up alongside the pod indexes
     return: testservindex, the updated server-level index object
     """
-    # HO 04/10/2024 BEGIN ***************
-    #def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
     def serverlevel_indexwebidnewdirs(self, id, text, webidlist, podpath, testservindex):
-    # HO 04/10/2024 END ***************
         print('inside serverlevel_indexwebidnewdirs')
         # if the file is empty, return the filename
         if len(text)==0:
@@ -670,8 +667,6 @@ class LdpIndex:
         # and keep a running total of the number of times it appears in this file
         for term in terms:
             if len(term)<50:
-                serverlevel_abs_frequency = testservindex.keyword_abs_frequencies[term] if term in testservindex.keyword_abs_frequencies else 0
-                testservindex.keyword_abs_frequencies[term] = serverlevel_abs_frequency + 1
                 if (config.HIERARCHICAL_POD_INDEXES == 'True'):
                     pod_termword='/'.join(term)+config.KEYWORD_INDEX_FILEXTN
                 else:
@@ -696,10 +691,7 @@ class LdpIndex:
                 # which has the following structure
                 # {keyword : {webidword : {widword : {podpath : {podword : keywordcount}}}}}
   
-                # HO 22/10/2024 BEGIN ***************
-                #webidworddict = testservindex.keywords_dict[termword] if termword in testservindex.keywords_dict else dict()
                 webidworddict = testservindex.keywords_dict[server_termword] if server_termword in testservindex.keywords_dict else dict()
-                # HO 22/10/2024 END ***************
                 # now add to the {keyword : {webidword : dictionary for every webidword
                 # that has access to this file
                 for f_webidword in filelevel_webidwordlist:
@@ -725,14 +717,11 @@ class LdpIndex:
                     # {webidword : {widword : {podpath : {podword : keywordcount}}}}
                     webidworddict[f_webidword] = widdict
                 # {keyword : {webidword : {widword : {podpath : {podword : keywordcount}}}}}
-                # HO 22/10/2024 BEGIN ***************
-                #testservindex.keywords_dict[termword] = webidworddict
                 testservindex.keywords_dict[server_termword] = webidworddict
-                # HO 22/10/2024 END ***************
         
         # updating the index dictionary entry 'index.sum'
         # with a running total of the number of files
-        self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f)
+        self.index[config.INDEX_FILECOUNT_FILENAME]=str(self.f) + '\r\n'
         
         # now go through the word counts
         for (key, freq) in filelevel_appearances_dict.items():
@@ -831,22 +820,24 @@ def serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex):
     pbar.close()
     print("ldpindex.index: ")
     # HO 28/10/2024 BEGIN ***************
-    # Pod distinct length.
+    # pod distinct length
     ldpindex.index[config.POD_DISTINCT_LEN_FILENAME] = str(ldpindex.pod_distinct_length) + '\r\n'
     if podpath not in testservindex.pod_distinct_lengths:
         testservindex.pod_distinct_lengths[podpath] = str(ldpindex.pod_distinct_length) + '\r\n'
-    # Pod length.
+    # pod length
     ldpindex.index[config.POD_LEN_FILENAME] = str(ldpindex.pod_length) + '\r\n'
     if podpath not in testservindex.pod_lengths:
         testservindex.pod_lengths[podpath] = str(ldpindex.pod_length) + '\r\n'
     # pod term frequency
+    ldpindex.index[config.POD_TERM_FREQUENCIES_FILENAME] = ''
     for term in ldpindex.podlevel_appearances_dict:
-        if term in ldpindex.podlevel_appearances_dict:
-            pod_term_freq = ldpindex.podlevel_appearances_dict[term]
-            ldpindex.index[term] = ldpindex.index[term] + str(pod_term_freq) + '\r\n'
-            if term not in testservindex.pod_term_freqs:
-                testservindex.pod_term_freqs[term] = ''
-            testservindex.pod_term_freqs[term] = testservindex.pod_term_freqs[term] + testservindex.podword_lookup[podpath] + ',' + str(pod_term_freq) + '\r\n'
+        # at pod level
+        pod_term_freq = ldpindex.podlevel_appearances_dict[term]
+        ldpindex.index[config.POD_TERM_FREQUENCIES_FILENAME] = ldpindex.index[config.POD_TERM_FREQUENCIES_FILENAME] + term.split(".")[0] + ',' + str(pod_term_freq) + '\r\n'
+        # at server level
+        if term not in testservindex.pod_term_freqs:
+            testservindex.pod_term_freqs[term] = ''
+        testservindex.pod_term_freqs[term] = testservindex.pod_term_freqs[term] + term.split(".")[0] + ',' + testservindex.podword_lookup[podpath] + ',' + str(pod_term_freq) + '\r\n'
     # running total of the collection length
     testservindex.collection_length = testservindex.collection_length + ldpindex.pod_length
     # HO 28/10/2024 END ***************
