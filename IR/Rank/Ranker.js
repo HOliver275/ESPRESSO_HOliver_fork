@@ -2,12 +2,12 @@ function calculateBM25({
                            termFrequency,
                            documentLength,
                            documentFrequency,
-                           collectionSize,
+                           totalDocuments,
                            avgDocumentLength,
                            k1 = 1.5,
                            b = 0.75
                        }, decimalPlaces = 4) {
-    const idf = Math.log((collectionSize - documentFrequency + 0.5) / (documentFrequency + 0.5) + 1);
+    const idf = Math.log((totalDocuments - documentFrequency + 0.5) / (documentFrequency + 0.5) + 1);
     const tfNorm = (termFrequency * (k1 + 1)) / (termFrequency + k1 * (1 - b + b * (documentLength / avgDocumentLength)));
 
     return parseFloat((idf * tfNorm).toFixed(decimalPlaces));
@@ -39,8 +39,7 @@ function calculateQueryScores({
                                   queryTerms,             // Array of terms with attributes for each term
                                   documentLength,         // dl: length of the document
                                   totalTermsInCollection, // N: total number of terms in the collection
-                                  totalDocuments,         // Total number of documents in the collection
-                                  collectionSize,         // Total number of documents in the collection for BM25 calculation
+                                  totalDocuments,
                                   avgDocumentLength,      // Average document length for BM25 calculation
                                   mu = 2000,              // Smoothing parameter (Dirichlet) for Query Likelihood
                                   k1 = 1.5,               // BM25 parameter
@@ -66,7 +65,7 @@ function calculateQueryScores({
             termFrequency,
             documentLength,
             documentFrequency: documentFrequencyBM25,
-            collectionSize,
+            totalDocuments,
             avgDocumentLength,
             k1,
             b

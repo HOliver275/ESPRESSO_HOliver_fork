@@ -20,7 +20,7 @@ const queryTerms = [
 const documentLength = 100;                    // Length of the document
 const totalTermsInCollection = 100000;         // Total terms in the collection
 const totalDocuments = 5000;                   // Total number of documents in the collection
-const collectionSize = 5000;                   // Collection size (BM25)
+                 // Collection size (BM25)
 const avgDocumentLength = 120;                 // Average document length (BM25)
 const mu = 2000;                               // Dirichlet smoothing parameter for Query Likelihood
 const k1 = 1.5;                                // BM25 k1 parameter
@@ -32,7 +32,7 @@ const scores = calculateQueryScores({
     documentLength,
     totalTermsInCollection,
     totalDocuments,
-    collectionSize,
+   
     avgDocumentLength,
     mu,
     k1,
