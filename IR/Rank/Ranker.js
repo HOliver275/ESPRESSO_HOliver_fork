@@ -64,7 +64,7 @@ function calculateQueryScores({
         const termBM25Score = calculateBM25({
             termFrequency,
             documentLength,
-            documentFrequency: documentFrequencyBM25,
+            documentFrequency,
             totalDocuments,
             avgDocumentLength,
             k1,
@@ -98,6 +98,7 @@ function calculateQueryScores({
         tfidfScore: totalTFIDFScore
     };
 }
+
 
 module.exports = {
     calculateBM25,
