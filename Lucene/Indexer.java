@@ -1,5 +1,3 @@
-package com.mycompany.indexer;
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;

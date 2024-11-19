@@ -2648,8 +2648,40 @@ class ESPRESSOexperiment:
     """        
     def serverlevel_storelocalindexzipdirs(self,zipdir):
         print('inside serverlevel_storelocalindexzipdirs')
+        # HO 08/11/2024 BEGIN **********
+        # DEV
+        # Are we building .csv files to store in the overlay network?
+        """b_building_overlay_csvs = True
+        # we need a dictionary for the keyword_tbl .csv
+        keyword_tbl_dict = dict()
+        # we need a dictionary for the server_tbl .csv
+        server_tbl_dict = dict()
+        # we need to sequentially number the servers to be an autoid for the tables
+        server_sequential_num = 0"""
+        # HO 08/11/2024 END ************
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
+            # HO 08/11/2024 BEGIN **********
+            # if we are building the overlay CSVs
+            """if(b_building_overlay_csvs):
+                # increment the server sequential number (yes it will be 1-based, that is right)
+                server_sequential_num += 1
+                # the server_tbl .csv dictionary needs to be nested
+                server_url_dict = dict()
+                # get the server URL for the server table
+                servurl = str(self.image.value(snode,self.namespace.Address))
+                # add to the subdictionary that has the server URL as the key
+                server_url_dict[servurl] = ''
+                servid = str(server_sequential_num)
+                if(servid not in (server_tbl_dict.keys())):
+                    # so now the key to the server dictionary is the ID number and the server URL
+                    server_tbl_dict[str(servid)] = server_url_dict
+                
+                print("server_tbl_dict = ")
+                for item in server_tbl_dict.items():
+                    print(str(item))"""
+            # HO 08/11/2024 BEGIN **********
+            
             # name the current zip directory after the current server
             serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
             testservindex=ServerIndex()
@@ -2708,6 +2740,7 @@ class ESPRESSOexperiment:
                 # construct an inverted index from the file tuples
                 print('constructing inverted index')
                 podlevel_index=dict()
+                
                 servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex)
 
                 if (servtuples is not None):
@@ -2746,9 +2779,23 @@ class ESPRESSOexperiment:
                 # close the pod index zip file
                 podindexzip.close()
 
+            # HO 08/11/2024 BEGIN **********
+            """keyword_tbl_tuples = []
+            if(b_building_overlay_csvs):
+                testservindex.buildservermetaindex_simple_csvs(keyword_tbl_dict, server_sequential_num)
+                collection_len = testservindex.index[config.COLLECTION_LEN_FILENAME].replace('\r\n', ',')
+                distinct_collection_len = testservindex.index[config.COLLECTION_DISTINCT_LEN_FILENAME].replace('\r\n', ',')
+                #pod_count = testservindex.index[config.POD_LEN_FILENAME]
+                #server_url_dict[servurl] = collection_len + ',' + distinct_collection_len + ',' + pod_count + '\r\n'
+                server_url_dict[servurl] = collection_len + distinct_collection_len
+                server_tbl_dict[servid] = server_url_dict
+                print("server_tbl_dict now looks like this: ")
+                print(str(server_tbl_dict))
+            else:"""
+            # HO 08/11/2024 END ************
             # unwind the server-level metaindex into a writable state
             testservindex.buildservermetaindex_simple()
-
+            
             n=len(testservindex.index.keys())
             print('About to write server level index:')
             # set up a progress bar

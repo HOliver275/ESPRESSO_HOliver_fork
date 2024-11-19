@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<dirs>
+    <entry loc="/usr/local/Cellar/openjdk/23.0.1/libexec/openjdk.jdk/Contents/Home" stamp="1727675507000"/>
+    <entry loc="/Library/Java/JavaVirtualMachines/jdk-21.jdk/Contents/Home" stamp="1710332085329"/>
+    <entry loc="/Library/Java/JavaVirtualMachines/jdk1.8.0.jdk/Contents/Home" stamp="1393932270000"/>
+    <entry loc="/Library/Java/JavaVirtualMachines/jdk1.7.0_25.jdk/Contents/Home" stamp="1370497387000"/>
+    <entry loc="/Applications/Eclipse.app/Contents/Eclipse/plugins/org.eclipse.justj.openjdk.hotspot.jre.full.macosx.aarch64_21.0.4.v20240802-1551" stamp="1725521828000"/>
+    <entry loc="/Applications/Eclipse.app/Contents/Eclipse/plugins/org.eclipse.justj.openjdk.hotspot.jre.full.macosx.aarch64_21.0.4.v20240802-1551/jre" stamp="1725521828000"/>
+    <entry loc="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home" stamp="1547800533000"/>
+    <entry loc="/Library/Java/JavaVirtualMachines/jdk1.8.0_172.jdk/Contents/Home" stamp="1530532401605"/>
+    <entry loc="/Library/Java/JavaVirtualMachines/jdk-9.0.4.jdk/Contents/Home" stamp="1519057081791"/>
+    <entry loc="/Library/Internet Plug-Ins/JavaAppletPlugin.plugin/Contents/Home" stamp="1727683771000"/>
+</dirs>

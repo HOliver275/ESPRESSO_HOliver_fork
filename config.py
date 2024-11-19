@@ -5,9 +5,9 @@ COLLECTION_DISTINCT_LEN_FILENAME = 'collection_distinct_len.sum'
 # collection length filename
 COLLECTION_LEN_FILENAME = 'collection_len.sum'
 # flag whether the pod index file structure is hierarchical
-HIERARCHICAL_POD_INDEXES = 'False'
+HIERARCHICAL_POD_INDEXES = 'True'
 # flag whether the server index file structure is hierarchical
-HIERARCHICAL_SERVER_INDEXES = 'False'
+HIERARCHICAL_SERVER_INDEXES = 'True'
 # filename for index file containing total number of files indexed
 INDEX_FILECOUNT_FILENAME = 'index.sum'
 # error log if couldn't open indexes
@@ -16,6 +16,9 @@ INDEXPUB_ERR_LOGFILE = 'couldntindexpub.log'
 JSON_SERVER_INDEXES = 'False'
 # file extension for keyword index files
 KEYWORD_INDEX_FILEXTN = '.ndx'
+# HO 08/11/2024 BEGIN **********
+KEYWORD_TBL_CSV = 'keyword_web_id_tbl.csv'
+# HO 08/11/2024 END **********
 # error log if couldn't open metaindexes
 METAINDEXPUB_ERR_LOGFILE = 'couldntmetaindexpub.log'
 # programmatic symbol used to denote open access

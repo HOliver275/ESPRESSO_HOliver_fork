@@ -325,12 +325,10 @@ class ServerIndex:
                     servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
         
         # collection distinct length
-        # HO 28/10/2024 BEGIN **************
         distkeys = self.keywords_dict.keys()
         self.collection_distinct_length = len(distkeys)
         servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = ''
-        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = str(self.collection_distinct_length) + '\r\n'
-        # HO 28/10/2024 END **************
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = str(self.collection_distinct_length) + '\r\n' 
                        
         for (servkey, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
@@ -344,12 +342,100 @@ class ServerIndex:
                         for(pidkey, freq) in piddict.items():
                             servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
         
-        # HO 28/10/2024 BEGIN **************
         # pod term frequency
         servidx[config.POD_TERM_FREQUENCIES_FILENAME] = ''
         for servkey in self.pod_term_freqs.keys():
             servidx[config.POD_TERM_FREQUENCIES_FILENAME] = servidx[config.POD_TERM_FREQUENCIES_FILENAME] + self.pod_term_freqs[servkey]
-        # HO 28/10/2024 END **************
+        
+        # now the pod lengths file
+        servidx[config.POD_LEN_FILENAME] = ''
+        for podpath in self.pod_lengths.keys():
+            servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_lengths[podpath]
+        # now the pod distinct lengths file
+        servidx[config.POD_DISTINCT_LEN_FILENAME] = ''
+        for podpath in self.pod_distinct_lengths.keys():
+            servidx[config.POD_DISTINCT_LEN_FILENAME] = servidx[config.POD_DISTINCT_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_distinct_lengths[podpath]
+        # now the collection length file
+        servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
+            
+        # and the old-fashioned index sum
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+        
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file, formatted as tuples.
+
+    param: keyword_tbl_dict, the dictionary that will be unwound into tuples that will be written to the .csv file containing the contents of the keyword table for the overlay network
+    param: servcount, the sequential number of the server
+    """
+    """def buildservermetaindex_simple_csvs(self, keyword_tbl_dict, servcount):
+        # HO 08/11/2024 BEGIN *********
+        # create the id number as the PK for the keyword table
+        kwd_id = len(keyword_tbl_dict)
+        # HO 08/11/2024 END *********
+        
+        servidx = dict()
+        # webid files first
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            for(wid, poddict) in widdict.items():
+                if wid != config.OPENACCESS_WIDWORD:
+                    servidx[webidfile]=servidx[webidfile] + "handle," + wid + '\r\n'
+                for(ppath, pid) in poddict.items():
+                    servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
+        
+        # collection distinct length
+        distkeys = self.keywords_dict.keys()
+        self.collection_distinct_length = len(distkeys)
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = ''
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = str(self.collection_distinct_length) + '\r\n'
+                       
+        for (servkey, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                # HO 08/11/2024 BEGIN *********
+                if (servkey not in keyword_tbl_dict.keys()):
+                    webidworddict = dict()
+                else:
+                    webidworddict = keyword_tbl_dict[servkey]
+                                
+                if(wwordkey not in webidworddict.keys()):
+                    servnumdict = dict()
+                else:
+                    servnumdict = webidworddict[wwordkey]
+                                
+                if(servcount not in servnumdict.keys()):
+                    servnumdict[servcount] = ''
+                    
+                podfreq = 0
+                termfreq = 0
+                # HO 08/11/2024 END *********
+                
+                for(widkey, poddict) in widdict.items():
+                    widtowrite=widkey
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
+                            # HO 08/11/2024 BEGIN *********
+                            podfreq += 1
+                            termfreq = termfreq + int(freq)
+                
+                # now we have server_id,pod_freq,term_freq
+                servnumdict[servcount] = str(podfreq) + ',' + str(termfreq) + '\r\n' 
+                # now we have webid(ish),server_id,pod_freq,term_freq
+                webidworddict[wwordkey] = servnumdict
+                # now we have keyword,webid(ish),server_id,pod_freq,term_freq
+                keyword_tbl_dict[servkey] = webidworddict          
+                # HO 08/11/2024 END *********
+                                
+        # pod term frequency
+        servidx[config.POD_TERM_FREQUENCIES_FILENAME] = ''
+        for servkey in self.pod_term_freqs.keys():
+            servidx[config.POD_TERM_FREQUENCIES_FILENAME] = servidx[config.POD_TERM_FREQUENCIES_FILENAME] + self.pod_term_freqs[servkey]
         
         # HO 28/10/2024 BEGIN **************
         # now the pod lengths file
@@ -365,7 +451,7 @@ class ServerIndex:
         # HO 28/10/2024 END **************
             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
-        self.index = servidx
+        self.index = servidx"""
 
 
         

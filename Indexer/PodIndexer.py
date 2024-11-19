@@ -733,8 +733,7 @@ class LdpIndex:
 
         # return the server-level index object
         return testservindex
-
-        
+          
 def ldpindexdict(filedict):
     ldpindex=LdpIndex()
     for (id,text) in filedict.items():
