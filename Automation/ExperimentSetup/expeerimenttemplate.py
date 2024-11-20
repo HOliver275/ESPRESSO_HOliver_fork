@@ -93,7 +93,8 @@ def indexexperiment(experiment):
     # And distribute them to the corresponding servers using ssh.
     
     # Option B, step 1, zip the indexes and store locally 
-    experiment.serverlevel_storelocalindexzipdirs(zipdir)
+    #experiment.serverlevel_storelocalindexzipdirs(zipdir)
+    experiment.lucene_storelocalindexzipdirs(zipdir)
     
     # Option B, step 2: distribute zips(using SSH username and password) 
     """experiment.distributezips(zipdir,SSHUser,SSHPassword,targetdir='/srv/espresso/')"""

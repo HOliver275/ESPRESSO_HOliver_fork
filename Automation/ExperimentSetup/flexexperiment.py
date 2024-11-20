@@ -5,20 +5,10 @@ import sys
 # requests: https://requests.readthedocs.io/en/latest/
 # numpy: https://numpy.readthedocs.io/en/latest/
 import os, random, requests, numpy
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
-
-from Automation.ExperimentSetup import FileDistributor, FileUploader
-sys.path.append('../../Indexer')
-from Indexer import PodIndexer
-sys.path.append('../../')
-
-import config
-
-from Indexer.ServerIndexer import ServerIndex
-# ESPRESSO modules for accessing Community Solid Server using DPOP 
-from Automation.CSSAccess import CSSaccess,dpop_utils
-sys.path.append('../CSSAccess')
+# subprocess: https://docs.python.org/3/library/subprocess.html
+import subprocess
+# json: https://docs.python.org/3/library/json.html
+import json
 
 # cleantext: https://pypi.org/project/cleantext/
 # string: https://docs.python.org/3/library/string.html
@@ -50,6 +40,20 @@ from paramiko import SSHClient
 from scp import SCPClient
 # sys: https://docs.python.org/3/library/sys.html#module-sys
 from sys import argv
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+from Automation.ExperimentSetup import FileDistributor, FileUploader
+
+sys.path.append('../../Indexer')
+from Indexer import PodIndexer
+from Indexer.ServerIndexer import ServerIndex
+
+sys.path.append('../../')
+import config
+
+# ESPRESSO modules for accessing Community Solid Server using DPOP 
+from Automation.CSSAccess import CSSaccess,dpop_utils
+sys.path.append('../CSSAccess')
 
 # Hard-coded list of servers. Replace the below with your own.
 """serverlistglobal=['https://srv03812.soton.ac.uk:3000/',
@@ -930,10 +934,9 @@ class ESPRESSOexperiment:
         # make a list of all the file nodes for the input filelabel
         thisfilelist=[fnode for fnode in self.image.subjects(self.namespace.Type,self.namespace.File) if str(self.image.value(fnode,self.namespace.Label))==filelabel]
         # get an integer representing the number of files for the requisite percentage
-        # HO 03/10/2024 BEGIN *****************
-        # handles the case where there are no open files
+
+        # handles the case where there are no open-access files
         if (openperc > 0):
-            # HO 03/10/2024 END *******************
             openn=floor(len(thisfilelist)*(openperc/100))
             # and select the open files at random from the list of file nodes
             thisopenfilelist=random.sample(thisfilelist, openn)
@@ -1182,53 +1185,6 @@ class ESPRESSOexperiment:
             # For each server node
             for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
                 executor.submit(self.podcreateperserver, snode)
-                """# get the identity provider
-                IDP=str(self.image.value(snode,self.namespace.Address))
-                # for every pod on this server
-                podcounter = 0
-                resetatpod = 50
-                for pnode in self.image.objects(snode,self.namespace.Contains):
-                    podcounter += 1
-                    if (podcounter >= resetatpod):
-                        podcounter = 0
-                        # make sure the CSS server doesn't get too many requests too fast
-                        print("Another " + str(resetatpod) + " pods created! Pausing for 30 seconds: ")
-                        time.sleep(30)
-                    # get the pod address
-                    podaddress=str(self.image.value(pnode,self.namespace.Address))
-                    # get the pod name
-                    podname=str(self.image.value(pnode,self.namespace.Name))
-                    # get the pod email
-                    email=str(self.image.value(pnode,self.namespace.Email))
-                    # get the WebID
-                    webid=str(self.image.value(pnode,self.namespace.WebID))
-                    # get the triple string
-                    triplestring=str(self.image.value(pnode,self.namespace.TripleString))
-                    # access the pod and display the response text
-                    # HO 25/09/2024 BEGIN *****************
-                    #try: 
-                    res=CSSaccess.get_file(podaddress)
-                    #except:
-                        #print("podcreate: Couldn't get file at " + podaddress + ", trying again.")
-                        #res=CSSaccess.get_file(podaddress)
-                    # HO 25/09/2024 END *****************
-                
-                    # if it worked
-                    if res.ok:
-                        # then say the pod is already there and we're going to 
-                        # wipe it and start again.
-                        print('Pod '+podname+ ' at '+IDP +' exists. Deleting.')
-                        # delete all the files in this pod
-                        self.cleanuppod(snode, pnode)
-                    else: # if it didn't work the pod isn't already there and we create it
-                        try: 
-                        print('Creating '+podname+ ' at '+IDP,CSSaccess.podcreate(IDP,podname,email,self.password))
-                        except:
-                            print("Couldn't create " + podname + " at " + IDP + ", skipping")
-                            with open(self.podname + "couldntcreatepods.log", 'a') as f:
-                                f.write("Couldn't create " + podname + " at " + IDP + "\r\n")
-                                f.close()
-                            continue"""
              # HO 29/10/2024 END ******************
              #print('self = ' + 'self')
 
@@ -1285,6 +1241,7 @@ class ESPRESSOexperiment:
                         f.write("Couldn't create " + podname + " at " + IDP + "\r\n")
                         f.close()
                     continue                     
+    
     """
     Same as podcreate, but threaded.
     
@@ -1294,7 +1251,7 @@ class ESPRESSOexperiment:
     
     What should reasonably work is to have one thread per server, so the pods are created on
     multiple servers in parallel, but each server is receiving the pod creation requests sequentially
-    and at a sustainable pace.
+    and at a sustainable pace. See podcreateperserver above.
     
     """
     def threadedpodcreate(self):
@@ -1880,64 +1837,6 @@ class ESPRESSOexperiment:
             # for each server
             for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
                 executor.submit(self.aclmetaindexperserver, snode)
-            """# get the identity provider
-            IDP=str(self.image.value(snode,self.namespace.Address))
-            print('IDP=' + IDP)
-            # initialize an output string for the metaindex data
-            metaindexpodlist=''
-            
-            # for each pod on the server
-            for pnode in self.image.objects(snode,self.namespace.Contains):
-                # get the pod index address
-                indexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
-                # append a newline to the pod index address to prepare it for writing to a file
-                addstring=indexaddress+'\r\n'
-                # append the current pod index address to the output string
-                metaindexpodlist+=addstring    
-                
-            # instantiate a new CSSaccess object for the server-level ESPRESSO pod
-            CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-            # HO 23/09/2024 BEGIN **************
-            # get the auth string containing the ID and secret for the server-level ESPRESSO pod
-            try: 
-                CSSAe.create_authstring()
-                # get the auth token for the server-level ESPRESSO pod from the client credentials
-                CSSAe.create_authtoken()
-            except:
-                # HO 16/10/2024 BEGIN **************
-                print("Couldn't create auth token. Trying again: ")
-                try:
-                    # instantiate a new CSSaccess object for the server-level ESPRESSO pod
-                    CSSAe=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-                    CSSAe.create_authstring()
-                    # get the auth token for the server-level ESPRESSO pod from the client credentials
-                    CSSAe.create_authtoken()
-                except:
-                    print("Couldn't create auth token on second attempt. Skipping.")
-                    with open(self.podname + "couldntcreateaclmetaindex.log", 'a') as f:
-                        f.write("Couldn't create authtoken for " + IDP + "\r\n")
-                        f.close()
-                    continue
-                # HO 16/10/2024 END **************
-            # HO 23/09/2024 END **************
-            # PUT the new metaindex data out to the server-level ESPRESSO pod metaindex,
-            # and display the identity provider and the server response to the PUT request
-            enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
-            targurl = str(self.image.value(enode,self.namespace.MetaindexFile))
-            # HO 23/09/2024 BEGIN **************
-            try:
-                print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
-            except:
-                print("Couldn't put to " + targurl + ", trying again: ")
-                try:
-                    print(IDP,CSSAe.put_url(targurl, metaindexpodlist, 'text/csv'))
-                except:
-                    print("Couldn't put to " + targurl + " on second attempt. Skipping.")
-                    with open(self.podname + config.ACL_METAINDEX_CREATE_ERR_LOGFILE, 'a') as f:
-                        f.write("Couldn't put to " + targurl + " on " + IDP + "\r\n")
-                        f.close()
-                    continue
-            # HO 23/09/2024 END **************"""
         # HO 29/10/2024 END *************
         #print('self = ' + str(self))
 
@@ -2006,7 +1905,7 @@ class ESPRESSOexperiment:
         # HO 23/09/2024 END **************
     
     """
-    Suitable for smaller experiments.
+    Suitable for smaller experiments only. Basically recreates the indexes, then checks them against the deployed ones to see if they're the same.
     
     param: self
     """
@@ -2157,78 +2056,6 @@ class ESPRESSOexperiment:
             # for every server
             for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
                 executor.submit(self.indexpubperserver, snode)
-            """# get the identity provider
-            IDP=str(self.image.value(snode,self.namespace.Address))
-            # display progress message
-            print('opening indexes for '+ IDP)
-
-            podcounter = 0
-            maxpods = 50
-
-            # for every pod on the server
-            for pnode in self.image.objects(snode,self.namespace.Contains):
-                podcounter += 1
-                if (podcounter >= maxpods):
-                    podcounter = 0
-                    print("Opened indexes for another " + str(maxpods) + " pods. Resting for 30 seconds:")
-                    time.sleep(30)
-
-                # get the pod index address
-                podindexaddress=str(self.image.value(pnode,self.namespace.IndexAddress))
-                # get the pod account username (email)
-                USERNAME=str(self.image.value(pnode,self.namespace.Email))
-                # get the pod account password
-                PASSWORD=self.password
-                # create a CSSaccess object with the identity provider, username and password
-                CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                
-                # HO 22/09/2024 BEGIN ************
-                try: 
-                    # get the auth string containing the pod ID and secret
-                    CSSA.create_authstring()
-                    # get the pod auth token from the client credentials
-                    CSSA.create_authtoken()
-                except:
-                    # try one more time
-                    try:
-                        # create a CSSaccess object with the identity provider, username and password
-                        CSSA=CSSaccess.CSSaccess(IDP, USERNAME, PASSWORD)
-                        # get the auth string containing the pod ID and secret
-                        CSSA.create_authstring()
-                        # get the pod auth token from the client credentials
-                        CSSA.create_authtoken()
-                    except:
-                        print("Couldn't create auth token for " + podindexaddress + " on " + IDP + ", skipping")
-                        with open(self.podname + config.INDEXPUB_ERR_LOGFILE, 'a') as f:
-                            f.write("Couldn't create auth token for " + podindexaddress + " on " + IDP + "\r\n")
-                            f.close()
-                        continue
-                # HO 22/09/2024 END ************
-                
-                # construct the target URL for an .acl file for the pod index address
-                targetUrl=podindexaddress+'.acl'
-                # construct the authorization headers for a turtle file
-                headers={ 'content-type': 'text/turtle', 'authorization':'DPoP '+CSSA.authtoken, 'DPoP': dpop_utils.create_dpop_header(targetUrl, "PUT", CSSA.dpopKey)}
-                # do a PUT request with the acldefopen query
-                # which makes c.me (the experiment) the owner of the .acl file
-                # and makes the .acl file open access 
-                # HO 22/09/2024 BEGIN ************
-                try:
-                    #res= requests.put(targetUrl,headers=headers,data=acldefopen)
-                    res= requests.put(targetUrl,headers=headers,data=acldefopen, timeout=5000)
-                except:
-                    try:
-                        print("Couldn't do a put to " + targetUrl + ", trying again: ")
-                        res= requests.put(targetUrl,headers=headers,data=acldefopen,timeout=5000)
-                    except:
-                        print("Couldn't do a put to " + targetUrl + ", skipping")
-                        with open(self.podname + config.INDEXPUB_ERR_LOGFILE, 'a') as f:
-                            f.write("Couldn't do a put to " + targetUrl + "\r\n")
-                            f.close()
-                        continue
-                # HO 22/09/2024 END ************
-                # display the .acl file URL and the server response to the PUT request
-                print(targetUrl,res)"""
         # HO 29/10/2024 END *************
         #print('self = ' + str(self))
 
@@ -2312,7 +2139,12 @@ class ESPRESSOexperiment:
             # display the .acl file URL and the server response to the PUT request
             print(targetUrl,res)
 
-    # HO 14/08/2024 appears not to be in use
+    """
+    Performs the same function as indexpub, but is different in detail. This is too flaky at the level of a single server,
+    because the CSS server seems to rate-limit connections, with the result that not all the intended actions are completed.
+    
+    Use indexpubperserver instead.
+    """
     def indexpubthreaded(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
             
@@ -2352,61 +2184,6 @@ class ESPRESSOexperiment:
             # for each server
             for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
                 executor.submit(self.metaindexpubperserver, snode)
-            """print('Making the metaindex for ' + snode + ' accessible to the experiment')
-            # get the identity provider
-            IDP=str(self.image.value(snode,self.namespace.Address))
-            # display progress message
-            print('Making the metaindex for '+IDP+' accessible to the experiment')
-            # create a CSSaccess object for this identity provider, the ESPRESSO
-            # pod email, and the ESPRESSO pod password
-            CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-            #HO 23/09/2024 BEGIN ******************
-            try:
-                # get the auth string containing the ESPRESSO pod ID and secret
-                a=CSSA.create_authstring()
-                # get the ESPRESSO pod auth token from the client credentials
-                t=CSSA.create_authtoken()
-            except:
-                try:
-                    print("Couldn't create auth token. Trying again: ")
-                    CSSA=CSSaccess.CSSaccess(IDP, self.espressoemail, self.password)
-                    # get the auth string containing the ESPRESSO pod ID and secret
-                    a=CSSA.create_authstring()
-                    # get the ESPRESSO pod auth token from the client credentials
-                    t=CSSA.create_authtoken()
-                except:
-                    print("Couldn't create auth token for " + IDP + " on second attempt, skipping")
-                    with open(self.podname + config.METAINDEXPUB_ERR_LOGFILE, 'a') as f:
-                        f.write("Couldn't create auth token for " + IDP + " on second attempt, skipping\r\n")
-                        f.close()
-                    continue
-            # make the ESPRESSO index file accessible
-            # we do need to make the whole metaindex folder accessible to the experiment
-            # not just the metaindex file
-            try:
-                print("Making " + self.espressoindexdir + " accessible: ")
-                # HO 22/10/2024 BEGIN ************
-                #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
-                res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
-                # HO 22/10/2024 END ************
-            except:
-                try:
-                    print("Couldn't make " + self.espressoindexdir + " accessible, trying again: ")
-                    # HO 22/10/2024 BEGIN ************
-                    #res=CSSA.makefileaccessible(self.espressopodname, self.espressoindexdir)
-                    res=CSSA.makemetaindexaccessible(self.espressopodname, self.espressoindexdir, acldefopen)
-                    # HO 22/10/2024 END ************
-                except:
-                    print("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping ")
-                    with open(self.podname + config.METAINDEXPUB_ERR_LOGFILE, 'a') as f:
-                        f.write("Couldn't make " + self.espressoindexdir + " on " + IDP + " accessible on second attempt, skipping\r\n")
-                        f.write("res: " + res + "\r\n")
-                        f.close()
-                    continue
-            #HO 23/09/2024 END ******************
-
-            # display the server response
-            print(res)"""
        # HO 29/10/2024 END *************
        #print('self = ' + str(self))
        
@@ -2648,40 +2425,8 @@ class ESPRESSOexperiment:
     """        
     def serverlevel_storelocalindexzipdirs(self,zipdir):
         print('inside serverlevel_storelocalindexzipdirs')
-        # HO 08/11/2024 BEGIN **********
-        # DEV
-        # Are we building .csv files to store in the overlay network?
-        """b_building_overlay_csvs = True
-        # we need a dictionary for the keyword_tbl .csv
-        keyword_tbl_dict = dict()
-        # we need a dictionary for the server_tbl .csv
-        server_tbl_dict = dict()
-        # we need to sequentially number the servers to be an autoid for the tables
-        server_sequential_num = 0"""
-        # HO 08/11/2024 END ************
         # for each server
-        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):
-            # HO 08/11/2024 BEGIN **********
-            # if we are building the overlay CSVs
-            """if(b_building_overlay_csvs):
-                # increment the server sequential number (yes it will be 1-based, that is right)
-                server_sequential_num += 1
-                # the server_tbl .csv dictionary needs to be nested
-                server_url_dict = dict()
-                # get the server URL for the server table
-                servurl = str(self.image.value(snode,self.namespace.Address))
-                # add to the subdictionary that has the server URL as the key
-                server_url_dict[servurl] = ''
-                servid = str(server_sequential_num)
-                if(servid not in (server_tbl_dict.keys())):
-                    # so now the key to the server dictionary is the ID number and the server URL
-                    server_tbl_dict[str(servid)] = server_url_dict
-                
-                print("server_tbl_dict = ")
-                for item in server_tbl_dict.items():
-                    print(str(item))"""
-            # HO 08/11/2024 BEGIN **********
-            
+        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):            
             # name the current zip directory after the current server
             serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
             testservindex=ServerIndex()
@@ -2779,20 +2524,6 @@ class ESPRESSOexperiment:
                 # close the pod index zip file
                 podindexzip.close()
 
-            # HO 08/11/2024 BEGIN **********
-            """keyword_tbl_tuples = []
-            if(b_building_overlay_csvs):
-                testservindex.buildservermetaindex_simple_csvs(keyword_tbl_dict, server_sequential_num)
-                collection_len = testservindex.index[config.COLLECTION_LEN_FILENAME].replace('\r\n', ',')
-                distinct_collection_len = testservindex.index[config.COLLECTION_DISTINCT_LEN_FILENAME].replace('\r\n', ',')
-                #pod_count = testservindex.index[config.POD_LEN_FILENAME]
-                #server_url_dict[servurl] = collection_len + ',' + distinct_collection_len + ',' + pod_count + '\r\n'
-                server_url_dict[servurl] = collection_len + distinct_collection_len
-                server_tbl_dict[servid] = server_url_dict
-                print("server_tbl_dict now looks like this: ")
-                print(str(server_tbl_dict))
-            else:"""
-            # HO 08/11/2024 END ************
             # unwind the server-level metaindex into a writable state
             testservindex.buildservermetaindex_simple()
             
@@ -2817,6 +2548,200 @@ class ESPRESSOexperiment:
             pbar.close()
             # close the server index zip file
             serindexzip.close()
+            
+    """
+    Zip Lucene indexes and store locally. For experiments that are too big to index on the fly.
+    There is (as yet) no equivalent for creating Lucene indexes on the fly.
+    
+    param: self
+    param: zipdir, the directory
+    """        
+    def lucene_storelocalindexzipdirs(self,zipdir):
+        print('inside lucene_storelocalindexzipdirs')
+        # for each server
+        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):            
+            # name the current zip directory after the current server
+            serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
+            #testservindex=ServerIndex()
+
+            # create directories recursively, no need to raise error if any already exist
+            print('make directory ' + serdir)
+            os.makedirs(serdir,mode=0o777,exist_ok=True)
+            print('made directory ' + serdir)
+            
+            # name the server level zip metaindex file
+            enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
+            #serzipindexfile=serdir +'/' +self.podname+'metaindex.zip'
+            
+            # for every pod in this server
+            for pnode in self.image.objects(snode,self.namespace.Contains):
+                # name the pod zip index file
+                podzipindexfile=serdir +'/'+str(self.image.value(pnode,self.namespace.Name))+'index.zip'
+                # get the pod address
+                podaddress=str(self.image.value(pnode,self.namespace.Address))
+
+                # here we need to create a podword for this pod so the server index can find it
+                podname=str(self.image.value(pnode,self.namespace.Name))
+                podpath=podname+'/'
+                #testservindex.addpod(podpath)
+
+                # create an empty dict for the files
+                #filetuples=[]
+                filedict = dict()
+                # set of source directories for the indexer to look in
+                sourcedirset = set()
+                # for each file in the pod
+                for fnode in self.image.objects(pnode,self.namespace.Contains):
+                    # get the file details
+                    #targetUrl=str(self.image.value(fnode,self.namespace.Address))
+                    #filetype=str(self.image.value(fnode,self.namespace.Filetype))
+                    filename=str(self.image.value(fnode,self.namespace.Filename))
+                    localsourcedir = str(self.image.value(fnode,self.namespace.LocalAddress))
+                        
+                    sourcedirset.add(localsourcedir)
+                    #f=str(self.image.value(fnode,self.namespace.LocalAddress))
+                    # open the file for reading
+                    #file = open(f, "r")
+                    #filetext=file.read()
+                    #file.close()
+                    # create a list to hold the WebIDs that have access to this file
+                    webidlist=[]
+                    # and add each WebID to the list
+                    for anode in self.image.objects(fnode,self.namespace.AccessibleBy):
+                        webid=str(self.image.value(anode,self.namespace.WebID))
+                        webidlist.append(webid)
+                    # if a given file is open access, represent that in the list with an asterisk
+                    if fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile):
+                        webidlist.append(config.OPENACCESS_SYMBOL)
+
+                    # cut the pod address off the target URL
+                    #ftrunc=targetUrl[len(podaddress):]
+                    # add the truncated pod address, file text, web ID list to the file tuples
+                    #filetuples.append((ftrunc,filetext,webidlist))
+                    
+                    # add the WebID list to this file's entry in the dictionary
+                    filedict[filename] = webidlist
+
+                    # Sequentially number the WebIDs            
+                    #testservindex.addwebids(podpath, webidlist)
+                    
+                # HO 18/11/2024 BEGIN **************
+                # Now we have access control details for every file in the pod,
+                # we can construct the Lucene pod index.
+                # the file dictionary is the access control list
+                access_control = filedict
+                # convert the access control list to JSON
+                access_control_data = json.dumps(access_control)
+                # the target directory for the pod index should be named after the pod
+                # (that is if we are not zipping the indexes)
+                destdir = serdir +'/'+str(self.image.value(pnode,self.namespace.Name)) + ''
+                #destdir = serdir
+                # for each source directory, index the files in the access control lists
+                for sdir in sourcedirset:
+                    command = [
+                        'java',
+                        '-jar',
+                        'Indexer.jar', # Path to your JAR file NB: it seems to only cope if the .jar is in the same directory
+                        sdir,  # Path to the files to index
+                        access_control_data,  # Pass the JSON string with lists of web IDs
+                        destdir  # Path for the destination index
+                    ]
+                    # create the index
+                    result = subprocess.run(command, capture_output=True, text=True)
+        
+                    # Output the result
+                    print(result.stdout)
+                    print(result.stderr)
+                    
+                    # open the pod index zip file for writing
+                    podindexzip=ZipFile(podzipindexfile, 'w')
+                    # write every file in the destination directory to the zip file
+                    #print("destdir is " + destdir)
+                    #podindexzip.write(destdir)
+                    for name in os.listdir(destdir):
+                        # write them to the zip file (name/key is archive name)
+                        writfile = os.path.join(destdir, name)
+                        podindexzip.write(writfile)
+                        # gets info about this item
+                        info = podindexzip.getinfo(writfile)
+                        # give full access to this file/item
+                        info.external_attr = 0o777 << 16
+
+                    """for idxfile in os.listdir(destdir):
+                        absidx = os.path.join(destdir, idxfile)
+                        podindexzip.write(absidx)"""
+                        #podindexzip.write(idxfile)
+                        # gets info about this item
+                        #info = podindexzip.getinfo(idxfile)
+                        # give full access to this file/item
+                        #info.external_attr = 0o777 << 16
+                        
+                # HO 18/11/2024 END **************
+                """print('constructing inverted index')
+                podlevel_index=dict()
+                
+                servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex)
+
+                if (servtuples is not None):
+                    # keep a running total of the files at server level
+                    runningsum=0
+                    if (len(servtuples) >= 1):
+                        podlevel_index = servtuples[0]
+                        if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
+                            runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
+                    if (len(servtuples) >= 2):
+                        testservindex = servtuples[1]
+                        testservindex.indexsum=testservindex.indexsum+int(runningsum)
+                
+                # work out how many .ndx files there are
+                n=len(podlevel_index.keys())
+                print('About to write podlevel_index')
+
+                # set up a progress bar
+                pbar = tqdm.tqdm(total=n,desc=podzipindexfile)
+                # open the pod index zip file for writing
+                podindexzip=ZipFile(podzipindexfile, 'w')
+
+                # for each item in the index dictionary
+                for (name,body) in podlevel_index.items():
+
+                    # write them to the zip file (name/key is archive name)
+                    podindexzip.writestr(name,body)
+                    # gets info about this item
+                    info = podindexzip.getinfo(name)
+                    # give full access to this file/item
+                    info.external_attr = 0o777 << 16
+                    # update the progress bar
+                    pbar.update(1)
+                # close the progress bar
+                pbar.close()
+                # close the pod index zip file
+                podindexzip.close()
+
+            # unwind the server-level metaindex into a writable state
+            testservindex.buildservermetaindex_simple()
+            
+            n=len(testservindex.index.keys())
+            print('About to write server level index:')
+            # set up a progress bar
+            pbar = tqdm.tqdm(total=n,desc=serzipindexfile)
+            # open the server index zip file for writing
+            serindexzip=ZipFile(serzipindexfile, 'w')
+            # for each item in the index dictionary
+            for (name,body) in testservindex.index.items():
+                # write them to the zip file (name/key is archive name)
+                serindexzip.writestr(name,body)
+                # gets info about this item
+                info = serindexzip.getinfo(name)
+                #print('about to give full access')
+                # give full access to this file/item
+                info.external_attr = 0o777 << 16
+                # update the progress bar
+                pbar.update(1)
+            # close the progress bar
+            pbar.close()
+            # close the server index zip file
+            serindexzip.close()"""
             
     """
     Distribute the zip files around the servers using ssh
