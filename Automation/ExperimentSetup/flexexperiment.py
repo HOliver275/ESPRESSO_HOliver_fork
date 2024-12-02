@@ -1,5 +1,8 @@
 # sys: https://docs.python.org/3/library/sys.html
 import sys
+# sys: https://docs.python.org/3/library/sys.html#module-sys
+from sys import argv
+
 # os: https://docs.python.org/3/library/os.html
 # random: https://docs.python.org/3/library/random.html
 # requests: https://requests.readthedocs.io/en/latest/
@@ -38,8 +41,6 @@ import paramiko
 from paramiko import SSHClient
 # scp: https://pypi.org/project/scp/
 from scp import SCPClient
-# sys: https://docs.python.org/3/library/sys.html#module-sys
-from sys import argv
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from Automation.ExperimentSetup import FileDistributor, FileUploader
@@ -52,7 +53,7 @@ sys.path.append('../../')
 import config
 
 # ESPRESSO modules for accessing Community Solid Server using DPOP 
-from Automation.CSSAccess import CSSaccess,dpop_utils
+from Automation.CSSAccess import CSSaccess, dpop_utils
 sys.path.append('../CSSAccess')
 
 # Hard-coded list of servers. Replace the below with your own.
@@ -240,6 +241,10 @@ class ESPRESSOexperiment:
         # instantiate experiment namespace
         # example value: 'http://example.org/SOLIDindex/'
         self.namespace=Namespace("http://example.org/SOLIDindex/")
+        # HO 02/12/2024 BEGIN **********************
+        self.serversmap = dict()
+        self.agentsmap = dict()
+        # HO 02/12/2024 BEGIN **********************
         # instantiate image graph
         # example value: [a rdfg:Graph;rdflib:storage [a rdflib:Store;rdfs:label 'Memory']].
         self.image=Graph()
@@ -315,6 +320,11 @@ class ESPRESSOexperiment:
     def loadserverlist(self,serverlist,label='server'):
         # for every server in the list
         for s in serverlist:
+            # HO 02/12/2024 BEGIN **********
+            # add this server to the global dictionary of servers
+            if (s not in self.serversmap.keys()):
+                self.serversmap[s] = ''
+            # HO 02/12/2024 END **********
             # construct a short name by prepending 'S' to the label and appending a counter
             sword='S'+label+str(self.servernum)
             # advance the counter
@@ -489,6 +499,9 @@ class ESPRESSOexperiment:
             snode=thisserverlist[s]
             # get the server node's address
             IDP=str(self.image.value(snode,self.namespace.Address))
+            # HO 02/12/2024 BEGIN ************
+            podslist = []
+            # HO 02/12/2024 END ***************
             # for each pod in the server's current pod distribution
             for p in range(len(poddist[s])):
                 # get the current pod
@@ -497,10 +510,17 @@ class ESPRESSOexperiment:
                 podname=str(self.image.value(pnode,self.namespace.Name))
                 # assign this pod to this server
                 self.assignpod(snode,pnode)
+                # HO 02/12/2024 BEGIN ************
+                if (podname not in podslist):
+                    podslist.append(podname)
+                # HO 02/12/2024 END ************
                 # initialize an empty triplestring
                 triplestring=''
                 # add the empty triplestring to the pod node
                 self.image.add((pnode,self.namespace.TripleString,Literal(triplestring)))
+            # HO 02/12/2024 BEGIN ************
+            self.serversmap[IDP] = podslist
+            # HO 02/12/2024 END ***************
         #print('self = ' + str(self))
         
     """
@@ -937,6 +957,15 @@ class ESPRESSOexperiment:
 
         # handles the case where there are no open-access files
         if (openperc > 0):
+            # HO 02/12/2024 BEGIN ***********
+            # server dictionary for this agent
+            aservdict = dict()
+            if (config.OPENACCESS_WEBIDWORD not in self.agentsmap.keys()):
+                self.agentsmap[config.OPENACCESS_WEBIDWORD] = '' 
+            else:
+                aservdict = self.agentsmap[config.OPENACCESS_WEBIDWORD]
+            awebid = config.OPENACCESS_WEBIDWORD
+            # HO 02/12/2024 END ***********
             openn=floor(len(thisfilelist)*(openperc/100))
             # and select the open files at random from the list of file nodes
             thisopenfilelist=random.sample(thisfilelist, openn)
@@ -944,6 +973,49 @@ class ESPRESSOexperiment:
             for fnode in thisopenfilelist:
                 # add them to the filenode as the OpenFile type
                 self.image.add((fnode,self.namespace.Type,self.namespace.OpenFile))
+                # HO 02/12/2024 BEGIN *************
+                # get the address of the file
+                """faddr = str(self.image.value(fnode,self.namespace.Address))
+                # get the name of the file
+                fname = str(self.image.value(fnode,self.namespace.Filename))
+                # parse the server/IDP out of the file address
+                for srv in self.serversmap.keys():
+                    if(faddr.startswith(srv)):
+                        # the pod dictionary for this server
+                        aservpdict = dict()
+                        # the file list for the pod dictionary for this server
+                        aservpfiles = []
+                        # add this server to this agent's dictionary, if not already there
+                        if(srv not in aservdict.keys()):
+                            aservdict[srv] = ''
+                        else: # otherwise get the 
+                            aservpdict = aservdict[srv]
+                        # parse the podname out of the file address
+                        stop = len(srv)
+                        aidp = faddr[:stop]
+                        start = stop+1
+                        srvlessidp = faddr[start:]
+                        # parse the filename out of the file address
+                        nextstop = srvlessidp.find('/')
+                        pd = srvlessidp[:nextstop]
+                        # if the podname isn't already in the server dictionary's keys, add it
+                        if (pd not in aservpdict.keys()):
+                            aservpdict[pd] = ''
+                        else:
+                            aservpfiles = aservpdict[pd]
+                        # if the filename is not already in the list, add it
+                        if (fname not in aservpfiles):
+                            aservpfiles.append(fname)
+                        # assign the filename list to the pod dictionary for this server
+                        aservpdict[pd] = aservpfiles
+                        # assign the pod dictionary for this server to the server dictionary for this agent
+                        aservdict[srv] = aservpdict
+                        break
+
+                # update the dictionary for this agent
+                self.agentsmap[awebid] = aservdict """
+                self.buildwebidspecificdict(fnode, aservdict, awebid)     
+                # HO 02/12/2024 END ***********
 
         # initialize the progress bar
         pbar=tqdm.tqdm(total=len(thisfilelist),desc='acls:')
@@ -970,11 +1042,67 @@ class ESPRESSOexperiment:
             for anode in accanodelist:
                 # and mark the file node as accessible by those Agent nodes
                 self.image.add((fnode,self.namespace.AccessibleBy,anode))
+                # HO 02/12/2024 BEGIN ***********
+                awebid = str(self.image.value(anode,self.namespace.WebID))
+                # server dictionary for this agent
+                aservdict = dict()
+                if (awebid not in self.agentsmap.keys()):
+                    self.agentsmap[awebid] = ''
+                else:
+                    aservdict = self.agentsmap[awebid]
+                # add to the big dictionary
+                self.buildwebidspecificdict(fnode, aservdict, awebid)      
+                # HO 02/12/2024 END ***********
             # update the progress bar
             pbar.update(1)
         # close the progress bar
         pbar.close()
         #print('self: ' + str(self))
+
+    def buildwebidspecificdict(self, fnode, aservdict, awebid):
+    # HO 02/12/2024 BEGIN *************
+        # get the address of the file
+        faddr = str(self.image.value(fnode,self.namespace.Address))
+        # get the name of the file
+        fname = str(self.image.value(fnode,self.namespace.Filename))
+        # parse the server/IDP out of the file address
+        for srv in self.serversmap.keys():
+            if(faddr.startswith(srv)):
+                # the pod dictionary for this server
+                aservpdict = dict()
+                # the file list for the pod dictionary for this server
+                aservpfiles = []
+                # add this server to this agent's dictionary, if not already there
+                if(srv not in aservdict.keys()):
+                    aservdict[srv] = ''
+                else: # otherwise get the 
+                    aservpdict = aservdict[srv]
+                # parse the podname out of the file address
+                stop = len(srv)
+                aidp = faddr[:stop]
+                start = stop+1
+                srvlessidp = faddr[start:]
+                # parse the filename out of the file address
+                nextstop = srvlessidp.find('/')
+                pd = srvlessidp[:nextstop]
+                # if the podname isn't already in the server dictionary's keys, add it
+                if (pd not in aservpdict.keys()):
+                    aservpdict[pd] = ''
+                else:
+                    aservpfiles = aservpdict[pd]
+                # if the filename is not already in the list, add it
+                if (fname not in aservpfiles):
+                    aservpfiles.append(fname)
+                # assign the filename list to the pod dictionary for this server
+                aservpdict[pd] = aservpfiles
+                # assign the pod dictionary for this server to the server dictionary for this agent
+                aservdict[srv] = aservpdict
+                break
+
+        # update the dictionary for this agent
+        self.agentsmap[awebid] = aservdict      
+        # HO 02/12/2024 END ***********
+
         
     """
     Initialize Special Agents (WebID) as a list, each with a percentage of access to the files.
@@ -1054,6 +1182,17 @@ class ESPRESSOexperiment:
             for fnode in chfilelist:
                 # add an ACL file saying it's accessible to this node
                 self.image.add((fnode,self.namespace.AccessibleBy,sanode))
+                # HO 02/12/2024 BEGIN ***********
+                sawebid = str(self.image.value(sanode,self.namespace.WebID))
+                # server dictionary for this special agent
+                saservdict = dict()
+                if (sawebid not in self.agentsmap.keys()):
+                    self.agentsmap[sawebid] = ''
+                else:
+                    saservdict = self.agentsmap[sawebid]
+                # add to the big dictionary
+                self.buildwebidspecificdict(fnode, saservdict, sawebid)      
+                # HO 02/12/2024 END ***********
                 # advance the progress bar
                 pbar.update(1)
             # close the progress bar
@@ -2571,7 +2710,14 @@ class ESPRESSOexperiment:
             
             # name the server level zip metaindex file
             enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
-            #serzipindexfile=serdir +'/' +self.podname+'metaindex.zip'
+            serzipindexfile=serdir +'/' +self.podname+'metaindex.zip'
+            # create an empty dict for the server index
+            servdict = dict()
+            # create an empty dict that is the same as the pod-level file dict,
+            # but the key is the pod and the values are the filedict
+            servpoddict = dict()
+            # and a set of source directories to index
+            servdirset = set()
             
             # for every pod in this server
             for pnode in self.image.objects(snode,self.namespace.Contains):
@@ -2584,9 +2730,12 @@ class ESPRESSOexperiment:
                 podname=str(self.image.value(pnode,self.namespace.Name))
                 podpath=podname+'/'
                 #testservindex.addpod(podpath)
+                if podpath not in servpoddict.keys():
+                    servpoddict[podpath] = ''
 
                 # create an empty dict for the files
                 #filetuples=[]
+                # this will have the filename and its WebID list
                 filedict = dict()
                 # set of source directories for the indexer to look in
                 sourcedirset = set()
@@ -2598,7 +2747,10 @@ class ESPRESSOexperiment:
                     filename=str(self.image.value(fnode,self.namespace.Filename))
                     localsourcedir = str(self.image.value(fnode,self.namespace.LocalAddress))
                         
+                    # add to the pod-level set of source directories
                     sourcedirset.add(localsourcedir)
+                    # add to the server-level set of source directories
+                    servdirset.add(localsourcedir)
                     #f=str(self.image.value(fnode,self.namespace.LocalAddress))
                     # open the file for reading
                     #file = open(f, "r")
@@ -2624,7 +2776,9 @@ class ESPRESSOexperiment:
 
                     # Sequentially number the WebIDs            
                     #testservindex.addwebids(podpath, webidlist)
-                    
+                
+                # now add the file dictionary to the server-level pod dictionary
+                servpoddict[podpath] = filedict    
                 # HO 18/11/2024 BEGIN **************
                 # Now we have access control details for every file in the pod,
                 # we can construct the Lucene pod index.
@@ -2666,15 +2820,6 @@ class ESPRESSOexperiment:
                         info = podindexzip.getinfo(writfile)
                         # give full access to this file/item
                         info.external_attr = 0o777 << 16
-
-                    """for idxfile in os.listdir(destdir):
-                        absidx = os.path.join(destdir, idxfile)
-                        podindexzip.write(absidx)"""
-                        #podindexzip.write(idxfile)
-                        # gets info about this item
-                        #info = podindexzip.getinfo(idxfile)
-                        # give full access to this file/item
-                        #info.external_attr = 0o777 << 16
                         
                 # HO 18/11/2024 END **************
                 """print('constructing inverted index')

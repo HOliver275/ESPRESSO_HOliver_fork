@@ -105,6 +105,56 @@ public class Indexer {
         writer.close();
         System.out.println("Indexing completed!");
     }
+
+    private static void indexFiles(String filesLocation, String podPath, Map<String, List<String>> accessControlMap, String destination) throws IOException
+    {
+        Directory index = FSDirectory.open(Paths.get(destination));
+        StandardAnalyzer analyzer = new StandardAnalyzer();
+        IndexWriterConfig config = new IndexWriterConfig(analyzer);
+        IndexWriter writer = new IndexWriter(index, config);
+
+        File[] files = new File(filesLocation).listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+
+                    Document doc = new Document();
+                    String content = readFile(file);
+                    int docLength = content.split("\\s+").length;
+
+                    doc.add(new TextField("content", content, Field.Store.YES));
+                    doc.add(new NumericDocValuesField("length", docLength));
+                    doc.add(new StoredField("length", docLength));
+
+                    Set<String> uniqueTerms = new HashSet<>();
+                    for (String term : content.split("\\s+")) {
+                        uniqueTerms.add(term);
+                    }
+                    int uniqueDocLength = uniqueTerms.size();
+
+                    doc.add(new NumericDocValuesField("uniqueLength", uniqueDocLength));
+                    doc.add(new StoredField("uniqueLength", uniqueDocLength));
+
+                    List<String> webIds = accessControlMap.get(file.getName());
+
+                    if (webIds != null) {
+                        for (String webId : webIds) {
+                            doc.add(new TextField("authorizedWebIds", webId, Field.Store.YES));
+                        }
+                    }
+
+                    if (podPath != null) {
+                        doc.add(new TextField("podPath", podPath, Field.Store.YES));
+                    }
+
+                    writer.addDocument(doc);
+                }
+            }
+        }
+
+        writer.close();
+        System.out.println("Indexing completed!");
+    }
  private static String readFile(File file) {
         StringBuilder content = new StringBuilder();
         try (FileReader fr = new FileReader(file)) {

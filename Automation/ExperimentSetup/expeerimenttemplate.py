@@ -198,12 +198,16 @@ def createexperiment(podname):
 
     # user message
     print('serverlist loaded')
+    print('experiment.serversmap: ')
+    print(str(experiment.serversmap))
 
     # create pods
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab2,podlabel=podlab2)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab3,podlabel=podlab3)
     print('logical pods created ')
+    print('experiment.serversmap: ')
+    print(str(experiment.serversmap))
 
     experiment.loaddirtopool(sourcedir1, filelab1)
 
@@ -231,13 +235,10 @@ def createexperiment(podname):
 
     experiment.imagineaclnormal(openperc=50,mean=themean, disp=0,filelabel=filelab2)
 
-    # HO 27/09/2024 BEGIN ******************
-    #experiment.imagineaclnormal(openperc=10,mean=themean, disp=0,filelabel=filelab3)
     experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab3)
-    # HO 27/09/2024 END ********************
     
     print('Normal ACLs distributed')
-
+    
     experiment.imagineaclspecial(filelab1)
 
     experiment.imagineaclspecial(filelab2)
@@ -245,6 +246,8 @@ def createexperiment(podname):
     experiment.imagineaclspecial(filelab3)
     
     print('Special agent ACLs distributed')
+    print('experiment.agentsmap: ')
+    print(str(experiment.agentsmap))
     
     # saves the experiment as a .ttl file named after the podname plus 'exp'
     experiment.saveexp(podname+'exp.ttl')
@@ -271,7 +274,7 @@ espressoindexdir=podname+'metaindex/'
 experiment=createexperiment(podname)
 
 # Loading the experiment. Step 1.
-experiment=flexexperiment.loadexp(podname+'exp.ttl')
+"""experiment=flexexperiment.loadexp(podname+'exp.ttl')
 # display progress message
 print('Experiment loaded')
 print('===================')
@@ -291,4 +294,4 @@ print('===================')
 #Indexing of the experiment
 indexexperiment(experiment)
 print('Experiment indexed')
-print('===================')
+print('===================')"""

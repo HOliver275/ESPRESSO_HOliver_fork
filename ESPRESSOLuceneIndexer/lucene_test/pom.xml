@@ -13,7 +13,7 @@
         <lucene.version>8.5.0</lucene.version>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.release>23</maven.compiler.release>
+        <!-- <maven.compiler.release>23</maven.compiler.release> -->
         <exec.mainClass>Indexer</exec.mainClass>
     </properties>
 
