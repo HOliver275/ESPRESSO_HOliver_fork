@@ -21,8 +21,17 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 public class Index {
+    
+    
+    public static Map<String, String> webIdToServerMap;
     public  String extractServerNumber(String input) {
         Pattern pattern = Pattern.compile("srv(\\d{5})");
         Matcher matcher = pattern.matcher(input);
@@ -36,18 +45,43 @@ public class Index {
     public static void main(String[] args) {
         
         if (args.length != 3) {
-            System.out.println("Usage: java Index <dictionaryJson> <sourceDir> <outputDir>");
+            System.out.println("Usage: java Index <dictionaryJsonFilePath> <sourceDir> <outputDir>");
             System.exit(1);
         }
-        
+
         try {
-            String dictionaryJson = args[0];
+            // Parse command-line arguments
+            String dictionaryJsonFilePath = args[0];
             String sourceDir = args[1];
             String outputDir = args[2];
 
-            // Parse the dictionary JSON string into a Map
+            // Read the dictionary JSON from the file
             ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, Map<String, Map<String, List<String>>>> dictionary = objectMapper.readValue(dictionaryJson, Map.class);
+            File dictionaryFile = new File(dictionaryJsonFilePath);
+            Map<String, Map<String, Map<String, List<String>>>> dictionary = objectMapper.readValue(dictionaryFile, Map.class);
+            
+            // Step 1: Get the distinct list of servers
+        Set<String> distinctServers = dictionary.values().stream()
+                .flatMap(webIdMap -> webIdMap.keySet().stream())
+                .collect(Collectors.toSet());
+
+        
+
+        // Step 2: Distribute webIds across servers
+        List<String> serversList = new ArrayList<>(distinctServers);
+        List<String> webIds = new ArrayList<>(dictionary.keySet());
+
+        // Map to hold the final webId-to-serverId assignment
+        webIdToServerMap = new HashMap<>();
+
+        // Distribute webIds to servers
+        int serverCount = serversList.size();
+        for (int i = 0; i < webIds.size(); i++) {
+            String webId = webIds.get(i);
+            String serverId = serversList.get(i % serverCount);
+            webIdToServerMap.put(webId, serverId);
+        }
+
 
             // Perform indexing with parallelization
             Index indexer = new Index();
@@ -67,7 +101,7 @@ public class Index {
     public void indexData(Map<String, Map<String, Map<String, List<String>>>> dictionary,
                           String sourceDir, String outputDir) throws IOException {
 
-        ExecutorService executor = Executors.newFixedThreadPool(4); // Pool size of 4 (adjust based on system)
+        ExecutorService executor = Executors.newFixedThreadPool(10); // Pool size of 4 (adjust based on system)
 
         try {
             for (String webId : dictionary.keySet()) {
@@ -92,7 +126,11 @@ public class Index {
                     for (String pod : pods.keySet()) {
                         executor.submit(() -> {
                             try {
-                                Path fileLevelPodDir = Paths.get(fileLevelServerDir.toString(), sanitizePath(pod) + ".zip");
+                                Path fileLevelServerPodDir = Paths.get(fileLevelServerDir.toString(), sanitizePath(pod));
+                                Files.createDirectories(fileLevelServerPodDir);
+                                Path fileLevelPodDir = Paths.get(fileLevelServerPodDir.toString(), sanitizePath(webId) + ".zip");
+                               
+                                
                                 Path tempPodDir = Files.createTempDirectory("tempPodIndex");
                                 try {
                                     List<String> files = getFilesForWebIdAndPod(dictionary, webId, server, pod);
@@ -112,7 +150,11 @@ public class Index {
                 for (String server : servers.keySet()) {
                     executor.submit(() -> {
                         try {
-                            Path podLevelServerZip = Paths.get(podLevelDir.toString(), sanitizePath(server) + ".zip");
+                            
+                            Path PodLevelServerDir = Paths.get(podLevelDir.toString(), sanitizePath(server));
+                            Files.createDirectories(PodLevelServerDir);
+                            
+                            Path podLevelServerZip = Paths.get(PodLevelServerDir.toString(), sanitizePath(webId) + "-pods.zip");
                             Path tempPodIndexDir = Files.createTempDirectory("tempPodIndex");
                             try {
                                 indexPodLevel(webId, server, servers.get(server), sourceDir, tempPodIndexDir);
@@ -127,10 +169,13 @@ public class Index {
                 }
 
                 // Submit server-level indexing tasks
-                for (String server : servers.keySet()) {
                     executor.submit(() -> {
                         try {
-                            Path serverLevelIndexDir = Paths.get(serverLevelDir.toString(), sanitizePath(server) + ".zip");
+                            
+                            Path ServerLevelServerDir = Paths.get(serverLevelDir.toString(), sanitizePath(webIdToServerMap.get(webId)));
+                            Files.createDirectories(ServerLevelServerDir);
+                            
+                            Path serverLevelIndexDir = Paths.get(ServerLevelServerDir.toString(),  sanitizePath(webId) + "-servers.zip");
                             Path tempServerDir = Files.createTempDirectory("tempServerIndex");
                             try {
                                 indexServerLevel(webId, servers, sourceDir, tempServerDir);
@@ -142,7 +187,6 @@ public class Index {
                             e.printStackTrace();
                         }
                     });
-                }
             }
 
             // Shutdown the executor service after all tasks are submitted
@@ -262,4 +306,3 @@ public class Index {
                          .getOrDefault(podUrl, Collections.emptyList());
     }
 }
-
