@@ -21,8 +21,19 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.*;
 
 public class Index {
+    
+    
+   
     public  String extractServerNumber(String input) {
         Pattern pattern = Pattern.compile("srv(\\d{5})");
         Matcher matcher = pattern.matcher(input);
@@ -36,18 +47,25 @@ public class Index {
     public static void main(String[] args) {
         
         if (args.length != 3) {
-            System.out.println("Usage: java Index <dictionaryJson> <sourceDir> <outputDir>");
+            System.out.println("Usage: java Index <dictionaryJsonFilePath> <sourceDir> <outputDir>");
             System.exit(1);
         }
-        
+
         try {
-            String dictionaryJson = args[0];
+            // Parse command-line arguments
+            String dictionaryJsonFilePath = args[0];
             String sourceDir = args[1];
             String outputDir = args[2];
 
-            // Parse the dictionary JSON string into a Map
+         // Read the dictionary JSON from the file
             ObjectMapper objectMapper = new ObjectMapper();
-            Map<String, Map<String, Map<String, List<String>>>> dictionary = objectMapper.readValue(dictionaryJson, Map.class);
+            File dictionaryFile = new File(dictionaryJsonFilePath);
+
+            // Use TypeReference to ensure proper deserialization of the nested structure
+            Map<String, Map<String, Map<String, List<String>>>> dictionary = objectMapper.readValue(
+                dictionaryFile,
+                new TypeReference<Map<String, Map<String, Map<String, List<String>>>>>() {}
+            );
 
             // Perform indexing with parallelization
             Index indexer = new Index();
@@ -67,7 +85,7 @@ public class Index {
     public void indexData(Map<String, Map<String, Map<String, List<String>>>> dictionary,
                           String sourceDir, String outputDir) throws IOException {
 
-        ExecutorService executor = Executors.newFixedThreadPool(4); // Pool size of 4 (adjust based on system)
+        ExecutorService executor = Executors.newFixedThreadPool(10); // Pool size of 4 (adjust based on system)
 
         try {
             for (String webId : dictionary.keySet()) {
@@ -92,7 +110,11 @@ public class Index {
                     for (String pod : pods.keySet()) {
                         executor.submit(() -> {
                             try {
-                                Path fileLevelPodDir = Paths.get(fileLevelServerDir.toString(), sanitizePath(pod) + ".zip");
+                                Path fileLevelServerPodDir = Paths.get(fileLevelServerDir.toString(), sanitizePath(pod));
+                                Files.createDirectories(fileLevelServerPodDir);
+                                Path fileLevelPodDir = Paths.get(fileLevelServerPodDir.toString(), sanitizePath(webId) + ".zip");
+                               
+                                
                                 Path tempPodDir = Files.createTempDirectory("tempPodIndex");
                                 try {
                                     List<String> files = getFilesForWebIdAndPod(dictionary, webId, server, pod);
@@ -112,7 +134,11 @@ public class Index {
                 for (String server : servers.keySet()) {
                     executor.submit(() -> {
                         try {
-                            Path podLevelServerZip = Paths.get(podLevelDir.toString(), sanitizePath(server) + ".zip");
+                            
+                            Path PodLevelServerDir = Paths.get(podLevelDir.toString(), sanitizePath(server));
+                            Files.createDirectories(PodLevelServerDir);
+                            
+                            Path podLevelServerZip = Paths.get(PodLevelServerDir.toString(), sanitizePath(webId) + "-pods.zip");
                             Path tempPodIndexDir = Files.createTempDirectory("tempPodIndex");
                             try {
                                 indexPodLevel(webId, server, servers.get(server), sourceDir, tempPodIndexDir);
@@ -127,10 +153,13 @@ public class Index {
                 }
 
                 // Submit server-level indexing tasks
-                for (String server : servers.keySet()) {
                     executor.submit(() -> {
                         try {
-                            Path serverLevelIndexDir = Paths.get(serverLevelDir.toString(), sanitizePath(server) + ".zip");
+                            
+                            Path ServerLevelServerDir = Paths.get(serverLevelDir.toString(), sanitizePath(selectRandomServer(servers.keySet())));
+                            Files.createDirectories(ServerLevelServerDir);
+                            
+                            Path serverLevelIndexDir = Paths.get(ServerLevelServerDir.toString(),  sanitizePath(webId) + "-servers.zip");
                             Path tempServerDir = Files.createTempDirectory("tempServerIndex");
                             try {
                                 indexServerLevel(webId, servers, sourceDir, tempServerDir);
@@ -142,7 +171,6 @@ public class Index {
                             e.printStackTrace();
                         }
                     });
-                }
             }
 
             // Shutdown the executor service after all tasks are submitted
@@ -250,6 +278,21 @@ public class Index {
                     }
                 });
     }
+    public static String selectRandomServer(Set<String> servers) {
+        // If the set is empty, return null or handle it as needed
+        if (servers.isEmpty()) {
+            return null;
+        }
+
+        // Convert Set to List to randomly access an index
+        List<String> serverList = new ArrayList<>(servers);
+
+        // Use Random to select a random index
+        Random random = new Random();
+        int randomIndex = random.nextInt(serverList.size());  // random index within the size of the list
+
+        return serverList.get(randomIndex);  // Return the randomly selected server
+    }
 
     private static List<String> getFilesForWebIdAndPod(
         Map<String, Map<String, Map<String, List<String>>>> dictionary,
@@ -262,4 +305,3 @@ public class Index {
                          .getOrDefault(podUrl, Collections.emptyList());
     }
 }
-
