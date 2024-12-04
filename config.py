@@ -18,6 +18,8 @@ JSON_SERVER_INDEXES = 'False'
 KEYWORD_INDEX_FILEXTN = '.ndx'
 # HO 08/11/2024 BEGIN **********
 KEYWORD_TBL_CSV = 'keyword_web_id_tbl.csv'
+# keyword .csv file headers
+KEYWORD_TBL_CSV_HEADERS = 'id,keyword,webid,server_id,pod_freq,term_freq\r\n'
 # HO 08/11/2024 END **********
 # error log if couldn't open metaindexes
 METAINDEXPUB_ERR_LOGFILE = 'couldntmetaindexpub.log'
@@ -39,6 +41,10 @@ POD_DISTINCT_LEN_FILENAME = 'pod_distinct_len.sum'
 POD_LEN_FILENAME = 'pod_len.sum'
 # pod term frequencies filename
 POD_TERM_FREQUENCIES_FILENAME = 'pod_term_frequencies.sum'
+# server table .csv file
+SERVER_TBL_CSV = 'server_tbl.csv'
+# server_tbl.csv file headers
+SERVER_TBL_CSV_HEADERS = 'id,server_url,collection_len,distinct_collection_len,pod_count\r\n'
 # file extension for WebID files
 WEBID_FILEXTN = '.webid'
 # prefix for a sequentially-numbered short WebID handle

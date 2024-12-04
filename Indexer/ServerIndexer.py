@@ -364,14 +364,26 @@ class ServerIndex:
         
     """
     Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file, formatted as tuples.
+    It also collects stats which are saved in the .sum files.
+    It also builds up the dictionaries which will be unwound into .csv files which will become the logical tables for the servers and keywords on the overlay network.
 
+    param: server_tbl_dict, the dictionary that will be unwound into tuples that will be written to the .csv file containing the contents of the server table for the overlay network
     param: keyword_tbl_dict, the dictionary that will be unwound into tuples that will be written to the .csv file containing the contents of the keyword table for the overlay network
-    param: servcount, the sequential number of the server
+    param: servcounter, the sequential number of the server
+    param: numpods, the number of pods on this server
+    return: tabledicts, a List containing the updated server and keyword table dictionaries that were passed in
     """
-    """def buildservermetaindex_simple_csvs(self, keyword_tbl_dict, servcount):
+    def buildservermetaindex_simple_csvs(self, server_tbl_dict, keyword_tbl_dict, servcounter, numpods):
         # HO 08/11/2024 BEGIN *********
         # create the id number as the PK for the keyword table
-        kwd_id = len(keyword_tbl_dict)
+        # imagine this comes in and it's empty
+        # we would be on the first server
+        # the ID for this keyword would be 0 because there would be no keywords yet
+        # and what we are building the keyword table up into is:
+        # id, keyword, webid, server_id (FK), pod_freq, term_freq
+        # HO 04/12/2024 it doesn't really matter what this is, it would be an autoincremented number
+        # for the PK in the table, so we can just assign it when we unwind
+        #kwd_id = len(keyword_tbl_dict)
         # HO 08/11/2024 END *********
         
         servidx = dict()
@@ -394,19 +406,27 @@ class ServerIndex:
         for (servkey, wworddict) in self.keywords_dict.items():
             for (wwordkey, widdict) in wworddict.items():
                 # HO 08/11/2024 BEGIN *********
-                if (servkey not in keyword_tbl_dict.keys()):
+                # preparing the .csv files
+                # this is the FK to the server table in the keyword table
+                cleanservkey = servkey[:-4]
+                cleanservkey = cleanservkey.translate({ord("/"): None}) # revert to original keyword
+
+                if (cleanservkey not in keyword_tbl_dict.keys()):
                     webidworddict = dict()
                 else:
-                    webidworddict = keyword_tbl_dict[servkey]
+                    webidworddict = keyword_tbl_dict[cleanservkey]
                                 
                 if(wwordkey not in webidworddict.keys()):
+                    # for the server ID FK to the server table [?]
                     servnumdict = dict()
-                else:
+                else: # it will be the dictionary under this webidword
                     servnumdict = webidworddict[wwordkey]
                                 
-                if(servcount not in servnumdict.keys()):
-                    servnumdict[servcount] = ''
-                    
+                # if the current server number isn't a key in the server table dictionary,. add it
+                if(servcounter not in servnumdict.keys()):
+                    servnumdict[servcounter] = ''
+
+                # init pod frequency and term frequency stats                    
                 podfreq = 0
                 termfreq = 0
                 # HO 08/11/2024 END *********
@@ -421,16 +441,18 @@ class ServerIndex:
                         for(pidkey, freq) in piddict.items():
                             servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
                             # HO 08/11/2024 BEGIN *********
+                            # once again preparing the .csv files
                             podfreq += 1
                             termfreq = termfreq + int(freq)
                 
-                # now we have server_id,pod_freq,term_freq
-                servnumdict[servcount] = str(podfreq) + ',' + str(termfreq) + '\r\n' 
-                # now we have webid(ish),server_id,pod_freq,term_freq
+                # now we have server_id,pod_freq,term_freq for the keyword table
+                servnumdict[servcounter] = str(podfreq) + ',' + str(termfreq) + '\r\n' 
+                # now we have webid,server_id,pod_freq,term_freq for the keyword table
                 webidworddict[wwordkey] = servnumdict
-                # now we have keyword,webid(ish),server_id,pod_freq,term_freq
-                keyword_tbl_dict[servkey] = webidworddict          
-                # HO 08/11/2024 END *********
+                # now we have keyword,webid,server_id,pod_freq,term_freq for the keyword table
+                keyword_tbl_dict[cleanservkey] = webidworddict          
+                
+        # HO 08/11/2024 END *********
                                 
         # pod term frequency
         servidx[config.POD_TERM_FREQUENCIES_FILENAME] = ''
@@ -451,7 +473,23 @@ class ServerIndex:
         # HO 28/10/2024 END **************
             
         servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
-        self.index = servidx"""
+        self.index = servidx
 
+        # HO 08/11/2024 BEGIN *********
+        # create a string with the last remaining values needed to populate the .csv file that will feed
+        # the logical server table on the overlay network
+        # we have the PK (id) and the server_url, now we add collection_len, distinct_collection_len, and podcount as a comma-separated string terminated with a newline
+        servstats = str(self.collection_length) + ',' + str(self.collection_distinct_length) + ',' + str(numpods) + '\r\n'
+        if servcounter in server_tbl_dict.keys():
+            # get the dictionary, we will then have the PK (id) and the server_url
+            srval = server_tbl_dict[servcounter]
+            # and now append the rest of the row values
+            srval = srval + ',' + servstats
+            # and assign it to the server table dictionary
+            server_tbl_dict[servcounter] = srval
+        # return the newly updated dictionaries for the keyword and server .csv files
+        tabledicts = [server_tbl_dict, keyword_tbl_dict]
+        return tabledicts
+        # HO 08/11/2024 END *********
 
         

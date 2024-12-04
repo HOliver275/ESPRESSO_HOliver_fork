@@ -3,6 +3,9 @@ import sys
 # sys: https://docs.python.org/3/library/sys.html#module-sys
 from sys import argv
 
+# https://docs.python.org/3/library/shutil.html
+import shutil
+
 # os: https://docs.python.org/3/library/os.html
 # random: https://docs.python.org/3/library/random.html
 # requests: https://requests.readthedocs.io/en/latest/
@@ -32,6 +35,7 @@ import threading
 # getpass: https://docs.python.org/3/library/getpass.html#module-getpass
 import time, tqdm, getpass
 # zipfile: https://docs.python.org/3/library/zipfile.html#module-zipfile
+import zipfile
 from zipfile import ZipFile
 # concurrent.futures: https://python.readthedocs.io/en/latest/library/concurrent.futures.html#module-concurrent.futures
 import concurrent.futures
@@ -185,7 +189,17 @@ class ESPRESSOexperiment:
     param: podemail, the current pod email, default: '@example.org'
     param: podindexdir, the current pod index directory, default: 'espressoindex/'
     param: password, default '12345'
+    param: podsperserver, the number of pods per server
     """
+    # HO 08/11/2024 BEGIN *****************
+    """def __init__(self, 
+        espressopodname='ESPRESSO',
+        espressoemail='espresso@example.com',
+        espressoindexdir='metaindex/',
+        podname='pod',
+        podemail='@example.org',
+        podindexdir='espressoindex/',
+        password='12345'):"""
     def __init__(self, 
         espressopodname='ESPRESSO',
         espressoemail='espresso@example.com',
@@ -193,7 +207,9 @@ class ESPRESSOexperiment:
         podname='pod',
         podemail='@example.org',
         podindexdir='espressoindex/',
-        password='12345'):
+        password='12345',
+        podsperserver=9500):
+    # HO 08/11/2024 END *****************
 
         # server names are sequentially numbered per experiment, from a zero base
         self.servernum=0
@@ -223,6 +239,9 @@ class ESPRESSOexperiment:
         # account password for a pod in this experiment
         # default value: '12345', example value: '12345'
         self.password=password
+        # HO 08/11/2024 BEGIN **********************
+        self.podsperserver = podsperserver
+        # HO 08/11/2024 END **********************
         # sequential pod number, starting from a zero base
         # HO 03/09/2024: does not appear to be in use
         # initial value: 0
@@ -241,9 +260,22 @@ class ESPRESSOexperiment:
         # instantiate experiment namespace
         # example value: 'http://example.org/SOLIDindex/'
         self.namespace=Namespace("http://example.org/SOLIDindex/")
+        # HO 08/11/2024 BEGIN **********************
+        self.keywordcsvdict = dict()
+        self.servercsvdict = dict()
+        # HO 08/11/2024 END **********************
         # HO 02/12/2024 BEGIN **********************
         self.serversmap = dict()
         self.agentsmap = dict()
+        self.lucenetempsrcdir = "lucenetestsource"
+        self.fulllucenesrcdir = os.getcwd() + '/' + self.lucenetempsrcdir
+        self.createtemplucenesource()
+        self.tempsrcfiles = set()
+        self.lucenesinkdir = "lucenetestsink"
+        self.fulllucenesinkdir = os.getcwd() + '/' + self.lucenesinkdir
+        self.createlucenesink()
+        self.jsonfilepath = "dictionary.json"  # Save JSON to this file
+        self.fulljsonfilepath = os.getcwd() + '/' + self.jsonfilepath
         # HO 02/12/2024 BEGIN **********************
         # instantiate image graph
         # example value: [a rdfg:Graph;rdflib:storage [a rdflib:Store;rdfs:label 'Memory']].
@@ -255,6 +287,32 @@ class ESPRESSOexperiment:
         Return image of the experiment in turtle format. 
         """
         return self.image.serialize(format='turtle')
+
+    # HO 03/12/2024 BEGIN *****************
+    def createtemplucenesource(self):
+        if (os.path.exists(self.fulllucenesrcdir)):
+            print(self.fulllucenesrcdir + " already exists")
+            self.destroytemplucenesource()
+        print("About to create " + self.fulllucenesrcdir)
+        os.makedirs(self.fulllucenesrcdir,mode=0o777,exist_ok=True)
+    # HO 03/12/2024 END *****************
+
+    # HO 03/12/2024 BEGIN *****************
+    def createlucenesink(self):
+        if (os.path.exists(self.fulllucenesinkdir)):
+            print(self.fulllucenesinkdir + " already exists, deleting: ")
+            shutil.rmtree(self.fulllucenesinkdir)
+        print("About to create " + self.fulllucenesinkdir)
+        os.makedirs(self.fulllucenesinkdir,mode=0o777,exist_ok=True)
+        self.lucenesinkdir = "lucenetestsink"
+    # HO 03/12/2024 END *****************
+
+    # HO 03/12/2024 BEGIN *****************
+    def destroytemplucenesource(self):
+        if (os.path.exists(self.fulllucenesrcdir)):
+            print("Deleting " + self.fulllucenesrcdir + " with all its contents")
+            shutil.rmtree(self.fulllucenesrcdir)
+    # HO 03/12/2024 END *****************
     
     # HO 14/08/2024 appears not to be in use
     def loaddir(self,datasource,label='file',filetype='text/plain'):
@@ -322,8 +380,11 @@ class ESPRESSOexperiment:
         for s in serverlist:
             # HO 02/12/2024 BEGIN **********
             # add this server to the global dictionary of servers
-            if (s not in self.serversmap.keys()):
-                self.serversmap[s] = ''
+            srvs = s.split("//")[1]
+            srvname = srvs[:-1]
+            print(srvname)
+            if (srvname not in self.serversmap.keys()):
+                self.serversmap[srvname] = ''
             # HO 02/12/2024 END **********
             # construct a short name by prepending 'S' to the label and appending a counter
             sword='S'+label+str(self.servernum)
@@ -519,7 +580,9 @@ class ESPRESSOexperiment:
                 # add the empty triplestring to the pod node
                 self.image.add((pnode,self.namespace.TripleString,Literal(triplestring)))
             # HO 02/12/2024 BEGIN ************
-            self.serversmap[IDP] = podslist
+            srvs = IDP.split("//")[1]
+            srvname = srvs[:-1]
+            self.serversmap[srvname] = podslist
             # HO 02/12/2024 END ***************
         #print('self = ' + str(self))
         
@@ -974,47 +1037,12 @@ class ESPRESSOexperiment:
                 # add them to the filenode as the OpenFile type
                 self.image.add((fnode,self.namespace.Type,self.namespace.OpenFile))
                 # HO 02/12/2024 BEGIN *************
-                # get the address of the file
-                """faddr = str(self.image.value(fnode,self.namespace.Address))
-                # get the name of the file
+                # map this to a WebID-specific dictionary
+                self.buildwebidspecificdict(fnode, aservdict, awebid)
+                # copy file to Lucene temp dir
+                localaddr = str(self.image.value(fnode,self.namespace.LocalAddress))
                 fname = str(self.image.value(fnode,self.namespace.Filename))
-                # parse the server/IDP out of the file address
-                for srv in self.serversmap.keys():
-                    if(faddr.startswith(srv)):
-                        # the pod dictionary for this server
-                        aservpdict = dict()
-                        # the file list for the pod dictionary for this server
-                        aservpfiles = []
-                        # add this server to this agent's dictionary, if not already there
-                        if(srv not in aservdict.keys()):
-                            aservdict[srv] = ''
-                        else: # otherwise get the 
-                            aservpdict = aservdict[srv]
-                        # parse the podname out of the file address
-                        stop = len(srv)
-                        aidp = faddr[:stop]
-                        start = stop+1
-                        srvlessidp = faddr[start:]
-                        # parse the filename out of the file address
-                        nextstop = srvlessidp.find('/')
-                        pd = srvlessidp[:nextstop]
-                        # if the podname isn't already in the server dictionary's keys, add it
-                        if (pd not in aservpdict.keys()):
-                            aservpdict[pd] = ''
-                        else:
-                            aservpfiles = aservpdict[pd]
-                        # if the filename is not already in the list, add it
-                        if (fname not in aservpfiles):
-                            aservpfiles.append(fname)
-                        # assign the filename list to the pod dictionary for this server
-                        aservpdict[pd] = aservpfiles
-                        # assign the pod dictionary for this server to the server dictionary for this agent
-                        aservdict[srv] = aservpdict
-                        break
-
-                # update the dictionary for this agent
-                self.agentsmap[awebid] = aservdict """
-                self.buildwebidspecificdict(fnode, aservdict, awebid)     
+                self.copyfiletolucenesrcdir(localaddr, fname)
                 # HO 02/12/2024 END ***********
 
         # initialize the progress bar
@@ -1043,7 +1071,10 @@ class ESPRESSOexperiment:
                 # and mark the file node as accessible by those Agent nodes
                 self.image.add((fnode,self.namespace.AccessibleBy,anode))
                 # HO 02/12/2024 BEGIN ***********
-                awebid = str(self.image.value(anode,self.namespace.WebID))
+                wid = str(self.image.value(anode,self.namespace.WebID))
+                #print("wid = " + wid)
+                awebid = wid.translate(str.maketrans('', '', string.punctuation))
+                #print("awebid = " + awebid)  
                 # server dictionary for this agent
                 aservdict = dict()
                 if (awebid not in self.agentsmap.keys()):
@@ -1051,7 +1082,11 @@ class ESPRESSOexperiment:
                 else:
                     aservdict = self.agentsmap[awebid]
                 # add to the big dictionary
-                self.buildwebidspecificdict(fnode, aservdict, awebid)      
+                self.buildwebidspecificdict(fnode, aservdict, awebid)
+                # copy file to Lucene temp dir
+                localaddr = str(self.image.value(fnode,self.namespace.LocalAddress))
+                fname = str(self.image.value(fnode,self.namespace.Filename))
+                self.copyfiletolucenesrcdir(localaddr, fname)      
                 # HO 02/12/2024 END ***********
             # update the progress bar
             pbar.update(1)
@@ -1059,23 +1094,50 @@ class ESPRESSOexperiment:
         pbar.close()
         #print('self: ' + str(self))
 
-    def buildwebidspecificdict(self, fnode, aservdict, awebid):
+    """
+    Utility function to copy a file from its LocalAddress to the temporary Lucene source directory.
+
+    param: self
+    param: localaddr, the LocalAddress of the file being copied
+    param: fname, the name of the file being copied
+    """
+    def copyfiletolucenesrcdir(self, localaddr, fname):
+        # Make sure we haven't already copied this one
+        if (localaddr not in self.tempsrcfiles):
+            # Copy that file
+            shutil.copyfile(localaddr, self.fulllucenesrcdir + '/' + fname)
+            # and add it to the set of files we already copied
+            self.tempsrcfiles.add(localaddr)
+
+    """
+    Builds a WebID-specific nested dictionary: { WebID : { server : { podname : [list of filenames] }}} as a data source for the Lucene Indexer
+
+    param: self
+    param: fnode, the file node being assigned to the current WebID
+    param: aservdict, the server dictionary for this Agent
+    param: awebid, the WebID for this Agent
+    """
     # HO 02/12/2024 BEGIN *************
+    def buildwebidspecificdict(self, fnode, aservdict, awebid):
         # get the address of the file
-        faddr = str(self.image.value(fnode,self.namespace.Address))
+        ffulladdr = str(self.image.value(fnode,self.namespace.Address))
+        # trim the http:// or https:// off it, we don't need to keep repeating that
+        # (you could also trim other stuff that's always the same; not implemented here)
+        faddr = ffulladdr.split("//")[1]
         # get the name of the file
         fname = str(self.image.value(fnode,self.namespace.Filename))
-        # parse the server/IDP out of the file address
+        # find the server this file is at 
         for srv in self.serversmap.keys():
+            # if we found a match for the file address
             if(faddr.startswith(srv)):
-                # the pod dictionary for this server
+                # get the pod dictionary for this server
                 aservpdict = dict()
                 # the file list for the pod dictionary for this server
                 aservpfiles = []
                 # add this server to this agent's dictionary, if not already there
                 if(srv not in aservdict.keys()):
                     aservdict[srv] = ''
-                else: # otherwise get the 
+                else: # otherwise get the pod dictionary for this server in this agent's dictionary
                     aservpdict = aservdict[srv]
                 # parse the podname out of the file address
                 stop = len(srv)
@@ -1088,18 +1150,19 @@ class ESPRESSOexperiment:
                 # if the podname isn't already in the server dictionary's keys, add it
                 if (pd not in aservpdict.keys()):
                     aservpdict[pd] = ''
-                else:
+                else: # otherwise get the file list for this pod
                     aservpfiles = aservpdict[pd]
                 # if the filename is not already in the list, add it
                 if (fname not in aservpfiles):
                     aservpfiles.append(fname)
-                # assign the filename list to the pod dictionary for this server
+                # assign the file list to the pod dictionary for this server
                 aservpdict[pd] = aservpfiles
                 # assign the pod dictionary for this server to the server dictionary for this agent
                 aservdict[srv] = aservpdict
+                # move on
                 break
 
-        # update the dictionary for this agent
+        # update the dictionary for this agent 
         self.agentsmap[awebid] = aservdict      
         # HO 02/12/2024 END ***********
 
@@ -1183,21 +1246,97 @@ class ESPRESSOexperiment:
                 # add an ACL file saying it's accessible to this node
                 self.image.add((fnode,self.namespace.AccessibleBy,sanode))
                 # HO 02/12/2024 BEGIN ***********
-                sawebid = str(self.image.value(sanode,self.namespace.WebID))
+                # Build up the dictionary for the Lucene indexer
+                # get the WebID
+                swid = str(self.image.value(sanode,self.namespace.WebID))
+                # strip it of special characters so it can be used as a filename
+                sawebid = swid.translate(str.maketrans('', '', string.punctuation))
                 # server dictionary for this special agent
                 saservdict = dict()
+                # If this WebID isn't already in the dictionary, add it
                 if (sawebid not in self.agentsmap.keys()):
                     self.agentsmap[sawebid] = ''
-                else:
+                else: # otherwise get the server dictionary for this agent
                     saservdict = self.agentsmap[sawebid]
-                # add to the big dictionary
-                self.buildwebidspecificdict(fnode, saservdict, sawebid)      
+                # update and add to the big dictionary
+                self.buildwebidspecificdict(fnode, saservdict, sawebid)
+                # copy file to Lucene temp dir
+                localaddr = str(self.image.value(fnode,self.namespace.LocalAddress))
+                fname = str(self.image.value(fnode,self.namespace.Filename))
+                self.copyfiletolucenesrcdir(localaddr, fname)      
                 # HO 02/12/2024 END ***********
                 # advance the progress bar
                 pbar.update(1)
             # close the progress bar
             pbar.close()
         #print('self: ' + str(self))
+
+    """
+    Builds the Lucene index
+
+    param: self
+    """
+    def buildluceneindex(self):
+        # Specify source and output directories
+        json_file_path = self.jsonfilepath
+        source_dir = self.lucenetempsrcdir
+        output_dir = self.lucenesinkdir
+
+        # Path to the JAR file
+        jar_file = "Index.jar"
+
+        print("Building Lucene index...")
+        pbar=tqdm.tqdm(total=len(self.agentsmap.keys()),desc='WebIDs indexed:')
+        # JSONify one WebID at a time
+        for k, v in self.agentsmap.items():
+            # Save the dictionary to a JSON file
+            with open(json_file_path, "w") as json_file:
+                json.dump({k: v}, json_file, indent=4)
+
+            # Ensure the file exists
+            if not os.path.exists(json_file_path):
+                raise FileNotFoundError(f"The JSON file {json_file_path} could not be created.")
+
+            # Run the Java program with the JSON file
+            result = subprocess.run([
+                "java", "-jar", jar_file, json_file_path, source_dir, output_dir
+            ], capture_output=True, text=True)
+
+            # Print the output from the Java program
+            print("STDOUT:")
+            print(result.stdout)
+            print("\nSTDERR:")
+            print(result.stderr)  # If there were any errors
+
+            # No need to zip the Lucene index files, they're already zipped
+            # update the progress bar
+            pbar.update(1)
+        # close the progress bar
+        pbar.close()
+        # get rid of the temp source directory, we won't need it again
+        self.destroytemplucenesource()
+
+    """
+    Recursively zips files nested within folders.
+
+    param: self
+    param: zip_file, the zip file we're zipping
+    param: root, the top-level directory whose contents are to be zipped
+    """
+    def zip_files(self, zip_file, root):
+        for root, dirs, files in os.walk(root):
+            for file in files:
+                file_path = os.path.join(root, file)
+                zip_file.write(file_path, file)
+                # gets info about this file
+                info = zip_file.getinfo(file)
+                # give full access to this file
+                info.external_attr = 0o777 << 16
+            for dir in dirs:
+                dir_path = os.path.join(root, dir)
+                zip_file.write(dir_path, dir)
+                if os.path.isdir(dir_path):
+                    self.zip_files(zip_file, dir_path)
 
     """
     Saves the experiment as a graph.
@@ -2294,7 +2433,7 @@ class ESPRESSOexperiment:
                 podlist=[str(self.image.value(pnode,self.namespace.Name)) for pnode in self.image.objects(snode,self.namespace.Contains)]
                 executor.submit(seriespub,IDP,podlist,addresstemplate,self.podemail,self.password)
                 
-    # HO 26/09/2024 BEGIN
+    # HO 26/09/2024 
     # was called in previous experiments, but we should use indexpubthreaded (or not, see comments on that function)
     def indexpubthreaded2(self):
         with concurrent.futures.ThreadPoolExecutor(max_workers=60) as executor:
@@ -2482,6 +2621,7 @@ class ESPRESSOexperiment:
             i=i+1
             self.image.add((snode,self.namespace.LocalAddress,Literal(dir+self.podname+'/'+sword)))
             pass
+
     """
     Zip the indexes and store locally. For experiments that are too big to index on the fly.
     
@@ -2561,14 +2701,30 @@ class ESPRESSOexperiment:
     
     param: self
     param: zipdir, the directory
+    param: overlaydir, the overlay network directory
     """        
-    def serverlevel_storelocalindexzipdirs(self,zipdir):
+    def serverlevel_storelocalindexzipdirs(self,zipdir,overlaydir):
         print('inside serverlevel_storelocalindexzipdirs')
+
+        # HO 08/11/2024 BEGIN **********************
+        servcount = 0
+        # HO 08/11/2024 END *************************
+
         # for each server
         for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):            
             # name the current zip directory after the current server
             serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
             testservindex=ServerIndex()
+
+            # HO 08/11/2024 BEGIN **********************
+            # for the .csv files that will feed the logical tables on the overlay network
+            # get the URL of this server
+            serverurl = str(self.image.value(snode,self.namespace.Address))
+            # servcount will be the primary key, which the keyword table will use as an FK
+            # we now have id and server_url for the server table
+            # when we build the server index we will append the rest of the values for the row, in a single string, comma separated
+            self.servercsvdict[servcount] = serverurl
+            # HO 08/11/2024 END *************************
 
             # create directories recursively, no need to raise error if any already exist
             print('make directory ' + serdir)
@@ -2664,7 +2820,15 @@ class ESPRESSOexperiment:
                 podindexzip.close()
 
             # unwind the server-level metaindex into a writable state
-            testservindex.buildservermetaindex_simple()
+            # HO 08/11/2024 BEGIN **********************
+            #testservindex.buildservermetaindex_simple()
+            dictlist = testservindex.buildservermetaindex_simple_csvs(self.servercsvdict, self.keywordcsvdict, servcount, self.podsperserver)
+            if(len(dictlist) >= 1):
+                self.servercsvdict = dictlist[0]
+            if(len(dictlist) >= 2):
+                self.keywordcsvdict = dictlist[1]
+            servcount += 1
+            # HO 08/11/2024 END **********************
             
             n=len(testservindex.index.keys())
             print('About to write server level index:')
@@ -2687,206 +2851,98 @@ class ESPRESSOexperiment:
             pbar.close()
             # close the server index zip file
             serindexzip.close()
-            
+
+        # HO 04/12/2024 BEGIN *****************
+        # finally, unwind the dictionaries into .csv files
+        self.createoverlaycsvfiles(overlaydir)
+        # HO 04/12/2024 END *****************
+
+
+    # HO 04/12/2024 BEGIN *****************
     """
-    Zip Lucene indexes and store locally. For experiments that are too big to index on the fly.
-    There is (as yet) no equivalent for creating Lucene indexes on the fly.
-    
+    Takes the relevant dictionaries and unwinds them into .csv files, then zips them
+
     param: self
-    param: zipdir, the directory
-    """        
-    def lucene_storelocalindexzipdirs(self,zipdir):
-        print('inside lucene_storelocalindexzipdirs')
-        # for each server
-        for snode in self.image.subjects(self.namespace.Type,self.namespace.Server):            
-            # name the current zip directory after the current server
-            serdir=zipdir+str(self.image.value(snode,self.namespace.Sword))
-            #testservindex=ServerIndex()
+    param: overlaydir, the local directory for storing overlay .csv files
+    """
+    def createoverlaycsvfiles(self, overlaydir):
+        print("Writing the " + config.SERVER_TBL_CSV + " file: ")
+        self.createoverlaydir(overlaydir)
+        filename = overlaydir + '/' + config.SERVER_TBL_CSV
+        with open(filename, 'w') as f:
+            f.write(config.SERVER_TBL_CSV_HEADERS)
+            for (k, v) in self.servercsvdict.items():
+                newline = str(k) + ',' + str(v)
+                f.write(newline)
+            f.close()
 
-            # create directories recursively, no need to raise error if any already exist
-            print('make directory ' + serdir)
-            os.makedirs(serdir,mode=0o777,exist_ok=True)
-            print('made directory ' + serdir)
-            
-            # name the server level zip metaindex file
-            enode=self.image.value(snode,self.namespace.ContainsEspressoPod)
-            serzipindexfile=serdir +'/' +self.podname+'metaindex.zip'
-            # create an empty dict for the server index
-            servdict = dict()
-            # create an empty dict that is the same as the pod-level file dict,
-            # but the key is the pod and the values are the filedict
-            servpoddict = dict()
-            # and a set of source directories to index
-            servdirset = set()
-            
-            # for every pod in this server
-            for pnode in self.image.objects(snode,self.namespace.Contains):
-                # name the pod zip index file
-                podzipindexfile=serdir +'/'+str(self.image.value(pnode,self.namespace.Name))+'index.zip'
-                # get the pod address
-                podaddress=str(self.image.value(pnode,self.namespace.Address))
+        print("Writing the " + config.KEYWORD_TBL_CSV + " files for each WebID: ")
+        pidcounter = 0
+        for (kwd, widdict) in self.keywordcsvdict.items():
+            for(wid, srvdict) in widdict.items():
+                wid = wid.split(".")[0]
+                filename = overlaydir + '/' + wid + '_' + config.KEYWORD_TBL_CSV
+                with open(filename, 'a') as f:
+                    # write headers if they're not already there
+                    if(os.stat(filename).st_size == 0):
+                        f.write(config.KEYWORD_TBL_CSV_HEADERS)
 
-                # here we need to create a podword for this pod so the server index can find it
-                podname=str(self.image.value(pnode,self.namespace.Name))
-                podpath=podname+'/'
-                #testservindex.addpod(podpath)
-                if podpath not in servpoddict.keys():
-                    servpoddict[podpath] = ''
+                    startline = str(kwd) + "," + str(wid) + ","
+                    for(sid, stats) in srvdict.items():
+                        newline = startline + str(sid) + ","
+                        newline = newline + str(stats)
+                        # the ID
+                        newline = str(pidcounter) + "," + newline
+                        f.write(newline)
+                        # autoincrement the ID number
+                        pidcounter+=1
+                # and close the file
+                f.close()
 
-                # create an empty dict for the files
-                #filetuples=[]
-                # this will have the filename and its WebID list
-                filedict = dict()
-                # set of source directories for the indexer to look in
-                sourcedirset = set()
-                # for each file in the pod
-                for fnode in self.image.objects(pnode,self.namespace.Contains):
-                    # get the file details
-                    #targetUrl=str(self.image.value(fnode,self.namespace.Address))
-                    #filetype=str(self.image.value(fnode,self.namespace.Filetype))
-                    filename=str(self.image.value(fnode,self.namespace.Filename))
-                    localsourcedir = str(self.image.value(fnode,self.namespace.LocalAddress))
-                        
-                    # add to the pod-level set of source directories
-                    sourcedirset.add(localsourcedir)
-                    # add to the server-level set of source directories
-                    servdirset.add(localsourcedir)
-                    #f=str(self.image.value(fnode,self.namespace.LocalAddress))
-                    # open the file for reading
-                    #file = open(f, "r")
-                    #filetext=file.read()
-                    #file.close()
-                    # create a list to hold the WebIDs that have access to this file
-                    webidlist=[]
-                    # and add each WebID to the list
-                    for anode in self.image.objects(fnode,self.namespace.AccessibleBy):
-                        webid=str(self.image.value(anode,self.namespace.WebID))
-                        webidlist.append(webid)
-                    # if a given file is open access, represent that in the list with an asterisk
-                    if fnode in self.image.subjects(self.namespace.Type,self.namespace.OpenFile):
-                        webidlist.append(config.OPENACCESS_SYMBOL)
+        # open the overlay zip file for writing
+        print("Zipping the overlay .csv files:")
+        overlayzipdir = "overlayzip"
+        fulloverlayzippath = os.getcwd() + '/' + overlayzipdir
+        if (os.path.exists(fulloverlayzippath)):
+            print("Deleting " + fulloverlayzippath + " with all its contents")
+            shutil.rmtree(fulloverlayzippath)
+        print("About to create " + fulloverlayzippath)
+        os.makedirs(fulloverlayzippath,mode=0o777,exist_ok=True)
+        overlayzip = overlayzipdir + '/' + 'overlay.zip'
 
-                    # cut the pod address off the target URL
-                    #ftrunc=targetUrl[len(podaddress):]
-                    # add the truncated pod address, file text, web ID list to the file tuples
-                    #filetuples.append((ftrunc,filetext,webidlist))
-                    
-                    # add the WebID list to this file's entry in the dictionary
-                    filedict[filename] = webidlist
-
-                    # Sequentially number the WebIDs            
-                    #testservindex.addwebids(podpath, webidlist)
-                
-                # now add the file dictionary to the server-level pod dictionary
-                servpoddict[podpath] = filedict    
-                # HO 18/11/2024 BEGIN **************
-                # Now we have access control details for every file in the pod,
-                # we can construct the Lucene pod index.
-                # the file dictionary is the access control list
-                access_control = filedict
-                # convert the access control list to JSON
-                access_control_data = json.dumps(access_control)
-                # the target directory for the pod index should be named after the pod
-                # (that is if we are not zipping the indexes)
-                destdir = serdir +'/'+str(self.image.value(pnode,self.namespace.Name)) + ''
-                #destdir = serdir
-                # for each source directory, index the files in the access control lists
-                for sdir in sourcedirset:
-                    command = [
-                        'java',
-                        '-jar',
-                        'Indexer.jar', # Path to your JAR file NB: it seems to only cope if the .jar is in the same directory
-                        sdir,  # Path to the files to index
-                        access_control_data,  # Pass the JSON string with lists of web IDs
-                        destdir  # Path for the destination index
-                    ]
-                    # create the index
-                    result = subprocess.run(command, capture_output=True, text=True)
-        
-                    # Output the result
-                    print(result.stdout)
-                    print(result.stderr)
-                    
-                    # open the pod index zip file for writing
-                    podindexzip=ZipFile(podzipindexfile, 'w')
-                    # write every file in the destination directory to the zip file
-                    #print("destdir is " + destdir)
-                    #podindexzip.write(destdir)
-                    for name in os.listdir(destdir):
-                        # write them to the zip file (name/key is archive name)
-                        writfile = os.path.join(destdir, name)
-                        podindexzip.write(writfile)
-                        # gets info about this item
-                        info = podindexzip.getinfo(writfile)
-                        # give full access to this file/item
-                        info.external_attr = 0o777 << 16
-                        
-                # HO 18/11/2024 END **************
-                """print('constructing inverted index')
-                podlevel_index=dict()
-                
-                servtuples=PodIndexer.serverlevel_aclindextupleswebidnewdirs(filetuples, podpath, testservindex)
-
-                if (servtuples is not None):
-                    # keep a running total of the files at server level
-                    runningsum=0
-                    if (len(servtuples) >= 1):
-                        podlevel_index = servtuples[0]
-                        if config.INDEX_FILECOUNT_FILENAME in podlevel_index.keys():
-                            runningsum = podlevel_index[config.INDEX_FILECOUNT_FILENAME]
-                    if (len(servtuples) >= 2):
-                        testservindex = servtuples[1]
-                        testservindex.indexsum=testservindex.indexsum+int(runningsum)
-                
-                # work out how many .ndx files there are
-                n=len(podlevel_index.keys())
-                print('About to write podlevel_index')
-
-                # set up a progress bar
-                pbar = tqdm.tqdm(total=n,desc=podzipindexfile)
-                # open the pod index zip file for writing
-                podindexzip=ZipFile(podzipindexfile, 'w')
-
-                # for each item in the index dictionary
-                for (name,body) in podlevel_index.items():
-
-                    # write them to the zip file (name/key is archive name)
-                    podindexzip.writestr(name,body)
-                    # gets info about this item
-                    info = podindexzip.getinfo(name)
-                    # give full access to this file/item
+        with zipfile.ZipFile(overlayzip, 'w', zipfile.ZIP_DEFLATED) as zip_obj:
+            for root, dirs, files in os.walk(overlaydir):
+                for file in files:
+                    file_path = os.path.join(root, file)
+                    zip_obj.write(file_path, file)
+                    # gets info about this file
+                    info = zip_obj.getinfo(file)
+                    # give full access to this file
                     info.external_attr = 0o777 << 16
-                    # update the progress bar
-                    pbar.update(1)
-                # close the progress bar
-                pbar.close()
-                # close the pod index zip file
-                podindexzip.close()
+            zip_obj.close()
 
-            # unwind the server-level metaindex into a writable state
-            testservindex.buildservermetaindex_simple()
-            
-            n=len(testservindex.index.keys())
-            print('About to write server level index:')
-            # set up a progress bar
-            pbar = tqdm.tqdm(total=n,desc=serzipindexfile)
-            # open the server index zip file for writing
-            serindexzip=ZipFile(serzipindexfile, 'w')
-            # for each item in the index dictionary
-            for (name,body) in testservindex.index.items():
-                # write them to the zip file (name/key is archive name)
-                serindexzip.writestr(name,body)
-                # gets info about this item
-                info = serindexzip.getinfo(name)
-                #print('about to give full access')
-                # give full access to this file/item
-                info.external_attr = 0o777 << 16
-                # update the progress bar
-                pbar.update(1)
-            # close the progress bar
-            pbar.close()
-            # close the server index zip file
-            serindexzip.close()"""
+        print("yay, done.")
+        # HO 08/11/2024 END *****************
+
+
+    # HO 04/12/2024 END *****************
+
+    # HO 04/12/2024 BEGIN *****************
+    def createoverlaydir(self, overlaydir):
+        fulloverlaydirpath = os.getcwd() + '/' + overlaydir
+        if (os.path.exists(fulloverlaydirpath)):
+            print(fulloverlaydirpath + " already exists")
+            self.destroyoverlaydir(fulloverlaydirpath)
+        print("About to create " + fulloverlaydirpath)
+        os.makedirs(fulloverlaydirpath,mode=0o777,exist_ok=True)
+    # HO 03/12/2024 END *****************
+
+    # HO 03/12/2024 BEGIN *****************
+    def destroyoverlaydir(self, fulloverlaydirpath):
+        if (os.path.exists(fulloverlaydirpath)):
+            print("Deleting " + fulloverlaydirpath + " with all its contents")
+            shutil.rmtree(fulloverlaydirpath)
+    # HO 03/12/2024 END *****************
             
     """
     Distribute the zip files around the servers using ssh

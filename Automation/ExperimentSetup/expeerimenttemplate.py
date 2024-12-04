@@ -92,9 +92,11 @@ def indexexperiment(experiment):
     # This will store the indexes in zips locally  
     # And distribute them to the corresponding servers using ssh.
     
-    # Option B, step 1, zip the indexes and store locally 
+    # Option B, step 1, zip the indexes and store locally
+    # HO 04/12/2024 BEGIN ************* 
     #experiment.serverlevel_storelocalindexzipdirs(zipdir)
-    experiment.lucene_storelocalindexzipdirs(zipdir)
+    experiment.serverlevel_storelocalindexzipdirs(zipdir, overlaydir)
+    # HO 04/12/2024 END ************* 
     
     # Option B, step 2: distribute zips(using SSH username and password) 
     """experiment.distributezips(zipdir,SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
@@ -163,6 +165,9 @@ disp=0
 # zip directory name
 zipdir='zipdir'
 
+# overlay directory name
+overlaydir='overlaydir'
+
 """ Step 0. 
 
 Creates an image (graph) that represents the relationship among everything (Servers, pods, files in those pods, and access control specs on those files). 
@@ -185,7 +190,10 @@ return: experiment, an object of type flexexperiment.ESPRESSOexperiment
 def createexperiment(podname):
     # Initializing the experiment
 
-    experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
+    # HO 08/11/2024 BEGIN *************
+    #experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
+    experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password, podsperserver=numpods)
+    # HO 08/11/2024 END *************
 
     print("Constructed experiment")
     
@@ -198,16 +206,12 @@ def createexperiment(podname):
 
     # user message
     print('serverlist loaded')
-    print('experiment.serversmap: ')
-    print(str(experiment.serversmap))
 
     # create pods
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab2,podlabel=podlab2)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab3,podlabel=podlab3)
     print('logical pods created ')
-    print('experiment.serversmap: ')
-    print(str(experiment.serversmap))
 
     experiment.loaddirtopool(sourcedir1, filelab1)
 
@@ -246,8 +250,6 @@ def createexperiment(podname):
     experiment.imagineaclspecial(filelab3)
     
     print('Special agent ACLs distributed')
-    print('experiment.agentsmap: ')
-    print(str(experiment.agentsmap))
     
     # saves the experiment as a .ttl file named after the podname plus 'exp'
     experiment.saveexp(podname+'exp.ttl')
@@ -255,7 +257,13 @@ def createexperiment(podname):
     # user progress message
     print('experiment saved') 
     print('===================')
+
+    # build Lucene index
+    experiment.buildluceneindex()
+    print('Lucene index built, check above for any errors')
+    print('===================')
     # return the flexexperiment.ESPRESSOexperiment object
+
     return experiment
 
 # Pod name template and experiment name
@@ -274,7 +282,7 @@ espressoindexdir=podname+'metaindex/'
 experiment=createexperiment(podname)
 
 # Loading the experiment. Step 1.
-"""experiment=flexexperiment.loadexp(podname+'exp.ttl')
+experiment=flexexperiment.loadexp(podname+'exp.ttl')
 # display progress message
 print('Experiment loaded')
 print('===================')
@@ -294,4 +302,4 @@ print('===================')
 #Indexing of the experiment
 indexexperiment(experiment)
 print('Experiment indexed')
-print('===================')"""
+print('===================')
