@@ -27,11 +27,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.*;
 
 public class Index {
     
     
-    public static Map<String, String> webIdToServerMap;
+   
     public  String extractServerNumber(String input) {
         Pattern pattern = Pattern.compile("srv(\\d{5})");
         Matcher matcher = pattern.matcher(input);
@@ -55,33 +57,15 @@ public class Index {
             String sourceDir = args[1];
             String outputDir = args[2];
 
-            // Read the dictionary JSON from the file
+         // Read the dictionary JSON from the file
             ObjectMapper objectMapper = new ObjectMapper();
             File dictionaryFile = new File(dictionaryJsonFilePath);
-            Map<String, Map<String, Map<String, List<String>>>> dictionary = objectMapper.readValue(dictionaryFile, Map.class);
-            
-            // Step 1: Get the distinct list of servers
-        Set<String> distinctServers = dictionary.values().stream()
-                .flatMap(webIdMap -> webIdMap.keySet().stream())
-                .collect(Collectors.toSet());
 
-        
-
-        // Step 2: Distribute webIds across servers
-        List<String> serversList = new ArrayList<>(distinctServers);
-        List<String> webIds = new ArrayList<>(dictionary.keySet());
-
-        // Map to hold the final webId-to-serverId assignment
-        webIdToServerMap = new HashMap<>();
-
-        // Distribute webIds to servers
-        int serverCount = serversList.size();
-        for (int i = 0; i < webIds.size(); i++) {
-            String webId = webIds.get(i);
-            String serverId = serversList.get(i % serverCount);
-            webIdToServerMap.put(webId, serverId);
-        }
-
+            // Use TypeReference to ensure proper deserialization of the nested structure
+            Map<String, Map<String, Map<String, List<String>>>> dictionary = objectMapper.readValue(
+                dictionaryFile,
+                new TypeReference<Map<String, Map<String, Map<String, List<String>>>>>() {}
+            );
 
             // Perform indexing with parallelization
             Index indexer = new Index();
@@ -172,7 +156,7 @@ public class Index {
                     executor.submit(() -> {
                         try {
                             
-                            Path ServerLevelServerDir = Paths.get(serverLevelDir.toString(), sanitizePath(webIdToServerMap.get(webId)));
+                            Path ServerLevelServerDir = Paths.get(serverLevelDir.toString(), sanitizePath(selectRandomServer(servers.keySet())));
                             Files.createDirectories(ServerLevelServerDir);
                             
                             Path serverLevelIndexDir = Paths.get(ServerLevelServerDir.toString(),  sanitizePath(webId) + "-servers.zip");
@@ -293,6 +277,21 @@ public class Index {
                         throw new RuntimeException("Error deleting directory", e);
                     }
                 });
+    }
+    public static String selectRandomServer(Set<String> servers) {
+        // If the set is empty, return null or handle it as needed
+        if (servers.isEmpty()) {
+            return null;
+        }
+
+        // Convert Set to List to randomly access an index
+        List<String> serverList = new ArrayList<>(servers);
+
+        // Use Random to select a random index
+        Random random = new Random();
+        int randomIndex = random.nextInt(serverList.size());  // random index within the size of the list
+
+        return serverList.get(randomIndex);  // Return the randomly selected server
     }
 
     private static List<String> getFilesForWebIdAndPod(
