@@ -4,7 +4,7 @@ from rdflib import URIRef
 from math import floor
 
 """
-Step 2. Actual deployment of the experiment.
+Function 2. Actual deployment of the experiment.
 
 This is the actual work of creating everything:
     - creating ESPRESSO pods if not created 
@@ -47,7 +47,7 @@ def deployexperiment(experiment):
     print('metaindexes made accessible to the experiment')
 
 """
-Step 3. 
+Function 3. 
 
 Upload Files to the pods from the image 
 Upload ACLs to the pods from the image
@@ -69,7 +69,7 @@ def uploadexperiment(experiment):
     experiment.storelocalfileszip(zipdir)
     
 """
-Step 4. We can do this if the experiment is not too big, otherwise we have to call zip(experiment,zipdir,SSHuser,SSHPassword) 
+Function 4. We can do this if the experiment is not too big, otherwise we have to call zip(experiment,zipdir,SSHuser,SSHPassword) 
 
 Indexes the experiment.
 param: experiment, a flexexperiment.ESPRESSOexperiment 
@@ -77,11 +77,11 @@ param: experiment, a flexexperiment.ESPRESSOexperiment
 def indexexperiment(experiment):
     
     ########################
-    # Option A step 1, for smaller experiments: index the pods on the fly 
+    # Option A part 1, for smaller experiments: index the pods on the fly 
     """experiment.aclindexwebidnewthreaded()
     print('pods indexed')
     
-    # Option A step 2, for smaller experiments: check the indexes 
+    # Option A part 2, for smaller experiments: check the indexes 
     # note: we're not doing this for the metaindex even for small experiments
     experiment.indexfixerwebidnew()
     print('indexes checked')"""
@@ -92,13 +92,16 @@ def indexexperiment(experiment):
     # This will store the indexes in zips locally  
     # And distribute them to the corresponding servers using ssh.
     
-    # Option B, step 1, zip the indexes and store locally
+    # Option B, part 1, zip the indexes and store locally
     # HO 04/12/2024 BEGIN ************* 
     #experiment.serverlevel_storelocalindexzipdirs(zipdir)
     experiment.serverlevel_storelocalindexzipdirs(zipdir, overlaydir)
     # HO 04/12/2024 END ************* 
     
-    # Option B, step 2: distribute zips(using SSH username and password) 
+    # Option B, part 2: distribute zips(using SSH username and password)
+    # MB AND MR: put your details in here, and don't forget to erase them when you're done
+    SSHUser='xxxxxx'
+    SSHPassword='xxxxxx' 
     """experiment.distributezips(zipdir,SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
     ########################
 
@@ -375,24 +378,34 @@ espressoemail='espresso@example.com'
 # Email to register the pod. the emails will be podname0@example.org,
 # podname1@example.org, etc.
 podemail='@example.org'
+
 # Folder where the pod indexes will go
 podindexdir='espressoindex/'
+
 # Same password for all the logins
 password='12345'
+
 # percs of sp.agents
 percs=[100,50,25,10]
 # percent of openfiles
+
 openperc=10
 #openperc=0
+
 numwebids=250
 #numwebids=20
+
 # number of pods
 numpods=9500
 #numpods=10
+
 # on average how many webids can read a given file
+# MB AND MR: I don't know how many this should be, so put whatever you want in here.
 #themean=1
 themean=10
+
 # relative deviation of the percentage of webids that can read a given file, can be left 0
+# MB AND MR: DON'T CHANGE THIS. It has to be 0 so that we can get 1 file per pod.
 disp=0
     #how many files on average a webid can read
     #initializing the experiment
@@ -403,7 +416,7 @@ zipdir='zipdir'
 # overlay directory name
 overlaydir='overlaydir'
 
-""" Step 0. 
+""" Function 1. 
 
 Creates an image (graph) that represents the relationship among everything (Servers, pods, files in those pods, and access control specs on those files). 
 
@@ -424,15 +437,14 @@ return: experiment, an object of type flexexperiment.ESPRESSOexperiment
 """
 def createexperiment(podname):
     # Initializing the experiment
-
-    # HO 08/11/2024 BEGIN *************
-    #experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password)
     experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password, podsperserver=numpods)
-    # HO 08/11/2024 END *************
 
     print("Constructed experiment")
     
     # Server list loading
+    # MB AND MR: If you want to try running the whole thing with just
+    # a few servers, comment out some of these function calls.
+    # Do likewise for the subsequent function calls below.
     experiment.loadserverlist(serverlist1, servlab1)
 
     experiment.loadserverlist(serverlist2, servlab2)
@@ -537,7 +549,8 @@ def createexperiment(podname):
     print('serverlist loaded')
 
     # create pods
-    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
+    
+experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab2,podlabel=podlab2)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab3,podlabel=podlab3)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab4,podlabel=podlab4)
@@ -972,7 +985,22 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
     print('Lucene index built, check above for any errors')
     print('===================')
     # return the flexexperiment.ESPRESSOexperiment object
+    return experiment
 
+""" 
+Initializes the experiment as an object, but does nothing else. Use this if you already
+ran createexperiment in Step 1, and you need to run the deployment as a separate step.
+
+param: podname, the experiment name. 
+return: experiment, the experiment object itself.
+"""
+def constructexperiment(podname):
+    # Initializing the experiment as an object, but doing nothing else
+    experiment=flexexperiment.ESPRESSOexperiment(espressopodname=espressopodname, espressoemail=espressoemail, espressoindexdir=espressoindexdir, podname=podname,podemail=podemail, podindexdir=podindexdir, password=password, podsperserver=numpods)
+
+    print("Constructed experiment")
+
+    # return the flexexperiment.ESPRESSOexperiment object
     return experiment
 
 # Pod name template and experiment name
@@ -986,11 +1014,38 @@ espressoindexfile=podname+'metaindex.csv'
 # example espressoindexdir value: 'ardfhealthmetaindex/'
 espressoindexdir=podname+'metaindex/'
 
+# MB AND MR: STEP 2: BEGIN COMMENT OUT
+#
+# After Step 1, you have the .ttl file defining the experiment,
+# plus all the Lucene indexes. 
+#
+# You're done with the Lucene indexes.
+#
+# You now need to go to the .ttl file and split it down into multiple
+# .ttl files containing only 5 servers (or however many servers you want to deploy)
+# per file.
+#
 # create and save the logical view of the experiment
 # example podname value: 'ardfhealth'
 experiment=createexperiment(podname)
+# MB AND MR: STEP 2: END COMMENT OUT
 
-# Loading the experiment. Step 1.
+# MB AND MR: STEP 1: BEGIN COMMENT OUT
+# Comment out everything below this line, so that you are running
+# createexperiment() over all 50 servers.
+# After doing this you will have:
+#
+# - Lucene indexes, per WebID, over all 50 servers.
+#
+# - A .ttl file defining the experiment over all 50 servers.
+#
+# MB AND MR: STEP 2: BEGIN COMMENT IN
+# Have you split your .ttl file into multiple smaller files with
+# 5 (or however many) servers in each? If not, do that first.
+experiment=constructexperiment(podname)
+
+# MB AND MR: Make sure your smaller .ttl file has the name you expect.
+# Loading the experiment. 
 experiment=flexexperiment.loadexp(podname+'exp.ttl')
 # display progress message
 print('Experiment loaded')
@@ -1002,7 +1057,6 @@ deployexperiment(experiment)
 print('Experiment deployed')
 print('===================')
 
-
 # Uploading of the files and corresponding acls
 uploadexperiment(experiment)
 print('Experiment uploaded')
@@ -1012,3 +1066,6 @@ print('===================')
 indexexperiment(experiment)
 print('Experiment indexed')
 print('===================')
+
+# MB AND MR: STEP 1: END COMMENT OUT
+# MB AND MR: STEP 2: END COMMENT IN

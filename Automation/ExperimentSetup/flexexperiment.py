@@ -1290,6 +1290,8 @@ class ESPRESSOexperiment:
         # JSONify one WebID at a time
         for k, v in self.agentsmap.items():
             # Save the dictionary to a JSON file
+            # MB AND MR: if you want to keep the .json files, change this so it gets
+            # a different filename each time
             with open(json_file_path, "w") as json_file:
                 json.dump({k: v}, json_file, indent=4)
 
@@ -2822,6 +2824,8 @@ class ESPRESSOexperiment:
             # unwind the server-level metaindex into a writable state
             # HO 08/11/2024 BEGIN **********************
             #testservindex.buildservermetaindex_simple()
+            # MB AND MR: here's where the overlay .csvs are built.
+            # If for whatever reason you don't want the .csvs, use buildservermetaindex_simple() instead.
             dictlist = testservindex.buildservermetaindex_simple_csvs(self.servercsvdict, self.keywordcsvdict, servcount, self.podsperserver)
             if(len(dictlist) >= 1):
                 self.servercsvdict = dictlist[0]
@@ -2854,6 +2858,7 @@ class ESPRESSOexperiment:
 
         # HO 04/12/2024 BEGIN *****************
         # finally, unwind the dictionaries into .csv files
+        # MB AND MR: this is where the .csv files come out
         self.createoverlaycsvfiles(overlaydir)
         # HO 04/12/2024 END *****************
 
