@@ -2928,6 +2928,12 @@ class ESPRESSOexperiment:
     # HO 04/12/2024 END *****************
 
     # HO 04/12/2024 BEGIN *****************
+    """
+    Creates the directory for the overlay .csvs.
+    Arguably it is kind of stupid to have more than one of these functions creating and destroying different local directories. Oh well.
+
+    param: overlaydir, the local overlay .csvs directory.
+    """
     def createoverlaydir(self, overlaydir):
         fulloverlaydirpath = os.getcwd() + '/' + overlaydir
         if (os.path.exists(fulloverlaydirpath)):
@@ -2938,6 +2944,12 @@ class ESPRESSOexperiment:
     # HO 03/12/2024 END *****************
 
     # HO 03/12/2024 BEGIN *****************
+    """
+    Deletes directory for the overlay .csvs.
+    Arguably it is kind of stupid to have more than one of these functions creating and destroying different local directories. Oh well.
+
+    param: fulloverlaydirpath, the full path to the local overlay .csvs directory.
+    """
     def destroyoverlaydir(self, fulloverlaydirpath):
         if (os.path.exists(fulloverlaydirpath)):
             print("Deleting " + fulloverlaydirpath + " with all its contents")
