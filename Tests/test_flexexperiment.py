@@ -1,5 +1,10 @@
 import sys
 import os
+
+# HO 23/10/2024 BEGIN ***********
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+# HO 23/10/2024 END *************
+
 import tempfile
 from rdflib import Graph, BNode, Literal, Namespace,URIRef
 import unittest
@@ -13,6 +18,7 @@ from Automation.ExperimentSetup.flexexperiment import ESPRESSOexperiment  # Adju
 
 class FlexExperimentTests(unittest.TestCase):
     def setUp(self):
+        #print("in setUp")
         # Initialize the ESPRESSOexperiment instance
         self.experiment = ESPRESSOexperiment()
         self.label = "test_label"
@@ -33,6 +39,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.pod_dir = tempfile.mkdtemp()
 
     def is_valid_url(self, url):
+        #print("in is_valid_url")
         try:
             result = urlparse(url)
             return all([result.scheme, result.netloc])
@@ -42,6 +49,7 @@ class FlexExperimentTests(unittest.TestCase):
 
 
     def dummyServers(self):
+        #print("in dummyServers")
         self.server1 = BNode('server1')
         self.server2 = BNode('server2')
         self.experiment.image.add((self.server1, self.experiment.namespace.Type, self.experiment.namespace.Server))
@@ -53,6 +61,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.experiment.image.add((self.server2, self.experiment.namespace.Address, Literal("http://server2.com/")))
 
     def createMockServerAndNodes(self):
+        #print("in createMockServerAndNodes")
         # Create mock server and pod nodes
         self.mock_server_node = BNode('Server1')
         self.mock_pod_node = BNode('Pod1')
@@ -75,6 +84,7 @@ class FlexExperimentTests(unittest.TestCase):
             (self.mock_pod_node, self.experiment.namespace.TripleString, Literal("<tripleString>")))
 
     def create_sample_bundles(self):
+        #print("in create_sample_bundles")
         """Create sample bundles for testing."""
         # Define the base path for the bundles
         bundle_path = os.path.join(self.bundlesource, 'bundle0')  # Adjust for the specific bundle you want to create
@@ -94,6 +104,7 @@ class FlexExperimentTests(unittest.TestCase):
             f.write('Sample content for testfile1.')
 
     def test_distributebundles_invalid_predicatetopod(self):
+        #print("in test_distributebundles_invalid_predicatetopod")
         """Test when predicatetopod is not a valid URL."""
         invalid_predicate = "invalid_predicate"
         with self.assertRaises(ValueError) as context:
@@ -105,6 +116,7 @@ class FlexExperimentTests(unittest.TestCase):
             )
         self.assertEqual(str(context.exception), "Invalid URL format for predicatetopod.")
     def test_logicaldistfilestopodsfrompool_invalid_file_format(self):
+        #print("in test_logicaldistfilestopodsfrompool_invalid_file_format")
         """Test when file format is invalid."""
         self.experiment.filepool = {
             'file': [
@@ -122,11 +134,13 @@ class FlexExperimentTests(unittest.TestCase):
             )
 
     def test_createlogicalpods_negative_number(self):
+        #print("in test_createlogicalpods_negative_number")
         """Test when numberofpods is -1."""
         with self.assertRaises(ValueError):
             self.experiment.createlogicalpods(-1, 0)
 
     def test_createlogicalpods_serverdisp_zero(self):
+        #print("in createlogicalpods_serverdisp_zero")
         """Test when serverdisp is 0."""
         # Mock server subjects
         self.experiment.image.subjects.return_value = ['server1', 'server2']
@@ -138,6 +152,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertIsNotNone(self.experiment.image)
 
     def test_distributebundles_success(self):
+        #print("in test_distributebundles_success")
         """Test successful distribution of bundles to pods."""
         number_of_bundles = 2
         filetype = 'text/plain'
@@ -152,6 +167,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddirtopool_empty_directory(self, mock_isfile, mock_listdir):
+        #print("in test_loaddirtopool_empty_directory")
         mock_listdir.return_value = []
 
         self.experiment.loaddirtopool('some/empty_directory', 'test_label')
@@ -162,6 +178,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddirtopool_with_hidden_files(self, mock_isfile, mock_listdir):
+        #print("in test_loaddirtopool_with_hidden_files")
         mock_listdir.return_value = ['file1.txt', '.hidden_file.txt', 'file2.txt']
         mock_isfile.side_effect = lambda filepath: True  # All items are files
 
@@ -177,6 +194,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddirtopool_existing_label(self, mock_isfile, mock_listdir):
+        #print("in test_loaddirtopool_existing_label")
         # Initial population of the filepool
         self.experiment.filepool['existing_label'] = [('existing_file.txt', 'existing_file.txt')]
 
@@ -195,6 +213,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddirtopool_invalid_directory(self, mock_isfile, mock_listdir):
+        #print("in test_loaddirtopool_invalid_directory")
         # Mock listdir to raise a FileNotFoundError
         mock_listdir.side_effect = FileNotFoundError
 
@@ -204,6 +223,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddirtopool_multiple_calls(self, mock_isfile, mock_listdir):
+        #print("in test_loaddirtopool_multiple_calls")
         mock_listdir.return_value = ['file1.txt', 'file2.txt']
         mock_isfile.side_effect = lambda filepath: True  # All items are files
 
@@ -223,6 +243,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.path.isfile')
     @mock.patch('tqdm.tqdm')  # Mock tqdm to prevent actual progress bar display
     def test_loaddir_basic_functionality(self, mock_tqdm, mock_isfile, mock_listdir):
+        #print("in test_loaddir_basic_functionality")
         mock_listdir.return_value = ['file1.txt', 'file2.txt']
         mock_isfile.side_effect = lambda filepath: True  # All items are files
 
@@ -235,6 +256,7 @@ class FlexExperimentTests(unittest.TestCase):
 
     @mock.patch('os.listdir')
     def test_loaddir_empty_directory(self, mock_listdir):
+        #print("in test_loaddir_empty_directory")
         mock_listdir.return_value = []
 
         self.experiment.loaddir(self.datasource, self.label)
@@ -245,6 +267,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddir_with_hidden_files(self, mock_isfile, mock_listdir):
+        #print("in test_loaddir_with_hidden_files")
         mock_listdir.return_value = ['file1.txt', '.hidden_file.txt', 'file2.txt']
         mock_isfile.side_effect = lambda filepath: True  # All items are files
 
@@ -255,6 +278,7 @@ class FlexExperimentTests(unittest.TestCase):
 
     @mock.patch('os.listdir')
     def test_loaddir_invalid_directory(self, mock_listdir):
+        #print("in test_loaddir_invalid_directory")
         mock_listdir.side_effect = FileNotFoundError  # Simulate non-existent directory
 
         with self.assertRaises(FileNotFoundError):
@@ -263,6 +287,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddir_multiple_calls(self, mock_isfile, mock_listdir):
+        #print("in test_loaddir_multiple_calls")
         mock_listdir.return_value = ['file1.txt', 'file2.txt']
         mock_isfile.side_effect = lambda filepath: True  # All items are files
 
@@ -278,6 +303,7 @@ class FlexExperimentTests(unittest.TestCase):
     @mock.patch('os.listdir')
     @mock.patch('os.path.isfile')
     def test_loaddir_with_different_filetype(self, mock_isfile, mock_listdir):
+        #print("in test_loaddir_with_different_filetype")
         mock_listdir.return_value = ['file1.txt', 'file2.txt']
         mock_isfile.side_effect = lambda filepath: True  # All items are files
 
@@ -285,6 +311,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.experiment.loaddir(self.datasource, self.label, filetype='image/png')
 
     def test_loadserverlist_basic_functionality(self):
+        #print("in test_loadserverlist_basic_functionality")
         serverlist = ['http://server1.com', 'http://server2.com']
         self.experiment.loadserverlist(serverlist)
 
@@ -293,6 +320,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(self.experiment.image), expected_triples_count)
 
     def test_loadserverlist_content(self):
+        #print("in test_loadserverlist_content")
         serverlist = ['http://server1.com']
         self.experiment.loadserverlist(serverlist)
 
@@ -311,6 +339,7 @@ class FlexExperimentTests(unittest.TestCase):
                       self.experiment.image)
 
     def test_loadserverlist_empty(self):
+        #print("in test_loadserverlist_empty")
         serverlist = []  # Test with an empty server list
         self.experiment.loadserverlist(serverlist)
 
@@ -318,6 +347,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(self.experiment.image), 0)
 
     def test_loadserverlist_duplicates(self):
+        #print("in test_loadserverlist_duplicates")
         serverlist = ['http://server1.com', 'http://server1.com']  # Duplicate server
         self.experiment.loadserverlist(serverlist)
 
@@ -330,6 +360,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertIn((snode, self.experiment.namespace.Address, Literal('http://server1.com')), self.experiment.image)
 
     def test_loadserverlist_invalid_input(self):
+        #print("in test_loadserverlist_invalid_input")
         serverlist = [None, '']  # Invalid server entries
         self.experiment.loadserverlist(serverlist)
 
@@ -337,45 +368,48 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(self.experiment.image), 0)
 
     def test_initpnode_none_values(self):
-            with self.assertRaises(TypeError):  # Expecting TypeError when passing None for pword
-                self.experiment.initpnode(None, "PodName", "PodLabel")
+        #print("in test_initpnode_none_values")
+        with self.assertRaises(TypeError):  # Expecting TypeError when passing None for pword
+            self.experiment.initpnode(None, "PodName", "PodLabel")
 
-            with self.assertRaises(TypeError):  # Expecting TypeError when passing None for podname
-                self.experiment.initpnode("Ppod1", None, "PodLabel")
+        with self.assertRaises(TypeError):  # Expecting TypeError when passing None for podname
+            self.experiment.initpnode("Ppod1", None, "PodLabel")
 
-            with self.assertRaises(TypeError):  # Expecting TypeError when passing None for podlabel
-                self.experiment.initpnode("Ppod1", "PodName", None)
+        with self.assertRaises(TypeError):  # Expecting TypeError when passing None for podlabel
+            self.experiment.initpnode("Ppod1", "PodName", None)
 
     def test_initfnode_none_values(self):
-                # Test each parameter as None to ensure graceful error handling
+        #print("in teest_initfnode_none_values")
+        # Test each parameter as None to ensure graceful error handling
 
-                with self.assertRaises(TypeError):  # fword is required
-                    self.experiment.initfnode(None, "filename", "/path/to/file", "text/plain")
+        with self.assertRaises(TypeError):  # fword is required
+            self.experiment.initfnode(None, "filename", "/path/to/file", "text/plain")
 
-                with self.assertRaises(TypeError):  # filename is required
-                    self.experiment.initfnode("Ffile1", None, "/path/to/file", "text/plain")
+        with self.assertRaises(TypeError):  # filename is required
+            self.experiment.initfnode("Ffile1", None, "/path/to/file", "text/plain")
 
-                with self.assertRaises(TypeError):  # filepath is required
-                    self.experiment.initfnode("Ffile1", "test.txt", None, "text/plain")
+        with self.assertRaises(TypeError):  # filepath is required
+            self.experiment.initfnode("Ffile1", "test.txt", None, "text/plain")
 
-                with self.assertRaises(TypeError):  # filetype is required
-                    self.experiment.initfnode("Ffile1", "test.txt", "/path/to/file", None)
+        with self.assertRaises(TypeError):  # filetype is required
+            self.experiment.initfnode("Ffile1", "test.txt", "/path/to/file", None)
 
-                # filelabel has a default value, so no need to test for None explicitly
+        # filelabel has a default value, so no need to test for None explicitly
 
     def test_initfnode_empty_strings(self):
-                # Test empty string values for parameters
-                fnode = self.experiment.initfnode("", "", "", "")
+        #print("in test_initfnode_empty_strings")
+        # Test empty string values for parameters
+        fnode = self.experiment.initfnode("", "", "", "")
 
-                # Check that the node is added with empty literals
-                self.assertIn((fnode, self.experiment.namespace.Type, self.experiment.namespace.File),
-                              self.experiment.image)
-                self.assertIn((fnode, self.experiment.namespace.LocalAddress, Literal("")), self.experiment.image)
-                self.assertIn((fnode, self.experiment.namespace.Filename, Literal("")), self.experiment.image)
-                self.assertIn((fnode, self.experiment.namespace.Filetype, Literal("")), self.experiment.image)
-                self.assertIn((fnode, self.experiment.namespace.Label, Literal("")), self.experiment.image)
+        # Check that the node is added with empty literals
+        self.assertIn((fnode, self.experiment.namespace.Type, self.experiment.namespace.File), self.experiment.image)
+        self.assertIn((fnode, self.experiment.namespace.LocalAddress, Literal("")), self.experiment.image)
+        self.assertIn((fnode, self.experiment.namespace.Filename, Literal("")), self.experiment.image)
+        self.assertIn((fnode, self.experiment.namespace.Filetype, Literal("")), self.experiment.image)
+        self.assertIn((fnode, self.experiment.namespace.Label, Literal("")), self.experiment.image)
 
     def test_assignpod_valid_input(self):
+        #print("in test_assignpod_valid_input")
         # Set up valid input
         snode = BNode('server1')
         pnode = BNode('pod1')
@@ -398,6 +432,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertIn((pnode, self.experiment.namespace.WebID, Literal(webid)), self.experiment.image)
 
     def test_assignpod_none_snode(self):
+        #print("in test_assignpod_none_snode")
         pnode = BNode('pod1')
         self.experiment.image.add((pnode, self.experiment.namespace.Name, Literal("Pod1")))
 
@@ -405,6 +440,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.assignpod(None, pnode)
 
     def test_assignpod_none_pnode(self):
+        #print("in test_assignpod_none_pnode")
         snode = BNode('server1')
         self.experiment.image.add((snode, self.experiment.namespace.Address, Literal("http://server1.com/")))
 
@@ -412,6 +448,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.assignpod(snode, None)
 
     def test_assignpod_missing_server_address(self):
+        #print("in test_assignpod_missing_server_address")
         # Set up input with missing server address
         snode = BNode('server1')
         pnode = BNode('pod1')
@@ -422,6 +459,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.assignpod(snode, pnode)
 
     def test_assignpod_missing_pod_name(self):
+        #print("in test_assignpod_missing_pod_name")
         # Set up input with missing pod name
         snode = BNode('server1')
         pnode = BNode('pod1')
@@ -432,6 +470,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.assignpod(snode, pnode)
 
     def test_createlogicalpairedpods_valid_input(self):
+        #print("in test_createlogicalpairedpods_valid_input")
         # Add mock servers to the graph
         self.dummyServers()
 
@@ -454,6 +493,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertGreater(len(triplestrings), 0)
 
     def test_createlogicalpairedpods_none_input(self):
+        #print("in test_createlogicalpairedpods_none_input")
         # Add mock servers to the graph
         self.dummyServers()
 
@@ -461,6 +501,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.createlogicalpairedpods(None, None)
 
     def test_createlogicalpairedpods_empty_server_list(self):
+        #print("in test_createlogicalpairedpods_empty_server_list")
         self.dummyServers()
         # Remove all servers from the graph
         self.experiment.image.remove((self.server1, None, None))
@@ -474,10 +515,12 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(pods), 0)
 
     def test_createlogicalpairedpods_invalid_number_of_pods(self):
+        #print("in test_createlogicalpairedpods_invalid_number_of_pods")
         with self.assertRaises(ValueError):  # Expect an error if the number of pods is invalid
             self.experiment.createlogicalpairedpods(-1, 1)
 
     def test_logicaldistfilestopodsfrompool_valid_input(self):
+        #print("in test_logicaldistfilestopodsfrompool_valid_input")
 
         self.experiment.filepool = {
             'file': [('path1', 'file1.txt'), ('path2', 'file2.txt')]
@@ -520,6 +563,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertGreater(len(pod_files), 0)
 
     def test_logicaldistfilestopodsfrompool_empty_file_pool(self):
+        #print("in test_logicaldistfilestopodsfrompool_empty_file_pool")
 
         self.experiment.filepool = {
             'file': [('path1', 'file1.txt'), ('path2', 'file2.txt')]
@@ -554,6 +598,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(files), 0)
 
     def test_logicaldistfilestopodsfrompool_invalid_input(self):
+        #print("in test_logicaldistfilestopodsfrompool_invalid_input")
 
         self.experiment.filepool = {
             'file': [('path1', 'file1.txt'), ('path2', 'file2.txt')]
@@ -577,6 +622,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.logicaldistfilestopodsfrompool(None, None, 'text')
 
     def test_logicaldistfilestopodsfrompool_fewer_files_than_pods(self):
+        #print("in test_logicaldistfilestopodsfrompool_fewer_files_than_pods")
         self.experiment.filepool = {
             'file': [('path1', 'file1.txt'), ('path2', 'file2.txt')]
         }
@@ -611,6 +657,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(files), 1)
 
     def test_logicaldistfilestopodsfrompool_fewer_pods_than_files(self):
+        #print("in test_logicaldistfilestopodsfrompool_fewer_pods_than_files")
 
         self.experiment.filepool = {
             'file': [('path1', 'file1.txt'), ('path2', 'file2.txt')]
@@ -647,6 +694,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(files), 3)
 
     def test_paretofilestopodsfrompool_filetype_none(self):
+        #print("in test_paretofilestopodsfrompool_filetype_none")
         # Arrange: Add mock files to file pool
         self.experiment.filepool['file'] = [("/local/path/to/file.txt", "http://example.org/file")]
 
@@ -663,7 +711,9 @@ class FlexExperimentTests(unittest.TestCase):
             # Since filetype is None, we can validate that it's handled gracefully by checking the graph
             file_nodes = list(self.experiment.image.subjects(self.experiment.namespace.Filename, None))
             self.assertGreater(len(file_nodes), 0)
+            
     def test_paretofilestopodsfrompool_predicatetopod_valid_url(self):
+        #print("in test_paretofilestopodsfrompool_predicatetopod_valid_url")
         # Arrange: Add mock files to file pool
         self.experiment.filepool['file'] = [("/local/path/to/file.txt", "http://example.org/file")]
 
@@ -678,7 +728,9 @@ class FlexExperimentTests(unittest.TestCase):
 
             # Assert: Ensure the predicatetopod is a valid URL
             self.assertTrue(self.is_valid_url(str(predicatetopod)))
+            
     def test_paretofilestopodsfrompool_empty_file_pool(self):
+        #print("in test_paretofilestopodsfrompool_empty_file_pool")
         self.experiment.filepool = {'file': []}  # Set empty file pool
 
         filetype = "text"
@@ -694,6 +746,7 @@ class FlexExperimentTests(unittest.TestCase):
         self.assertEqual(len(files), 0)
 
     def test_paretofilestopodsfrompool_invalid_alpha(self):
+        #print("in test_paretofilestopodsfrompool_invalid_alpha")
         filetype = "text"
         filelabel = "file"
         podlabel = "pod"
@@ -707,6 +760,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.experiment.paretofilestopodsfrompool(filetype, filelabel, podlabel, alpha=alpha)
 
     def test_paretofilestopodsfrompool_replacebool_true(self):
+        #print("in test_paretofilestopodsfrompool_replacebool_true")
         filetype = "text"
         filelabel = "file"
         podlabel = "pod"
@@ -727,6 +781,7 @@ class FlexExperimentTests(unittest.TestCase):
             self.assertTrue((file_node, self.experiment.namespace.ReplaceText, None) in self.experiment.image)
 
     def test_paretofilestopodsfrompool_fewer_files_than_pods(self):
+        #print("in test_paretofilestopodsfrompool_fewer_files_than_pods")
         self.experiment.filepool = {'file': [('path1', 'file1.txt')]}  # Only 1 file
 
         filetype = "text"
@@ -762,12 +817,14 @@ class FlexExperimentTests(unittest.TestCase):
             self.assertTrue((fnode, self.experiment.namespace.TripleString, None) in self.experiment.image)
 
     def test_loadexp_none_filename(self):
+        #print("in test_loadexp_none_filename")
         """Test when filename is None."""
         with self.assertRaises(ValueError) as context:
             self.experiment.loadexp(None)
         self.assertEqual(str(context.exception), "Filename cannot be None.")
 
     def test_distributebundles_success(self):
+        #print("in test_distributebundles_success")
         """Test successful distribution of bundles to pods."""
         number_of_bundles = 2
         filetype = 'text/plain'
@@ -790,31 +847,35 @@ class FlexExperimentTests(unittest.TestCase):
                                  os.path.join(self.bundlesource, 'bundle' + str(int(filename[-5]))), filename))
 
     def test_distributebundles_with_no_files(self):
-                """Test the behavior when there are no files to distribute."""
-                empty_source = tempfile.mkdtemp()
-                number_of_bundles = 1
-                filetype = 'text/plain'
-                filelabel = 'file'
-                subdir = 'file'
+        #print("in test_distributebundles_with_no_files")
+        """Test the behavior when there are no files to distribute."""
+        empty_source = tempfile.mkdtemp()
+        number_of_bundles = 1
+        filetype = 'text/plain'
+        filelabel = 'file'
+        subdir = 'file'
 
-                self.experiment.distributebundles(number_of_bundles, empty_source, filetype, filelabel, subdir)
+        self.experiment.distributebundles(number_of_bundles, empty_source, filetype, filelabel, subdir)
 
-                # Check that no files are created in the pod directory
-                self.assertEqual(len(os.listdir(self.pod_dir)), 0)
+        # Check that no files are created in the pod directory
+        self.assertEqual(len(os.listdir(self.pod_dir)), 0)
 
     def test_initsanodelist_negative_value(self):
+        #print("in test_initsanode_negative_value")
         """Test when percs contains a negative value."""
         with self.assertRaises(ValueError) as context:
             self.experiment.initsanodelist([10, -5, 20])  # Contains a negative value
         self.assertEqual(str(context.exception), "Input parameter percs cannot contain negative values.")
 
     def test_initsanodelist_valid_input(self):
+        #print("in test_initsanodelist_valid_input")
         """Test when percs contains valid values."""
         result = self.experiment.initsanodelist([10, 20, 30])
         self.assertEqual(len(result), 3)  # Expecting 3 special agent nodes
         self.assertTrue(isinstance(result[0], BNode))  # Checking if the nodes are BNodes
 
     def test_imagineaclnormal_no_agents(self):
+        #print("in test_imagineaclnormal_no_agents")
         self.file_nodes = []
         for i in range(10):
             fnode = BNode(f'F{i}')
@@ -838,6 +899,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('Automation.ExperimentSetup.flexexperiment.seriespodcreate')  # Patch method within the same class
     @patch('concurrent.futures.ThreadPoolExecutor')
     def test_threadedpodcreate(self, mock_thread_pool, mock_seriespodcreate):
+        #print("in test_threadedpodcreate")
         """Test the threaded pod creation method."""
 
         # Mock the executor's submit method
@@ -855,6 +917,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('Indexer.PodIndexer.crawl')
     @patch('tqdm.tqdm')  # Mock tqdm if you want to avoid output during tests
     def test_cleanuppod(self, mock_tqdm, mock_crawl, mock_CSSaccess):
+        #print("in test_cleanuppod")
         """Test the cleanuppod method."""
         self.createMockServerAndNodes()
         # Mock the response of crawl
@@ -879,6 +942,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('os.makedirs')
     @patch('builtins.open', new_callable=unittest.mock.mock_open)
     def test_storeexplocal(self, mock_open, mock_makedirs):
+        #print("in test_storeexplocal")
         """Test the storeexplocal method."""
         self.createMockServerAndNodes()
         dir_path = "mock_directory"
@@ -893,6 +957,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('builtins.open', create=True)  # Mock file opening
     @patch('os.path.isdir')  # Mock the directory check
     def test_storeindexlocal_with_empty_dir(self, mock_isdir, mock_open):
+        #print("in test_storeindexlocal_with_empty_dir")
         # Set up the mock to simulate an invalid (non-directory) path
         mock_isdir.return_value = False
 
@@ -906,6 +971,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('builtins.open', create=True)  # Mock file opening
     @patch('os.path.isdir')  # Mock the directory check
     def test_storeindexlocal_with_none_dir(self, mock_isdir, mock_open):
+        #print("in test_storeindexlocal_with_none_dir")
         # Set up the mock to simulate an invalid (None) directory path
         mock_isdir.return_value = False
 
@@ -920,6 +986,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('concurrent.futures.ThreadPoolExecutor')
     @patch('os.path.isdir')
     def test_uploadindexlocal_with_empty_dir(self, mock_isdir, mock_thread_pool, mock_open):
+        #print("in test_uploadindexlocal_with_empty_dir")
         # Set up the mock to simulate an invalid (non-directory) path
         mock_isdir.return_value = False
 
@@ -936,6 +1003,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('zipfile.ZipFile')
     @patch('tqdm.tqdm')
     def test_storelocalindexzipdirs(self, mock_tqdm, mock_zipfile, mock_makedirs, mock_open):
+        #print("in test_storelocalindexzipdirs")
         # Mock the image object and its methods
         self.experiment.image = MagicMock()
 
@@ -977,6 +1045,7 @@ class FlexExperimentTests(unittest.TestCase):
     @patch('os.listdir')
     @patch('tqdm.tqdm')
     def test_distributezips(self, mock_tqdm, mock_listdir, mock_SCPClient, mock_SSHClient):
+        #print("in test_distributezips")
         # Mock the directory listing
         mock_listdir.return_value = ['file1.zip', 'file2.zip']
 
@@ -1008,6 +1077,7 @@ class FlexExperimentTests(unittest.TestCase):
         mock_tqdm().update.assert_called()
 
     def test_assignlocalimage(self):
+        #print("in test_assignlocalimage")
         # Set up mock subjects
         mock_snode1 = MagicMock()
         mock_snode2 = MagicMock()

@@ -262,7 +262,8 @@ podlab49 = 'pod49'
 podlab50 = 'pod50'
 
 # server lists
-serverlist1=['https://srv03812.soton.ac.uk:3000/']
+serverlist1=['http://localhost:3001/']
+#serverlist1=['https://srv03812.soton.ac.uk:3000/']
 serverlist2=['https://srv03813.soton.ac.uk:3000/']
 serverlist3=['https://srv03814.soton.ac.uk:3000/']
 serverlist4=['https://srv03815.soton.ac.uk:3000/']
@@ -314,7 +315,8 @@ serverlist49=['https://srv03954.soton.ac.uk:3000/']
 serverlist50=['https://srv03955.soton.ac.uk:3000/']
 
 # source directories for data
-sourcedir1='../DatasetSplitter/sourcedir1/'
+sourcedir1='../DatasetSplitter/testsource1/'
+#sourcedir1='../DatasetSplitter/sourcedir1/'
 sourcedir2 = '../DatasetSplitter/sourcedir2/'
 sourcedir3 = '../DatasetSplitter/sourcedir3/'
 sourcedir4 = '../DatasetSplitter/sourcedir4/'
@@ -365,8 +367,8 @@ sourcedir48 = '../DatasetSplitter/sourcedir48/'
 sourcedir49 = '../DatasetSplitter/sourcedir49/'
 sourcedir50 = '../DatasetSplitter/sourcedir50/'
 
-numfiles = 9500
-#numfiles = 10
+#numfiles = 9500
+numfiles = 10
 
 # Name of the ESPRESSO pod. ESPRESSO is default.
 espressopodname='ESPRESSO'
@@ -392,12 +394,12 @@ percs=[100,50,25,10]
 openperc=10
 #openperc=0
 
-numwebids=250
-#numwebids=20
+#numwebids=250
+numwebids=20
 
 # number of pods
-numpods=9500
-#numpods=10
+#numpods=9500
+numpods=10
 
 # on average how many webids can read a given file
 # MB AND MR: I don't know how many this should be, so put whatever you want in here.
@@ -447,7 +449,7 @@ def createexperiment(podname):
     # Do likewise for the subsequent function calls below.
     experiment.loadserverlist(serverlist1, servlab1)
 
-    experiment.loadserverlist(serverlist2, servlab2)
+    """experiment.loadserverlist(serverlist2, servlab2)
 
     experiment.loadserverlist(serverlist3, servlab3)
 
@@ -543,15 +545,14 @@ def createexperiment(podname):
 
     experiment.loadserverlist(serverlist49, servlab49)
 
-    experiment.loadserverlist(serverlist50, servlab50)
+    experiment.loadserverlist(serverlist50, servlab50)"""
 
     # user message
     print('serverlist loaded')
 
     # create pods
-    
-experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
-    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab2,podlabel=podlab2)
+    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab1,podlabel=podlab1)
+    """experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab2,podlabel=podlab2)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab3,podlabel=podlab3)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab4,podlabel=podlab4)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab5,podlabel=podlab5)
@@ -601,13 +602,11 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab47,podlabel=podlab47)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab48,podlabel=podlab48)
     experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab49,podlabel=podlab49)
-    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab50,podlabel=podlab50)
-
+    experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servlab50,podlabel=podlab50)"""
     print('logical pods created ')
-
     experiment.loaddirtopool(sourcedir1, filelab1)
 
-    experiment.loaddirtopool(sourcedir2, filelab2)
+    """experiment.loaddirtopool(sourcedir2, filelab2)
 
     experiment.loaddirtopool(sourcedir3, filelab3)
 
@@ -703,11 +702,11 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
 
     experiment.loaddirtopool(sourcedir49, filelab49)
 
-    experiment.loaddirtopool(sourcedir50, filelab50)
+    experiment.loaddirtopool(sourcedir50, filelab50)"""
 
     print('loaded source dirs to pool')
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab1,podlabel=podlab1,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
+    """experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab2,podlabel=podlab2,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab3,podlabel=podlab3,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab4,podlabel=podlab4,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab5,podlabel=podlab5,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
@@ -755,7 +754,7 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab47,podlabel=podlab47,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab48,podlabel=podlab48,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
     experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab49,podlabel=podlab49,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
-    experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab50,podlabel=podlab50,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)
+    experiment.logicaldistfilestopodsfrompool(numberoffiles=numfiles,filedisp=0,filetype=0,filelabel=filelab50,podlabel=podlab50,subdir='file',predicatetopod=URIRef('http://example.org/SOLIDindex/HasFile'),replacebool=False)"""
 
     print('files distributed')
     
@@ -771,7 +770,7 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
 
     experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab1)
 
-    experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab2)
+    """experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab2)
 
     experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab3)
 
@@ -867,13 +866,13 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
 
     experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab49)
 
-    experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab50)
+    experiment.imagineaclnormal(openperc=openperc,mean=themean, disp=0,filelabel=filelab50)"""
     
     print('Normal ACLs distributed')
     
     experiment.imagineaclspecial(filelab1)
 
-    experiment.imagineaclspecial(filelab2)
+    """experiment.imagineaclspecial(filelab2)
 
     experiment.imagineaclspecial(filelab3)
 
@@ -969,7 +968,7 @@ experiment.createlogicalpods(numberofpods=numpods,serverdisp=0,serverlabel=servl
 
     experiment.imagineaclspecial(filelab49)
 
-    experiment.imagineaclspecial(filelab50)
+    experiment.imagineaclspecial(filelab50)"""
     
     print('Special agent ACLs distributed')
     
@@ -1027,7 +1026,7 @@ espressoindexdir=podname+'metaindex/'
 #
 # create and save the logical view of the experiment
 # example podname value: 'ardfhealth'
-experiment=createexperiment(podname)
+"""experiment=createexperiment(podname)"""
 # MB AND MR: STEP 2: END COMMENT OUT
 
 # MB AND MR: STEP 1: BEGIN COMMENT OUT
