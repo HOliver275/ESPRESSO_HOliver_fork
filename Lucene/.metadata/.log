@@ -1,0 +1,26 @@
+!SESSION 2024-11-12 16:27:49.942 -----------------------------------------------
+eclipse.buildId=4.33.0.20240905-0613
+java.version=21.0.4
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=macosx, ARCH=aarch64, WS=cocoa, NL=en_GB
+Framework arguments:  -product org.eclipse.epp.package.jee.product -keyring /Users/helenoliver/.eclipse_keyring
+Command-line arguments:  -os macosx -ws cocoa -arch aarch64 -product org.eclipse.epp.package.jee.product -keyring /Users/helenoliver/.eclipse_keyring
+
+!ENTRY ch.qos.logback.classic 1 0 2024-11-12 16:27:51.312
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY ch.qos.logback.classic 1 0 2024-11-12 16:28:21.654
+!MESSAGE Logback config file: /Users/helenoliver/Documents/ESPRESSO/working/ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork/Lucene/.metadata/.plugins/org.eclipse.m2e.logback/logback.2.6.1.20240411-1122.xml
+!SESSION 2024-11-12 16:42:47.642 -----------------------------------------------
+eclipse.buildId=4.33.0.20240905-0613
+java.version=21.0.4
+java.vendor=Eclipse Adoptium
+BootLoader constants: OS=macosx, ARCH=aarch64, WS=cocoa, NL=en_GB
+Framework arguments:  -product org.eclipse.epp.package.jee.product -keyring /Users/helenoliver/.eclipse_keyring
+Command-line arguments:  -os macosx -ws cocoa -arch aarch64 -product org.eclipse.epp.package.jee.product -keyring /Users/helenoliver/.eclipse_keyring -data /Users/helenoliver/Documents/ESPRESSO/working/ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork/Lucene
+
+!ENTRY ch.qos.logback.classic 1 0 2024-11-12 16:42:48.959
+!MESSAGE Activated before the state location was initialized. Retry after the state location is initialized.
+
+!ENTRY ch.qos.logback.classic 1 0 2024-11-12 16:42:49.883
+!MESSAGE Logback config file: /Users/helenoliver/Documents/ESPRESSO/working/ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork/Lucene/.metadata/.plugins/org.eclipse.m2e.logback/logback.2.6.1.20240411-1122.xml

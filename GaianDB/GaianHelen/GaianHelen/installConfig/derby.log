@@ -1,0 +1,18 @@
+----------------------------------------------------------------
+Fri Nov 15 14:58:48 GMT 2024:
+Booting Derby version The Apache Software Foundation - Apache Derby - 10.10.1.1 - (1458268): instance a816c00e-0193-3055-79b0-00000d05e660 
+on database directory /Users/helenoliver/Documents/ESPRESSO/working/ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork/GaianDB/GaianHelen/GaianHelen/installConfig/gaiandb with class loader sun.misc.Launcher$AppClassLoader@18b4aac2 
+Loaded from file:/Users/helenoliver/.m2/repository/org/apache/derby/derby/10.10.1.1/derby-10.10.1.1.jar
+java.vendor=BellSoft
+java.runtime.version=1.8.0_432-b07
+user.dir=/Users/helenoliver/Documents/ESPRESSO/working/ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork/GaianDB/GaianHelen/GaianHelen/installConfig
+os.name=Mac OS X
+os.arch=aarch64
+os.version=14.6.1
+derby.system.home=null
+Database Class Loader started - derby.database.classpath=''
+Fri Nov 15 14:58:49 GMT 2024 : Apache Derby Network Server - 10.10.1.1 - (1458268) started and ready to accept connections on port 6414
+Fri Nov 15 14:58:54 GMT 2024 : Log Connections turned on.
+Fri Nov 15 14:58:54 GMT 2024 : Connection number: 7.
+Fri Nov 15 14:58:54 GMT 2024 : Max threads changed to 1000.
+Fri Nov 15 14:58:54 GMT 2024 : Connection number: 8.

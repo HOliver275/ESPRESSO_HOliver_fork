@@ -1,0 +1,221 @@
+HANDOVER NOTES FOR VLDB EXPERIMENTS, 5 DECEMBER 2024
+
+Handing over: Helen Oliver
+to: Mohammad Bahrahi, Mohamed Ragab
+
+===========
+
+WHERE TO LOOK
+
+The assumption is that you'll be doing these deployments from srv04031.
+
+My directory under home is kho1v23@srv04031. The deployment scripts are in ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork.
+
+The source files are under Automation/DatasetSplitter. The folders are sourcedir1 .. sourcedir50. One source directory per server. 
+
+Each sourcedir has 9500 files inside. One file per pod. Each file is unique across all servers.
+
+=========
+
+HOW TO RUN THE DEPLOYMENT
+
+You run the deployment by running Automation/ExperimentSetup/expeerimenttemplate.py. Use python 3.11.
+
+I have placed comments in Automation/ExperimentSetup/expeerimenttemplate.py and Automation/ExperimentSetup/flexexperiment.py. Your comments begin with 
+
+"# MB AND MR:"
+
+You need to do the deployment in two steps. You will split the steps by commenting stuff out or in. 
+
+To do step 1, look for 
+
+# MB AND MR: STEP 1: BEGIN COMMENT OUT
+and
+# MB AND MR: STEP 1: END COMMENT OUT
+
+To do step 2, prepare the .ttl files (see below), and look for
+
+# MB AND MR: STEP 2: BEGIN COMMENT OUT
+# MB AND MR: STEP 2: END COMMENT OUT
+
+and
+
+# MB AND MR: STEP 2: BEGIN COMMENT IN
+# MB AND MR: STEP 2: END COMMENT IN
+
+-----
+
+STEP 1: Find the call in expeerimenttemplate to createexperiment(). Comment out everything below that, so that when you run expeerimenttemplate.py you're ONLY running createexperiment. 
+
+This will create a .ttl file defining the experiment for all 50 servers. It will also create the Lucene indexes for all 50 servers.
+
+The Lucene indexes are output to Automation/ExperimentSetup/lucenetestsink. They are zipped and there is one index per WebID.
+
+--
+
+PREPARING FOR STEP 2:
+
+You then need to take the big .ttl file and split it down into multiple smaller .ttl files, in order to deploy the setup to a few servers at a time. I would say 5 servers.
+
+I know splitting the .ttl file will be a pain, but a server is clearly demarcated in the .ttl file. A server starts like this:
+
+[] ns1:Address "http://localhost:3001/" ;
+
+and it ends like this:
+
+ns1:Type ns1:Server .
+
+--
+
+STEP 2: Comment out expeerimenttemplate.createexperiment(), but comment everything else back in. So that you'll be running everything from expeerimenttemplate.constructexperiment() to expeerimenttemplate.indexexperiment().
+
+To deploy 5 (or however many) servers at a time, feed it one of your smaller .ttl files each time. It expects a file called {experimentname} + 'exp.ttl'. So if you named the experiment 'ardfhealth_vldb', it will pick up a file called 'ardfhealth_vldbexp.ttl'.
+
+=========
+
+WHAT YOU WILL HAVE AFTER STEP 2
+
+The files and pods etc. deployed to the five servers in the .ttl file you used.
+
+The old-fashioned index in its .zip files, exactly where MR is used to picking them up from.
+
+NEW: A folder called "overlaydir" containing the .csv files with the source data for the logical tables in the overlay network. There will be a corresponding folder called "overlayzip" containing the zipped .csv files.
+
+------
+
+WHAT YOU WON'T HAVE AFTER STEP 2
+
+Take a look in expeerimenttemplate.indexexperiment. You will see that the following lines are commented out:
+
+# Option B, part 2: distribute zips(using SSH username and password) 
+"""SSHUser='xxxxxx'
+SSHPassword='xxxxxx' 
+experiment.distributezips(zipdir,SSHUser,SSHPassword,targetdir='/srv/espresso/')"""
+
+In other words, the deployment scripts won't distribute the .zip files unless you comment that line back in.
+
+I ALSO haven't updated distributezips to distribute the Lucene indexes or the overlay .csv files. It will ONLY distribute the zip files we had before.
+
+========
+
+IMPORTANT - WHAT TO UPLOAD TO 04031
+
+I think that all the files under Automation and Indexer are up-to-date. Those are the files that are involved in the deployment process.
+
+I tried, and failed last night, to upload my entire codebase to 04031. It just kept timing out. However, I think Automation and Indexer are all you need.
+
+If for some reason you need the rest of the codebase (e.g. GaianDB) to be up to date, you'd have to pull the repo and transfer that yourself. 
+
+==========
+
+IMPORTANT - WHAT TO DELETE
+
+Previously, I did a Big Deployment to:
+
+                    'https://srv03951.soton.ac.uk:3000/',
+                    'https://srv03952.soton.ac.uk:3000/',
+                    'https://srv03953.soton.ac.uk:3000/',
+                    'https://srv03954.soton.ac.uk:3000/',
+                    'https://srv03955.soton.ac.uk:3000/'
+
+You'll have to wipe those before deploying to them again.
+
+=========
+
+THINGS YOU MAY NEED TO EDIT
+
+Settings in expeerimenttemplate.py
+==================================
+
+1. Open access files
+
+There's a setting to specify the percentage of files that are open access:
+
+-----
+# percent of openfiles
+openperc=10
+#openperc=0
+-----
+
+We were going to do this experiment with no open-access files because that doesn't make sense for the scenario. However, at one point, MR and I decided it would be a good idea to make 10% of files open access after all, but then during the experiments just ignore the open access ones. If you change your mind, you can change the setting here.
+
+2. Average number of WebIDs that can access a given file
+
+# on average how many webids can read a given file
+#themean=1
+themean=10
+
+Change this setting to taste. I don't know how many it should be.
+
+======
+
+THINGS YOU MUST NOT EDIT
+
+# relative deviation of the percentage of webids that can read a given file, can be left 0
+disp=0
+
+Do not edit the disp setting. It needs to be 0 in order to get one file per pod.
+
+=============
+
+THE LUCENE INDEX
+
+This is created by flexexperiment.buildluceneindex(). It does it one WebID at a time, reading from a .json file, in order to cope with potentially large data structures.
+
+The dictionaries for the Lucene index are built up in flexexperiment.imagineaclnormal() and flexexperiment.imagineaclspecial().
+
+The .json file for the Lucene index is dictionary.json. This file is not saved in the current implementation, just created and overwritten repeatedly. If you want to keep the .json files, you could change the following lines to give it a different filename each time:
+
+# Save the dictionary to a JSON file
+with open(json_file_path, "w") as json_file:
+    json.dump({k: v}, json_file, indent=4)
+
+=========
+
+THE OVERLAY NETWORK .CSV files
+
+These are built up at the same time as the server index and its stats, in Indexer/ServerIndexer.buildservermetaindex_simple_csvs(). Unfortunately the logic is intricate. If you don't want to build these .csv files for whatever reason, you can just call buildservermetaindex_simple().
+
+The function builds up two dictionaries, one for server_tbl and one for keyword_webid_tbl. The dictionaries are unwound into .csv files by flexexperiment.createoverlaycsvfiles(). 
+
+Server_tbl.csv will only ever have 50 lines. Keyword_webid_tbl is split into one file per WebID because the files are absolutely huge. My local machine has 3 servers with 10 files each, and just one WebID had a file with over 6000 lines. If you need to split the files down further, that will be okay, as the .csv files are just sets of unique rows to go into a single table.
+
+
+=========
+
+THINGS THAT COULD GO WRONG
+
+Things that don't work will most likely involve HTTP requests on the CSS servers.
+
+If anything doesn't work during the deployment, it will be logged in a local file named $experimentname + "couldnt" + $function + ".log", for example, 'ardfhealth_vldbtestcouldntindexpub.log'.
+
+Example contents are "Couldn't create auth token for https://srv03951.soton.ac.uk:3000/ardfhealth_vldbtestpod15267/espressoindex/ on https://srv03951.soton.ac.uk:3000/".
+
+What this implies is that at some point in indexpub it couldn't get the authtoken (or some other thing on a nearby line of code) that it needed.
+
+Hopefully there won't be any .log files of this kind - there usually aren't - but if they are, you should check out the errors listed therein.
+
+==========
+
+THE LAST STEP
+
+The last step is experiment.distributezips. This will distribute the .zip files for the old-fashioned index ONLY. 
+
+Before running experiment.distributezips, you will need to enter your username and password into the variables above. DON'T FORGET to erase them when you're done {:-0
+
+IMPORTANT: distributezips will NOT distribute:
+- the Lucene index zips
+- the .csv file zips
+unless you change the code so it performs these steps too.
+
+
+
+
+
+
+
+
+
+
+
+

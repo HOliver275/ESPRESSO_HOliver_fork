@@ -1,0 +1,495 @@
+# cleantext: https://pypi.org/project/cleantext/
+# string: https://docs.python.org/3/library/string.html
+import cleantext, string
+# rdflib.URIRef: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.term.URIRef
+# rdflib.BNode: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.term.BNode
+# rdflib.Literal: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.term.Literal
+# rdflib.Graph: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.html#rdflib.graph.Graph
+# rdflib.Namespace: https://rdflib.readthedocs.io/en/stable/apidocs/rdflib.namespace.html#rdflib.namespace.Namespace
+from rdflib import URIRef, BNode, Literal, Graph, Namespace
+# concurrent.futures: https://docs.python.org/3/library/concurrent.futures.html
+import concurrent.futures
+# time: https://docs.python.org/3/library/time.html#module-time
+# tqdm: https://tqdm.github.io/
+import time, tqdm
+# multiprocessing.Pool: https://docs.python.org/3/library/multiprocessing.html#multiprocessing.pool.Pool
+from multiprocessing import Pool
+
+import sys
+sys.path.append('../../')
+import config
+
+"""
+An index of terms at server level, effectively an aggregation of the server's pod indexes.
+
+author: Helen Oliver for the ESPRESSO Project, 2024
+"""
+class ServerIndex:
+
+    def __init__(self):
+        # the server-level index to be written to the ESPRESSO pod metaindex
+        self.index = dict()
+        # count the pods on the server
+        self.pod_counter=0
+        # count the WebIDs that have access to any of the pods on the server
+        self.webid_counter=0
+        # server-level nested dictionary mapping of index keywords 
+        self.keywords_dict = dict()
+        # lookup of all the webidword:widword mappings on this server
+        self.widword_lookup = dict()
+        # lookup of all the podpath:pid mappings on this server
+        self.podword_lookup = dict()
+        # dictionary from which to create the .webid files to be added to the index
+        self.webidwords_dict = dict()
+        # running sum of all the files held on the server
+        self.indexsum=0
+        # name of the pod handle lookup file (if using JSON format)
+        self.podlookupfilename='podlookup.json'
+        # HO 25/10/2024 BEGIN **************
+        self.collection_length = 0
+        self.collection_distinct_length = 0
+        self.pod_distinct_lengths = dict()
+        self.pod_lengths = dict()
+        self.pod_term_freqs = dict()
+        # HO 25/10/2024 END **************
+        
+    def __repr__(self):
+        """
+        String representation of the index
+        """
+        return self.index
+        
+    """
+    Maps a sequentially numbered short pod handle to a pod address and adds it to the running total pods on this server.
+    
+    param: self
+    param: podpath, the relative path to the pod index on the server 
+    """
+    def addpod(self, podpath):
+        if podpath not in self.podword_lookup:
+            podword = 'p' + str(self.pod_counter)
+            # advance the pod counter
+            self.pod_counter = self.pod_counter+1
+            # map the podword to this podaddress
+            self.podword_lookup[podpath] = podword
+            
+    """
+    Maps a sequentially numbered short WebID handle to a WebID and adds it to the running total WebIDs on this server.
+    
+    param: self
+    param: podpath, the relative path to the pod index on the server 
+    param: webidlist, a list of webids to convert
+    """
+    def addwebids(self, podpath, webidlist):
+        # the WebID becomes the filename for a .webid file
+        for webid in webidlist:
+            if webid==config.OPENACCESS_SYMBOL:
+                widword=config.OPENACCESS_WIDWORD
+                webidword=config.OPENACCESS_FILENAME
+
+                if webidword not in self.widword_lookup.keys():
+                    # add this webidword:widword mapping to the lookup
+                    self.widword_lookup[webidword]=widword
+                    print("widword_lookup[" + webidword + "]=" + widword)
+                    # add this widword : {podpath : podword} mapping to the dictionary
+                    if webidword not in self.webidwords_dict.keys(): # it shouldn't be
+                        piddict = {podpath : self.podword_lookup[podpath]}
+                        widdict = {widword : piddict}
+                        self.webidwords_dict[webidword] = widdict
+            else: # remove the punctuation from the WebID so it doesn't gum up the works
+                webidword=webid.translate(str.maketrans('', '', string.punctuation))+config.WEBID_FILEXTN
+                            
+            # if this webidword isn't already mapped to a widword, map it
+            if webidword not in self.widword_lookup.keys():
+                widword=config.WIDWORD_PREFIX + str(self.webid_counter)
+                # advance the webid counter every time we add a new mapping
+                self.webid_counter = self.webid_counter+1
+                self.widword_lookup[webidword]=widword
+                # add this widword : {podpath : podword} mapping to the dictionary
+                if webidword not in self.webidwords_dict.keys(): # it shouldn't be
+                    piddict = {podpath : self.podword_lookup[podpath]}
+                    widdict = {widword : piddict}
+                    self.webidwords_dict[webidword] = widdict
+                            
+            # if it's not in the dictionary by now something is wrong
+            widword = self.widword_lookup[webidword] if webidword in self.widword_lookup else ''
+            if (len(widword) > 0):
+                widdict = self.webidwords_dict[webidword] if webidword in self.webidwords_dict else dict()
+                poddict = widdict[widword] if widword in widdict else dict()
+                # if this pod isn't already listed against this widword
+                if podpath not in poddict.keys():
+                    # add the podword mapping
+                    poddict[podpath] = self.podword_lookup[podpath]
+                    # update the podname mapping
+                    widdict[widword] = poddict
+                    # update the widword mapping
+                    self.webidwords_dict[webidword] = widdict 
+
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, creating a separate index for each WebID by placing the short webid handle at the top of the directory structure
+
+    """
+    def buildservermetaindex_groupbywebid(self):
+        servidx = dict()
+        # webid files first
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            for(wid, poddict) in widdict.items():
+                for(ppath, pid) in poddict.items():
+                    servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+        
+        # now the keyword files                
+        for (key, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                for(widkey, poddict) in widdict.items():
+                    if(widkey==config.OPENACCESS_WIDWORD):
+                        servkey=config.OPENACCESS_WEBIDWORD + '/' + key
+                    else:
+                        servkey=widkey + '/' + key
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
+                            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, creating one .ndx file per web id, by making the short webid handle the filename at the end of the directory tree
+
+    """
+    def buildservermetaindex_splitbywebid(self):
+        # holder for the server-level index being built
+        servidx = dict()
+        # webid files first
+        # .webid for filename, dictionary with short wid handles as keys
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            # if this filename is not already a key in the server-level index, add it
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            # short wid handle, dictionary with pod index paths as keys
+            for(wid, poddict) in widdict.items():
+                # go through every pod that this WebID has access to
+                for(ppath, pid) in poddict.items():
+                    # The open access symbol is an asterisk, can't be used as filename
+                    # Anyway, add the short wid handle, the short pod handle, and the path to the pod index as a line in the .webid file
+                    servidx[webidfile]=servidx[webidfile] + wid + ',' + pid + ',' + ppath + '\r\n'
+                        
+        # k/e/y/w/o/r/d.ndx filename as key, dictionary with webidwords for keys
+        for (key, wworddict) in self.keywords_dict.items():
+            # for every WebID that has access to this keyword
+            for (wwordkey, widdict) in wworddict.items():
+                # short wid handle as key, dictionary with short pod handle
+                for(widkey, poddict) in widdict.items():
+                    # The open access symbol is an asterisk and can't be used as a filename
+                    # anyway, format the keyword into an .ndx filename
+                    startkey=key[:-(len(config.KEYWORD_INDEX_FILEXTN))]
+                    if(widkey==config.OPENACCESS_WIDWORD):
+                        servkey= startkey + '/' + config.OPENACCESS_WEBIDWORD + config.KEYWORD_INDEX_FILEXTN
+                    else:
+                        servkey= startkey + '/' + widkey + config.KEYWORD_INDEX_FILEXTN
+                    
+                    # if the keyword isn't already a key in the server-level dictionary, add it    
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey]+pidkey+','+str(freq)+'\r\n'
+                            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+        
+    """
+    Prepares the pod lookup to be output as a JSON file.
+    
+    param: servidx, an empty dictionary
+    return: servidx, the same dictionary with the filename as key, JSON as value.
+    """
+    def jsonify_podlookup(self, servidx):
+        # write the pod lookup file
+        if self.podlookupfilename not in servidx.keys():
+            servidx[self.podlookupfilename] = '{ '
+            
+        for ppath, pid in self.podword_lookup.items():
+            # if this is not the first item, append a comma before adding the next item
+            if(servidx[self.podlookupfilename] != '{ '):
+                servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + ','
+            # add the next item
+            servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + '"' + pid + '":"' + ppath + '"'
+            
+        # close the JSON
+        servidx[self.podlookupfilename] = servidx[self.podlookupfilename] + ' }\r\n'
+        # return the dictionary with the JSON pod lookup
+        return servidx
+    
+    """
+    Prepares the .webid file contents to be output as JSON.
+    
+    param: servidx, a dictionary with the filename as key, JSON as value.
+    return: servidx, the same dictionary with the .webid files added.
+    """
+    def jsonify_webidfiles(self, servidx):
+        for (webidfile, widdict) in self.webidwords_dict.items(): 
+            if webidfile not in servidx.keys():
+                # HO 07/10/2024 BEGIN ************
+                #servidx[webidfile] = ''
+                servidx[webidfile] = '{ '
+                # HO 07/10/2024 END ************
+            for(wid, poddict) in widdict.items():
+                # HO 07/10/2024 BEGIN ************
+                if (servidx[webidfile] == '{ '):
+                    servidx[webidfile] = servidx[webidfile] + '"' + wid + '"' + ': ['
+                for(ppath) in poddict.keys():
+                    # if this is not the first list item, add a comma to the end of the line first
+                    if (servidx[webidfile] != '{ "' + wid + '": ['):
+                        servidx[webidfile] = servidx[webidfile] + ','
+                    # add the next pid to the list
+                    servidx[webidfile] = servidx[webidfile] + '"' + poddict[ppath] + '"'
+                # close the list and end the file
+                servidx[webidfile] = servidx[webidfile] + '] }\r\n'
+            
+        return servidx
+    
+    """
+    Prepares the .ndx files to be output as JSON.
+    
+    param: servidx, a dictionary with the filename as key, JSON as value.
+    return: servidx, the same dictionary with the .ndx files added.
+    """
+    def jsonify_ndxfiles(self, servidx):
+        # now the keyword files                
+        for (servkey, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                for(widkey, poddict) in widdict.items():
+                    widtowrite=widkey
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]='{ ' 
+
+                    servidx[servkey] = servidx[servkey] + '"' + widtowrite + '"' + ': { '
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey] + '"' + pidkey + '" : "' + str(freq) + '", '
+                    if(servidx[servkey].endswith(', ')):
+                        servidx[servkey]=servidx[servkey][:-2]
+                    servidx[servkey]=servidx[servkey] + ' }'
+                # end the wid, end the row
+                servidx[servkey] = servidx[servkey] + ', \r\n'
+            
+            if(servidx[servkey].endswith(', \r\n')):
+                servidx[servkey] = servidx[servkey][:-4]  
+                servidx[servkey] = servidx[servkey] + ' }\r\n'
+            
+        return servidx
+
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file. All server-level index files are in JSON format.
+
+    """
+    def buildservermetaindex_simple_json(self):
+        servidx = dict()
+        # write the pod lookup file
+        servidx = self.jsonify_podlookup(servidx)
+        # write the .webid files
+        servidx = self.jsonify_webidfiles(servidx)
+        # and the .ndx files
+        servidx = self.jsonify_ndxfiles(servidx)
+        
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+        
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file, formatted as tuples.
+
+    """
+    def buildservermetaindex_simple(self):
+        if(config.JSON_SERVER_INDEXES == 'True'):
+            self.buildservermetaindex_simple_json()
+            return
+        
+        servidx = dict()
+        # webid files first
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            for(wid, poddict) in widdict.items():
+                if wid != config.OPENACCESS_WIDWORD:
+                    servidx[webidfile]=servidx[webidfile] + "handle," + wid + '\r\n'
+                for(ppath, pid) in poddict.items():
+                    servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
+        
+        # collection distinct length
+        distkeys = self.keywords_dict.keys()
+        self.collection_distinct_length = len(distkeys)
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = ''
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = str(self.collection_distinct_length) + '\r\n' 
+                       
+        for (servkey, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                for(widkey, poddict) in widdict.items():
+                    widtowrite=widkey
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+                        
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
+        
+        # pod term frequency
+        servidx[config.POD_TERM_FREQUENCIES_FILENAME] = ''
+        for servkey in self.pod_term_freqs.keys():
+            servidx[config.POD_TERM_FREQUENCIES_FILENAME] = servidx[config.POD_TERM_FREQUENCIES_FILENAME] + self.pod_term_freqs[servkey]
+        
+        # now the pod lengths file
+        servidx[config.POD_LEN_FILENAME] = ''
+        for podpath in self.pod_lengths.keys():
+            servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_lengths[podpath]
+        # now the pod distinct lengths file
+        servidx[config.POD_DISTINCT_LEN_FILENAME] = ''
+        for podpath in self.pod_distinct_lengths.keys():
+            servidx[config.POD_DISTINCT_LEN_FILENAME] = servidx[config.POD_DISTINCT_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_distinct_lengths[podpath]
+        # now the collection length file
+        servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
+            
+        # and the old-fashioned index sum
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+        
+    """
+    Takes the server-level dictionary and unwinds it into a server-level metaindex, with all the webids that can access a keyword listed in the one .ndx file, formatted as tuples.
+    It also collects stats which are saved in the .sum files.
+    It also builds up the dictionaries which will be unwound into .csv files which will become the logical tables for the servers and keywords on the overlay network.
+
+    param: server_tbl_dict, the dictionary that will be unwound into tuples that will be written to the .csv file containing the contents of the server table for the overlay network
+    param: keyword_tbl_dict, the dictionary that will be unwound into tuples that will be written to the .csv file containing the contents of the keyword table for the overlay network
+    param: servcounter, the sequential number of the server
+    param: numpods, the number of pods on this server
+    return: tabledicts, a List containing the updated server and keyword table dictionaries that were passed in
+    """
+    def buildservermetaindex_simple_csvs(self, server_tbl_dict, keyword_tbl_dict, servcounter, numpods):
+        # HO 08/11/2024 BEGIN *********
+        # create the id number as the PK for the keyword table
+        # imagine this comes in and it's empty
+        # we would be on the first server
+        # the ID for this keyword would be 0 because there would be no keywords yet
+        # and what we are building the keyword table up into is:
+        # id, keyword, webid, server_id (FK), pod_freq, term_freq
+        # HO 04/12/2024 it doesn't really matter what this is, it would be an autoincremented number
+        # for the PK in the table, so we can just assign it when we unwind
+        #kwd_id = len(keyword_tbl_dict)
+        # HO 08/11/2024 END *********
+        
+        servidx = dict()
+        # webid files first
+        for (webidfile, widdict) in self.webidwords_dict.items():
+            if webidfile not in servidx.keys():
+                servidx[webidfile] = ''
+            for(wid, poddict) in widdict.items():
+                if wid != config.OPENACCESS_WIDWORD:
+                    servidx[webidfile]=servidx[webidfile] + "handle," + wid + '\r\n'
+                for(ppath, pid) in poddict.items():
+                    servidx[webidfile]=servidx[webidfile] + pid + ',' + ppath + '\r\n'
+        
+        # collection distinct length
+        distkeys = self.keywords_dict.keys()
+        self.collection_distinct_length = len(distkeys)
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = ''
+        servidx[config.COLLECTION_DISTINCT_LEN_FILENAME] = str(self.collection_distinct_length) + '\r\n'
+                       
+        for (servkey, wworddict) in self.keywords_dict.items():
+            for (wwordkey, widdict) in wworddict.items():
+                # HO 08/11/2024 BEGIN *********
+                # preparing the .csv files
+                # this is the FK to the server table in the keyword table
+                cleanservkey = servkey[:-4]
+                cleanservkey = cleanservkey.translate({ord("/"): None}) # revert to original keyword
+
+                if (cleanservkey not in keyword_tbl_dict.keys()):
+                    webidworddict = dict()
+                else:
+                    webidworddict = keyword_tbl_dict[cleanservkey]
+                                
+                if(wwordkey not in webidworddict.keys()):
+                    # for the server ID FK to the server table [?]
+                    servnumdict = dict()
+                else: # it will be the dictionary under this webidword
+                    servnumdict = webidworddict[wwordkey]
+                                
+                # if the current server number isn't a key in the server table dictionary,. add it
+                if(servcounter not in servnumdict.keys()):
+                    servnumdict[servcounter] = ''
+
+                # init pod frequency and term frequency stats                    
+                podfreq = 0
+                termfreq = 0
+                # HO 08/11/2024 END *********
+                
+                for(widkey, poddict) in widdict.items():
+                    widtowrite=widkey
+                        
+                    if servkey not in servidx.keys():
+                        servidx[servkey]=''
+
+                    for(ppathkey, piddict) in poddict.items():
+                        for(pidkey, freq) in piddict.items():
+                            servidx[servkey]=servidx[servkey] + widtowrite + ',' + pidkey+','+str(freq)+'\r\n'
+                            # HO 08/11/2024 BEGIN *********
+                            # once again preparing the .csv files
+                            podfreq += 1
+                            termfreq = termfreq + int(freq)
+                
+                # now we have server_id,pod_freq,term_freq for the keyword table
+                servnumdict[servcounter] = str(podfreq) + ',' + str(termfreq) + '\r\n' 
+                # now we have webid,server_id,pod_freq,term_freq for the keyword table
+                webidworddict[wwordkey] = servnumdict
+                # now we have keyword,webid,server_id,pod_freq,term_freq for the keyword table
+                keyword_tbl_dict[cleanservkey] = webidworddict          
+                
+        # HO 08/11/2024 END *********
+                                
+        # pod term frequency
+        servidx[config.POD_TERM_FREQUENCIES_FILENAME] = ''
+        for servkey in self.pod_term_freqs.keys():
+            servidx[config.POD_TERM_FREQUENCIES_FILENAME] = servidx[config.POD_TERM_FREQUENCIES_FILENAME] + self.pod_term_freqs[servkey]
+        
+        # HO 28/10/2024 BEGIN **************
+        # now the pod lengths file
+        servidx[config.POD_LEN_FILENAME] = ''
+        for podpath in self.pod_lengths.keys():
+            servidx[config.POD_LEN_FILENAME] = servidx[config.POD_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_lengths[podpath]
+        # now the pod distinct lengths file
+        servidx[config.POD_DISTINCT_LEN_FILENAME] = ''
+        for podpath in self.pod_distinct_lengths.keys():
+            servidx[config.POD_DISTINCT_LEN_FILENAME] = servidx[config.POD_DISTINCT_LEN_FILENAME] + self.podword_lookup[podpath] + ',' + self.pod_distinct_lengths[podpath]
+        # now the collection length file
+        servidx[config.COLLECTION_LEN_FILENAME] = str(self.collection_length) + '\r\n'
+        # HO 28/10/2024 END **************
+            
+        servidx[config.INDEX_FILECOUNT_FILENAME]=str(self.indexsum) + '\r\n'
+        self.index = servidx
+
+        # HO 08/11/2024 BEGIN *********
+        # create a string with the last remaining values needed to populate the .csv file that will feed
+        # the logical server table on the overlay network
+        # we have the PK (id) and the server_url, now we add collection_len, distinct_collection_len, and podcount as a comma-separated string terminated with a newline
+        servstats = str(self.collection_length) + ',' + str(self.collection_distinct_length) + ',' + str(numpods) + '\r\n'
+        if servcounter in server_tbl_dict.keys():
+            # get the dictionary, we will then have the PK (id) and the server_url
+            srval = server_tbl_dict[servcounter]
+            # and now append the rest of the row values
+            srval = srval + ',' + servstats
+            # and assign it to the server table dictionary
+            server_tbl_dict[servcounter] = srval
+        # return the newly updated dictionaries for the keyword and server .csv files
+        tabledicts = [server_tbl_dict, keyword_tbl_dict]
+        return tabledicts
+        # HO 08/11/2024 END *********
+
+        

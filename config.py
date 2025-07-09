@@ -1,0 +1,53 @@
+# error log if couldn't create .acl metaindex
+ACL_METAINDEX_CREATE_ERR_LOGFILE = 'couldntcreateaclmetaindex.log'
+# collection distinct length filename
+COLLECTION_DISTINCT_LEN_FILENAME = 'collection_distinct_len.sum'
+# collection length filename
+COLLECTION_LEN_FILENAME = 'collection_len.sum'
+# flag whether the pod index file structure is hierarchical
+HIERARCHICAL_POD_INDEXES = 'True'
+# flag whether the server index file structure is hierarchical
+HIERARCHICAL_SERVER_INDEXES = 'True'
+# filename for index file containing total number of files indexed
+INDEX_FILECOUNT_FILENAME = 'index.sum'
+# error log if couldn't open indexes
+INDEXPUB_ERR_LOGFILE = 'couldntindexpub.log'
+# flag whether the server index should be written in JSON
+JSON_SERVER_INDEXES = 'False'
+# file extension for keyword index files
+KEYWORD_INDEX_FILEXTN = '.ndx'
+# HO 08/11/2024 BEGIN **********
+KEYWORD_TBL_CSV = 'keyword_web_id_tbl.csv'
+# keyword .csv file headers
+KEYWORD_TBL_CSV_HEADERS = 'id,keyword,webid,server_id,pod_freq,term_freq\r\n'
+# HO 08/11/2024 END **********
+# error log if couldn't open metaindexes
+METAINDEXPUB_ERR_LOGFILE = 'couldntmetaindexpub.log'
+# programmatic symbol used to denote open access
+OPENACCESS_SYMBOL= '*'
+# designated filename for open access WebID files
+OPENACCESS_FILENAME = 'openaccess.webid'
+# designated WebID filename for open access WebID files
+OPENACCESS_WEBIDWORD = 'openaccess'
+# short WebID handle for open access
+OPENACCESS_WIDWORD= '*'
+# error log if couldn't clean up pods
+POD_CLEANUP_ERR_LOGFILE = 'couldntcleanuppods.log'
+# error log if couldn't create pods
+POD_CREATE_ERR_LOGFILE = 'couldntcreatepods.log'
+# pod distinct length filename
+POD_DISTINCT_LEN_FILENAME = 'pod_distinct_len.sum'
+# pod length filename
+POD_LEN_FILENAME = 'pod_len.sum'
+# pod term frequencies filename
+POD_TERM_FREQUENCIES_FILENAME = 'pod_term_frequencies.sum'
+# server table .csv file
+SERVER_TBL_CSV = 'server_tbl.csv'
+# server_tbl.csv file headers
+SERVER_TBL_CSV_HEADERS = 'id,server_url,collection_len,distinct_collection_len,pod_count\r\n'
+# file extension for WebID files
+WEBID_FILEXTN = '.webid'
+# prefix for a sequentially-numbered short WebID handle
+WIDWORD_PREFIX = 'w'
+
+

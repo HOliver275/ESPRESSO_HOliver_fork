@@ -1,0 +1,55 @@
+---
+- name: Clone or update the ESPRESSO repository
+  hosts: solid_servers
+  become: yes
+
+  vars:
+    git_user: MohamedRagabAnas
+    git_token: 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
+    github_url: https://{{ git_user }}:{{ git_token }}@github.com/espressogroup/ESPRESSO.git
+    project_path: /usr/local/ESPRESSO/
+
+  tasks:
+    # Install Git package if it's not installed
+    - name: Install Git package
+      dnf:
+        name: git
+        state: present
+      when: ansible_pkg_mgr == "dnf" and not ansible_check_mode
+
+    # Clone the project if it doesn't exist
+    - name: Clone GitHub project
+      git:
+        repo: "{{ github_url }}"
+        dest: "{{ project_path }}"
+        version: main
+        force: yes
+      when: not ansible_local.git_installed|default(false)
+
+    # Pull the latest changes if the project already exists
+    - name: Pull latest changes from GitHub project
+      git:
+        repo: "{{ github_url }}"
+        dest: "{{ project_path }}"
+        version: main
+        update: yes
+        force: yes
+      when: ansible_local.git_installed|default(false)
+
+
+#    - name: Discard local changes, reset, and pull latest changes
+#      ansible.builtin.shell: |
+#        cd "{{ project_path }}"
+#        git fetch --all
+#        git reset --hard origin/main
+#        git pull origin main
+#      when: ansible_local.git_installed | default(false)
+
+
+#    # Discard local changes and forcefully update the repository
+#    - name: Discard local changes and forcefully update
+#      ansible.builtin.shell: |
+#        cd "{{ project_path }}"
+#        git fetch --all
+#        git reset --hard origin/main
+#      when: ansible_local.git_installed|default(false)

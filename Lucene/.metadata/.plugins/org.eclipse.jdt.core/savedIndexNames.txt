@@ -1,0 +1,1 @@
+INDEX VERSION 1.134+/Users/helenoliver/Documents/ESPRESSO/working/ESPRESSO_HOliver_fork/ESPRESSO_HOliver_fork/Lucene/.metadata/.plugins/org.eclipse.jdt.core
