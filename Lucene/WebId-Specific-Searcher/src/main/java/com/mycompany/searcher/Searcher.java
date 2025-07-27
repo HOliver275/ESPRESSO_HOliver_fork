@@ -18,13 +18,11 @@ public class Searcher {
     private static Map<String, Double> backgroundModel = null;
 
     public static void main(String[] args) throws Exception {
-        // HO 27/07/2025 BEGIN ********
-        //int minArgs = 3;
-        int minArgs = 2;
+        // HO 27/07/2025 BEGIN *********
+        int minArgs = 3;
         if (args.length < minArgs) {
-            //System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <layer>");
-            System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k]");
-            // HO 27/07/2025 BEGIN ********
+            System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <UUID>");
+            // HO 27/07/2025 END *********
             System.exit(1);
         }
 
@@ -33,10 +31,7 @@ public class Searcher {
         int topK = 10;
         int initialRetrieve = 50; // Reduce to 5K for performance
 
-        // HO 27/07/2025 BEGIN ********
-        //String layer = args[2].toLowerCase();
         String layer = "document";
-        // HO 27/07/2025 END ********
 
         if (args.length >= 2) {
             try {
@@ -51,10 +46,36 @@ public class Searcher {
             }
         }
 
+        // HO 27/07/2025 BEGIN *********
+        String strUUID = "";
+
+        if (args.length >= 3) {
+            try {
+                strUUID = args[2];
+                if (strUUID.length() == 0) {
+                    System.err.println("You must provide a UUID.");
+                    System.exit(1);
+                }
+            } catch (NullPointerException e) {
+                System.err.println("Invalid value for UUID.");
+                System.exit(1);
+            }
+        }
+        // HO 27/07/2025 END *********
+
         RAMDirectory ramDirectory = new RAMDirectory();
         // HO 26/07/2025 BEGIN ********
         //InputStream zipStream = System.in;
-        InputStream zipStream = new FileInputStream("6561a0f3-ed1b-4378-bf46-c4ed190ad213-servers.zip");
+        // HO 27/07/2025 BEGIN *****************
+        String testSinkPath = "Dataswyfttestsink/";
+        String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
+        String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
+        String networkZipIndexFileSuffix = "-servers.zip";
+        String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
+        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
+        //InputStream zipStream = new FileInputStream("6561a0f3-ed1b-4378-bf46-c4ed190ad213-servers.zip");
+        InputStream zipStream = new FileInputStream(fullPathToUUIDSpecificNetworkIndex);
+        // HO 27/07/2025 END *****************
         // HO 26/07/2025 END ********
 
         try (ZipInputStream zis = new ZipInputStream(zipStream)) {
@@ -156,7 +177,10 @@ public class Searcher {
 
         // HO 26/07/2025 BEGIN ********
         //System.out.println(new ObjectMapper().writeValueAsString(jsonResponse));
-        new ObjectMapper().writeValue(new File("6561a0f3-ed1b-4378-bf46-c4ed190ad213-networklevel-searchresults.json"), jsonResponse);
+        String networkLevelSearchResultsPath = "searchresults/networklevel/";
+        String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
+        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
+        new ObjectMapper().writeValue(new File(UUIDSpecificNetworkLevelResults), jsonResponse);
         // HO 26/07/2025 END ********
 
         reader.close();
