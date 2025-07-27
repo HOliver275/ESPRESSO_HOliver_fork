@@ -132,6 +132,21 @@ dictionary_json = 'testdataswyft.json'
 source_dir = "Dataswyfttestsource"
 output_dir = "Dataswyfttestsink"
 
+"""
+dictionary = {
+    "webid1": {
+        "srv03812": {
+            "pod1": ["AlecFile.txt", "AlphaFile.txt"],
+            "pod2": ["Jamal.txt"]
+        }
+    },
+    "webid2": {
+        "srv03812": {
+            "pod3": ["Mo.txt", "Helen.txt"]
+        }
+    }
+}"""
+
 # Path to the JAR file
 jar_file = "Index.jar"
 

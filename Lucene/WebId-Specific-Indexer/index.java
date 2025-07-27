@@ -1,3 +1,4 @@
+
 package index.index;
 
 import org.apache.lucene.analysis.standard.StandardAnalyzer;

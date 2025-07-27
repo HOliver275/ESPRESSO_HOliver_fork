@@ -262,8 +262,8 @@ podlab49 = 'pod49'
 podlab50 = 'pod50'
 
 # server lists
-serverlist1=['http://localhost:3001/']
-#serverlist1=['https://srv03812.soton.ac.uk:3000/']
+#serverlist1=['http://localhost:3001/']
+serverlist1=['https://srv03812.soton.ac.uk:3000/']
 serverlist2=['https://srv03813.soton.ac.uk:3000/']
 serverlist3=['https://srv03814.soton.ac.uk:3000/']
 serverlist4=['https://srv03815.soton.ac.uk:3000/']
@@ -315,8 +315,7 @@ serverlist49=['https://srv03954.soton.ac.uk:3000/']
 serverlist50=['https://srv03955.soton.ac.uk:3000/']
 
 # source directories for data
-sourcedir1='../DatasetSplitter/testsource1/'
-#sourcedir1='../DatasetSplitter/sourcedir1/'
+sourcedir1='../DatasetSplitter/sourcedir1/'
 sourcedir2 = '../DatasetSplitter/sourcedir2/'
 sourcedir3 = '../DatasetSplitter/sourcedir3/'
 sourcedir4 = '../DatasetSplitter/sourcedir4/'
@@ -367,8 +366,7 @@ sourcedir48 = '../DatasetSplitter/sourcedir48/'
 sourcedir49 = '../DatasetSplitter/sourcedir49/'
 sourcedir50 = '../DatasetSplitter/sourcedir50/'
 
-#numfiles = 9500
-numfiles = 10
+numfiles = 9500
 
 # Name of the ESPRESSO pod. ESPRESSO is default.
 espressopodname='ESPRESSO'
@@ -1026,7 +1024,7 @@ espressoindexdir=podname+'metaindex/'
 #
 # create and save the logical view of the experiment
 # example podname value: 'ardfhealth'
-"""experiment=createexperiment(podname)"""
+experiment=createexperiment(podname)
 # MB AND MR: STEP 2: END COMMENT OUT
 
 # MB AND MR: STEP 1: BEGIN COMMENT OUT
