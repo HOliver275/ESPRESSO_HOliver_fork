@@ -1,5 +1,6 @@
 Datasets/
 .DS_Store
+*/.DS_Store
 **/.DS_Store
 ca.pem
 **/*.ttl
@@ -26,3 +27,11 @@ Lucene/lucenetestsource/*.*
 Tests/test_flexexperiment.bak
 data/
 testzipdirs/
+Automation/ExperimentSetup/dictionary.json
+Automation/ExperimentSetup/exampleoutputofdictforkeyword_tbl.txt
+Automation/ExperimentSetup/exampleoutputofdictforserver_tbl.txt
+Automation/ExperimentSetup/overlaydir/
+Automation/ExperimentSetup/overlayzip/
+Automation/ExperimentSetup/underlay/
+Lucene/WebId-Specific-Indexer/.idea/
+Lucene/WebId-Specific-Indexer/.java-version
