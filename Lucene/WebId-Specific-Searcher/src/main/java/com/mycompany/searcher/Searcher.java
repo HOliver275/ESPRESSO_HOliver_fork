@@ -18,33 +18,29 @@ public class Searcher {
     private static Map<String, Double> backgroundModel = null;
 
     public static void main(String[] args) throws Exception {
-        // HO 27/07/2025 BEGIN **********
-        int minArgs = 3;
-        //if (args.length < 3) {
+        // HO 27/07/2025 BEGIN ********
+        //int minArgs = 3;
+        int minArgs = 2;
         if (args.length < minArgs) {
-            //System.err.println("Usage: java com.mycompany.searcher.Searcher <query> <model> [k] <layer>");
-            System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <layer>");
-            // HO 27/07/2025 END **********
+            //System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <layer>");
+            System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k]");
+            // HO 27/07/2025 BEGIN ********
             System.exit(1);
         }
 
         String queryStr = args[0].toLowerCase();
-        // HO 27/07/2025 BEGIN **********
-        //String model = args[1].toUpperCase();
         String model = "LM";
-        // HO 27/07/2025 END **********
         int topK = 10;
         int initialRetrieve = 50; // Reduce to 5K for performance
-        // HO 27/07/2025 BEGIN **********
-        //String layer = args[3].toLowerCase();
-        String layer = args[2].toLowerCase();
-        
-        //if (args.length >= 3) {
+
+        // HO 27/07/2025 BEGIN ********
+        //String layer = args[2].toLowerCase();
+        String layer = "document";
+        // HO 27/07/2025 END ********
+
         if (args.length >= 2) {
             try {
-                //topK = Integer.parseInt(args[2]);
                 topK = Integer.parseInt(args[1]);
-                // HO 27/07/2025 END **********
                 if (topK <= 0) {
                     System.err.println("The value of k must be a positive integer.");
                     System.exit(1);
@@ -81,11 +77,10 @@ public class Searcher {
                         output.writeBytes(baos.toByteArray(), baos.size());
                     }
                 }
-            } // HO 26/07/2025 BEGIN ********
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-        // HO 26/07/2025 END ********
 
         IndexReader reader = DirectoryReader.open(ramDirectory);
         IndexSearcher searcher = new IndexSearcher(reader);
@@ -98,8 +93,6 @@ public class Searcher {
         }
 
         // Calculate the average document length for the entire index
-       
-       
         List<Map<String, Object>> documents = new ArrayList<>();
 
         // Precompute query terms once
@@ -109,15 +102,13 @@ public class Searcher {
             int docID = scoreDoc.doc;
             Document doc = searcher.doc(docID);
             String content = doc.get("content");
-            
-     
 
             Map<String, Object> docData = new HashMap<>();
             docData.put("Id", doc.get("Id"));
             if( ("document".equals(layer)))
             docData.put("content", doc.get("content"));
             docData.put("BM25Score", scoreDoc.score);
-                    // Compute LM score directly without storing term frequencies
+            // Compute LM score directly without storing term frequencies
             if ("LM".equals(model))
                 docData.put("LanguageModelingScore", (content != null) ? computeLMScore(content, queryTerms) : Double.NEGATIVE_INFINITY);
             
@@ -126,7 +117,6 @@ public class Searcher {
             if( ("document".equals(layer)))
             docData.put("DocLength", docLength);
 
- 
             if (("document".equals(layer)))
             {
             // Add TermFrequencies for each query term
