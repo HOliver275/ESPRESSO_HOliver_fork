@@ -70,8 +70,8 @@ public class Searcher {
         String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
         String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
         String networkZipIndexFileSuffix = "-servers.zip";
-        String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
-        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
+        String UUIDSpecificNetworkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
+        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(UUIDSpecificNetworkZipIndexFileName);
         // HO 26/07/2025 BEGIN ********
         //InputStream zipStream = new FileInputStream("6561a0f3-ed1b-4378-bf46-c4ed190ad213-servers.zip");
         InputStream zipStream = new FileInputStream(fullPathToUUIDSpecificNetworkIndex);
@@ -187,12 +187,36 @@ public class Searcher {
         reader.close();
         ramDirectory.close();
         */
-        conductNetworkLevelSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
+
+        String openAccessUUID = "public";
+        String testSinkPath = "Dataswyfttestsink/";
+        String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
+
+        // network level search
+        String networkZipIndexFileSuffix = "-servers.zip";
+        String networkLevelSearchResultsPath = "searchresults/networklevel/";
+        String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
+
+        // UUID-specific network level search
+        String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
+        String UUIDSpecificNetworkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
+        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(UUIDSpecificNetworkZipIndexFileName);
+        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
+
+        // open-access network level search
+        String openAccessNetworkIndexPath = networkZipIndexFilePath.concat(openAccessUUID).concat("/");
+        String openAccessNetworkZipIndexFileName = openAccessUUID.concat(networkZipIndexFileSuffix);
+        String fullPathToOpenAccessNetworkIndex = openAccessNetworkIndexPath.concat(openAccessNetworkZipIndexFileName);
+        String openAccessNetworkLevelResults = networkLevelSearchResultsPath.concat(openAccessUUID.concat(networkLevelSearchResultsSuffix));
+
+        // do a UUID-specific network-level search followed by an open-access network-level search
+        conductSearch(strUUID, queryStr, initialRetrieve, model, layer, topK, fullPathToUUIDSpecificNetworkIndex, UUIDSpecificNetworkLevelResults);
+        conductSearch(openAccessUUID, queryStr, initialRetrieve, model, layer, topK, fullPathToOpenAccessNetworkIndex, openAccessNetworkLevelResults);
         // HO 27/07/2025 END ********
     }
 
     // HO 27/07/2025 BEGIN *************
-    private static void conductNetworkLevelSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK) {
+    private static void conductSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK, String fullIndexPath, String resultsPath) {
         if(strUUID == null || strUUID.length() == 0) {
             throw new NullPointerException("Invalid UUID.");
             //System.exit(1);
@@ -213,23 +237,26 @@ public class Searcher {
         if(topK <= 0) {
             topK = 10;
         }
+        if(fullIndexPath == null || fullIndexPath.length() == 0) {
+            System.err.println("Invalid index path.");
+            System.exit(1);
+        }
+        if(resultsPath == null || resultsPath.length() == 0) {
+            System.err.println("Invalid path to results output file.");
+            System.exit(1);
+        }
 
         RAMDirectory ramDirectory = new RAMDirectory();
         // HO 26/07/2025 BEGIN ********
         //InputStream zipStream = System.in;
         // HO 26/07/2025 END ********
-        String testSinkPath = "Dataswyfttestsink/";
-        String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
-        String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
-        String networkZipIndexFileSuffix = "-servers.zip";
-        String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
-        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
+
         // HO 26/07/2025 BEGIN ********
         //InputStream zipStream = new FileInputStream("6561a0f3-ed1b-4378-bf46-c4ed190ad213-servers.zip");
         // HO 26/07/2025 END *****************
 
         try {
-            InputStream zipStream = new FileInputStream(fullPathToUUIDSpecificNetworkIndex);
+            InputStream zipStream = new FileInputStream(fullIndexPath);
             ZipInputStream zis = new ZipInputStream(zipStream);
             ZipEntry entry;
             // HO 26/07/2025 BEGIN ********
@@ -253,7 +280,7 @@ public class Searcher {
             }
         } catch (FileNotFoundException e) {
             System.err.print("file ");
-            System.err.print(fullPathToUUIDSpecificNetworkIndex);
+            System.err.print(fullIndexPath);
             System.err.println(" not found.");
             System.exit(1);
         } catch (IOException e) {
@@ -367,14 +394,10 @@ public class Searcher {
         jsonResponse.put("documents", documents.subList(0, Math.min(topK, documents.size())));
         //jsonResponse.put("avgDocLength", avgDocLength); // Include the average document length
 
-
-        String networkLevelSearchResultsPath = "searchresults/networklevel/";
-        String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
-        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
         // HO 26/07/2025 BEGIN ********
         //System.out.println(new ObjectMapper().writeValueAsString(jsonResponse));
         try {
-            new ObjectMapper().writeValue(new File(UUIDSpecificNetworkLevelResults), jsonResponse);
+            new ObjectMapper().writeValue(new File(resultsPath), jsonResponse);
             // HO 26/07/2025 END ********
         } catch (IOException e) {
             System.err.println("Error writing network level search results.");
