@@ -1,6 +1,5 @@
 package com.mycompany.searcher;
 
-import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
 import org.apache.lucene.analysis.standard.StandardAnalyzer;
@@ -19,9 +18,11 @@ public class Searcher {
     private static Map<String, Double> backgroundModel = null;
 
     public static void main(String[] args) throws Exception {
+        // HO 27/07/2025 BEGIN *********
         int minArgs = 3;
         if (args.length < minArgs) {
             System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <UUID>");
+            // HO 27/07/2025 END *********
             System.exit(1);
         }
 
@@ -45,6 +46,7 @@ public class Searcher {
             }
         }
 
+        // HO 27/07/2025 BEGIN *********
         String strUUID = "";
 
         if (args.length >= 3) {
@@ -59,24 +61,22 @@ public class Searcher {
                 System.exit(1);
             }
         }
+        // HO 27/07/2025 END *********
 
-        // HO 27/07/2025 BEGIN ********
-        /*
         RAMDirectory ramDirectory = new RAMDirectory();
         // HO 26/07/2025 BEGIN ********
         //InputStream zipStream = System.in;
-        // HO 26/07/2025 END ********
+        // HO 27/07/2025 BEGIN *****************
         String testSinkPath = "Dataswyfttestsink/";
         String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
         String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
         String networkZipIndexFileSuffix = "-servers.zip";
-        String UUIDSpecificNetworkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
-        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(UUIDSpecificNetworkZipIndexFileName);
-        // HO 26/07/2025 BEGIN ********
+        String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
+        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
         //InputStream zipStream = new FileInputStream("6561a0f3-ed1b-4378-bf46-c4ed190ad213-servers.zip");
         InputStream zipStream = new FileInputStream(fullPathToUUIDSpecificNetworkIndex);
-        // HO 26/07/2025 END *****************
-
+        // HO 27/07/2025 END *****************
+        // HO 26/07/2025 END ********
 
         try (ZipInputStream zis = new ZipInputStream(zipStream)) {
             ZipEntry entry;
@@ -122,225 +122,6 @@ public class Searcher {
         for (ScoreDoc scoreDoc : results.scoreDocs) {
             int docID = scoreDoc.doc;
             Document doc = searcher.doc(docID);
-            String content = doc.get("content");
-
-            Map<String, Object> docData = new HashMap<>();
-            docData.put("Id", doc.get("Id"));
-            if( ("document".equals(layer)))
-            docData.put("content", doc.get("content"));
-            docData.put("BM25Score", scoreDoc.score);
-            // Compute LM score directly without storing term frequencies
-            if ("LM".equals(model))
-                docData.put("LanguageModelingScore", (content != null) ? computeLMScore(content, queryTerms) : Double.NEGATIVE_INFINITY);
-            
-            // Compute document length and add to the result
-            int docLength = (content != null) ? content.split("\\s+").length : 0;
-            if( ("document".equals(layer)))
-            docData.put("DocLength", docLength);
-
-            if (("document".equals(layer)))
-            {
-            // Add TermFrequencies for each query term
-            Map<String, Integer> termFrequencies = new HashMap<>();
-            if (content != null) {
-                String[] words = content.toLowerCase().split("\\s+");
-                for (String term : queryTerms) {
-                    int termCount = 0;
-                    for (String word : words) {
-                        if (word.equals(term.toLowerCase())) {
-                            termCount++;
-                        }
-                    }
-                    termFrequencies.put(term, termCount);
-                }
-            }
-            docData.put("TermFrequencies", termFrequencies);
-
-           
-            }
-             documents.add(docData);
-        }
-
-        // Sort only if needed
-        if (model.equals("LM")) {
-            documents.sort((d1, d2) -> Double.compare(
-                (double) d2.get("LanguageModelingScore"),
-                (double) d1.get("LanguageModelingScore")
-            ));
-        }
-
-        // Create final JSON response with top K results
-        Map<String, Object> jsonResponse = new HashMap<>();
-        jsonResponse.put("totalHits", results.totalHits.value);
-        jsonResponse.put("documents", documents.subList(0, Math.min(topK, documents.size())));
-        //jsonResponse.put("avgDocLength", avgDocLength); // Include the average document length
-
-
-        String networkLevelSearchResultsPath = "searchresults/networklevel/";
-        String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
-        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
-        // HO 26/07/2025 BEGIN ********
-        //System.out.println(new ObjectMapper().writeValueAsString(jsonResponse));
-        new ObjectMapper().writeValue(new File(UUIDSpecificNetworkLevelResults), jsonResponse);
-        // HO 26/07/2025 END ********
-
-        reader.close();
-        ramDirectory.close();
-        */
-
-        String openAccessUUID = "public";
-        String testSinkPath = "Dataswyfttestsink/";
-        String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
-
-        // network level search
-        String networkZipIndexFileSuffix = "-servers.zip";
-        String networkLevelSearchResultsPath = "searchresults/networklevel/";
-        String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
-
-        // UUID-specific network level search
-        String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
-        String UUIDSpecificNetworkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
-        String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(UUIDSpecificNetworkZipIndexFileName);
-        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
-
-        // open-access network level search
-        String openAccessNetworkIndexPath = networkZipIndexFilePath.concat(openAccessUUID).concat("/");
-        String openAccessNetworkZipIndexFileName = openAccessUUID.concat(networkZipIndexFileSuffix);
-        String fullPathToOpenAccessNetworkIndex = openAccessNetworkIndexPath.concat(openAccessNetworkZipIndexFileName);
-        String openAccessNetworkLevelResults = networkLevelSearchResultsPath.concat(openAccessUUID.concat(networkLevelSearchResultsSuffix));
-
-        // do a UUID-specific network-level search followed by an open-access network-level search
-        conductSearch(strUUID, queryStr, initialRetrieve, model, layer, topK, fullPathToUUIDSpecificNetworkIndex, UUIDSpecificNetworkLevelResults);
-        conductSearch(openAccessUUID, queryStr, initialRetrieve, model, layer, topK, fullPathToOpenAccessNetworkIndex, openAccessNetworkLevelResults);
-        // HO 27/07/2025 END ********
-    }
-
-    // HO 27/07/2025 BEGIN *************
-    private static void conductSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK, String fullIndexPath, String resultsPath) {
-        if(strUUID == null || strUUID.length() == 0) {
-            throw new NullPointerException("Invalid UUID.");
-            //System.exit(1);
-        }
-        if(queryStr == null || queryStr.length() == 0) {
-            throw new NullPointerException("Invalid query string.");
-            //System.exit(1);
-        }
-        if(initialRetrieve <= 0) {
-            initialRetrieve = 50;
-        }
-        if(model == null || model.length() == 0) {
-            model = "LM";
-        }
-        if(layer == null || layer.length() == 0) {
-            layer = "document";
-        }
-        if(topK <= 0) {
-            topK = 10;
-        }
-        if(fullIndexPath == null || fullIndexPath.length() == 0) {
-            System.err.println("Invalid index path.");
-            System.exit(1);
-        }
-        if(resultsPath == null || resultsPath.length() == 0) {
-            System.err.println("Invalid path to results output file.");
-            System.exit(1);
-        }
-
-        RAMDirectory ramDirectory = new RAMDirectory();
-        // HO 26/07/2025 BEGIN ********
-        //InputStream zipStream = System.in;
-        // HO 26/07/2025 END ********
-
-        // HO 26/07/2025 BEGIN ********
-        //InputStream zipStream = new FileInputStream("6561a0f3-ed1b-4378-bf46-c4ed190ad213-servers.zip");
-        // HO 26/07/2025 END *****************
-
-        try {
-            InputStream zipStream = new FileInputStream(fullIndexPath);
-            ZipInputStream zis = new ZipInputStream(zipStream);
-            ZipEntry entry;
-            // HO 26/07/2025 BEGIN ********
-            //while ((entry = zis.getNextEntry()) != null) {
-            while (true) {
-                if ((entry = zis.getNextEntry()) == null) break;
-                // HO 26/07/2025 END ********
-                String entryName = entry.getName();
-                if (entryName.contains("segments") || entryName.endsWith(".index") || entryName.endsWith(".doc") ||
-                        entryName.endsWith(".cfe") || entryName.endsWith(".si") || entryName.endsWith(".cfs") || entryName.endsWith("write.lock")) {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[65536];
-                    int len;
-                    while ((len = zis.read(buffer)) != -1) {
-                        baos.write(buffer, 0, len);
-                    }
-                    try (IndexOutput output = ramDirectory.createOutput(entryName, IOContext.DEFAULT)) {
-                        output.writeBytes(baos.toByteArray(), baos.size());
-                    }
-                }
-            }
-        } catch (FileNotFoundException e) {
-            System.err.print("file ");
-            System.err.print(fullIndexPath);
-            System.err.println(" not found.");
-            System.exit(1);
-        } catch (IOException e) {
-            System.err.println("Error reading next zip entry.");
-            System.exit(1);
-        }
-
-
-        IndexReader reader = null;
-        try {
-            reader = DirectoryReader.open(ramDirectory);
-        } catch (IOException e) {
-            System.err.println("Error opening index.");
-            System.exit(1);
-        }
-
-        IndexSearcher searcher = new IndexSearcher(reader);
-        QueryParser parser = new QueryParser("content", new StandardAnalyzer());
-        Query query = null;
-        try {
-            query = parser.parse(queryStr);
-        } catch (ParseException e) {
-            System.err.println("Error parsing query.");
-            System.exit(1);
-        }
-
-        TopDocs results = null;
-        try {
-            results = searcher.search(query, initialRetrieve);
-        } catch (IOException e) {
-            System.err.println("Error searching for query.");
-            System.exit(1);
-        }
-
-        if (backgroundModel == null && "LM".equals(model)) {
-            try {
-                backgroundModel = computeBackgroundModel(reader);
-            }  catch (IOException e) {
-                System.err.println("Error reading background model.");
-                System.exit(1);
-            }
-        }
-
-        // Calculate the average document length for the entire index
-        List<Map<String, Object>> documents = new ArrayList<>();
-
-        // Precompute query terms once
-        String[] queryTerms = queryStr.split("\\s+");
-
-        for (ScoreDoc scoreDoc : results.scoreDocs) {
-            int docID = scoreDoc.doc;
-
-            Document doc = new Document();
-            try {
-                searcher.doc(docID);
-            } catch (IOException e) {
-                System.err.println("Error searching for query.");
-                System.exit(1);
-            }
-
             String content = doc.get("content");
 
             Map<String, Object> docData = new HashMap<>();
@@ -396,22 +177,15 @@ public class Searcher {
 
         // HO 26/07/2025 BEGIN ********
         //System.out.println(new ObjectMapper().writeValueAsString(jsonResponse));
-        try {
-            new ObjectMapper().writeValue(new File(resultsPath), jsonResponse);
-            // HO 26/07/2025 END ********
-        } catch (IOException e) {
-            System.err.println("Error writing network level search results.");
-        }
+        String networkLevelSearchResultsPath = "searchresults/networklevel/";
+        String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
+        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
+        new ObjectMapper().writeValue(new File(UUIDSpecificNetworkLevelResults), jsonResponse);
+        // HO 26/07/2025 END ********
 
-        try {
-            reader.close();
-        } catch (IOException e) {
-            System.err.println("Error closing index reader.");
-        }
-
+        reader.close();
         ramDirectory.close();
     }
-    // HO 27/07/2025 END ***************
 
     private static double computeLMScore(String content, String[] queryTerms) {
         double lmScore = 0.0;
