@@ -73,20 +73,37 @@ public class Searcher {
         String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
 
         // do a network-level search
-        conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
+        long networkHits = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
 
-        // do a server-level search of server1
-        /*String serverZipIndexFilePath = testSinkPath.concat("server1_/metaindex/");
-        String UUIDSpecificServerIndexPath = serverZipIndexFilePath.concat(strUUID).concat("/");
-        String serverZipIndexFileSuffix = "-pods.zip";
-        String serverZipIndexFileName = strUUID.concat(serverZipIndexFileSuffix);
-        String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
-        conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID);*/
+        // no point looking if there were no results
+        if (networkHits > 0) {
+            // do a server-level search
+            String[] serversToSearch = new String[]{"server1_", "server2_"};
+            int numServers = serversToSearch.length;
+            for (int i = 0; i < numServers; i++) {
+                String serverZipIndexFilePath = testSinkPath.concat(serversToSearch[i].concat("/metaindex/"));
+                String UUIDSpecificServerIndexPath = serverZipIndexFilePath.concat(strUUID).concat("/");
+                String serverZipIndexFileSuffix = "-pods.zip";
+                String serverZipIndexFileName = strUUID.concat(serverZipIndexFileSuffix);
+                String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
+                String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(serversToSearch[i].concat("/"));
+                String serverLevelSearchResultsSuffix = "-serverlevel-searchresults.json";
+                String UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(serverLevelSearchResultsSuffix));
+                conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
+            }
+        }
     }
 
-    private static void conductSearch(String fullPathToNetworkIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
+    private static long conductSearch(String fullPathToNetworkIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
         RAMDirectory ramDirectory = new RAMDirectory();
         InputStream zipStream = null;
+
+        File f = new File(fullPathToNetworkIndex);
+        // if there isn't an index file for this user, there won't be any query results
+        if(!f.exists() || f.isDirectory()) {
+            System.out.println("No results for query " + queryStr + " for UUID " + strUUID);
+            return 0;
+        }
         try {
            zipStream = new FileInputStream(fullPathToNetworkIndex);
         } catch(FileNotFoundException e) {
@@ -211,6 +228,13 @@ public class Searcher {
         }
 
         // Create final JSON response with top K results
+        // HO 28/07/2025 BEGIN ***********
+        // don't return any results if the keyword isn't found
+        if (results.totalHits.value <= 0) {
+            closeOpenSearchStreams(reader, ramDirectory);
+            return 0;
+        }
+        // HO 28/07/2025 END ***********
         Map<String, Object> jsonResponse = new HashMap<>();
         jsonResponse.put("totalHits", results.totalHits.value);
         jsonResponse.put("documents", documents.subList(0, Math.min(topK, documents.size())));
@@ -225,12 +249,27 @@ public class Searcher {
         }
         // HO 26/07/2025 END ********
 
-        try {
+        /*try {
             reader.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        ramDirectory.close();
+        ramDirectory.close();*/
+        closeOpenSearchStreams(reader, ramDirectory);
+        return results.totalHits.value;
+    }
+
+    private static void closeOpenSearchStreams(IndexReader reader, RAMDirectory ramDirectory) {
+        if (reader != null) {
+            try {
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (ramDirectory != null) {
+            ramDirectory.close();
+        }
     }
 
     private static double computeLMScore(String content, String[] queryTerms) {
