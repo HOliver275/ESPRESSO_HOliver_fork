@@ -15,6 +15,11 @@ import java.util.zip.ZipInputStream;
 import java.util.*;
 import org.apache.lucene.util.BytesRef;
 
+/**
+ * @author Mohammad Bahrani for the ESPRESSO Project 2025
+ * @author Helen Oliver for the ESPRESSO Project 2025
+ */
+
 public class Searcher {
     private static Map<String, Double> backgroundModel = null;
 
@@ -60,82 +65,125 @@ public class Searcher {
             }
         }
 
-        // HO 26/07/2025 BEGIN ********
-        //InputStream zipStream = System.in;
+        searchByLevels(strUUID, queryStr, initialRetrieve, model, layer, topK);
+        // search for public results too
+        searchByLevels("public", queryStr, initialRetrieve, model, layer, topK);
+    }
+
+    /**
+     * Searches the local file system offline, simulating a search first at network level,
+     * then server level, then pod level.
+     *
+     * @param strUUID The UUID of the search party.
+     * @param queryStr The query string
+     * @param initialRetrieve
+     * @param model The model
+     * @param layer The layer to search
+     * @param topK
+     */
+    private static void searchByLevels(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK) {
+        // Parent folder where index files are kept
         String testSinkPath = "Dataswyfttestsink/";
+        // Index folder for network index
         String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
+        // Path to UUID-specific network-level index
         String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
+        // Suffix denoting a network-level index file
         String networkZipIndexFileSuffix = "-servers.zip";
+        // Full name of UUID-specific network index file
         String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
+        // Full path to UUID-specific network index file
         String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
+        // Output path for network-level search results
         String networkLevelSearchResultsPath = "searchresults/networklevel/";
+        // Create the output file if it doesn't already exist
         File netresdir = new File(networkLevelSearchResultsPath);
         if (!netresdir.exists()) {
             netresdir.mkdirs();
         }
+        // Suffix denoting network-level search results file
         String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
+        // Path to UUID-specific network level results output
         String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
 
         // do a network-level search
         List<String> foundServers = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
 
-        // servers and pods containing results
+        // Now we've pinpointed the servers and pods containing results
         HashMap<String, List<String>> podsInServers = new HashMap<>();
         // no point looking if there were no results
+        // otherwise look only in the servers where we know there are results
         if ((foundServers != null) && (foundServers.size() > 0)) {
-
             // do a server-level search
             int numServers = foundServers.size();
             for (int i = 0; i < numServers; i++) {
+                // Path to folder where server-level index files are kept
                 String serverZipIndexFilePath = testSinkPath.concat(foundServers.get(i).concat("metaindex/"));
+                // Path to UUID-specific server-level index
                 String UUIDSpecificServerIndexPath = serverZipIndexFilePath.concat(strUUID).concat("/");
+                // Suffix denoting a server-level index file
                 String serverZipIndexFileSuffix = "-pods.zip";
+                // Full name of UUID-specific server-level index file
                 String serverZipIndexFileName = strUUID.concat(serverZipIndexFileSuffix);
+                // Full path to UUID-specific server-level index file
                 String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
+                // Output folder of server-level search results
                 String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(foundServers.get(i));
+                // Create the output folders if they don't already exist
                 File servresdir = new File(serverLevelSearchResultsPath);
                 if (!servresdir.exists()) {
                     servresdir.mkdirs();
                 }
+                // Suffix denoting server-level search results file
                 String serverLevelSearchResultsSuffix = "-serverlevel-searchresults.json";
+                // Full path to UUID-specific server-level search results
                 String UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(serverLevelSearchResultsSuffix));
+                // List of pods containing search results
                 List<String> foundPods = conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
                 if((foundPods != null) && (foundPods.size() > 0)) {
                     podsInServers.put(foundServers.get(i), foundPods);
-                    /*for(int j=0; j<foundPods.size(); j++) {
-                        System.out.println(foundPods.get(j));
-                    }*/
                 }
             }
         }
         // search the pods now
         for (Map.Entry<String, List<String>> entry : podsInServers.entrySet()) {
             if(entry.getValue().size() != 0) {
+                // Path to pod-level index files
                 String serverPath = testSinkPath.concat(entry.getKey());
+                // List of pods that contain results
                 List<String> podsOnServer = entry.getValue();
                 for(String pod : podsOnServer) {
+                    // Path to pod index folder
                     String podIndexPath = serverPath.concat(pod.concat("/metaindex/"));
+                    // Path to UUID-specific pod index file
                     String UUIDSpecificPodIndexPath = podIndexPath.concat(strUUID).concat(".zip");
+                    // Path to UUID-specific pod-level results output folder
                     String podLevelUUIDSpecificResultsPath = "searchresults/podlevel/".concat(strUUID).concat("/");
+                    // Full path to UUID-specific pod-level results output
                     String podLevelSearchResultsPath = podLevelUUIDSpecificResultsPath.concat(entry.getKey()).concat(pod);
+                    // if the output folders don't exist, create them.
                     File podresdir = new File(podLevelSearchResultsPath);
                     if (!podresdir.exists()) {
                         podresdir.mkdirs();
                     }
+                    // Suffix denoting a pod-level search results file
                     String podLevelSearchResultsSuffix = "-podlevel-searchresults.json";
+                    // Full path of UUID-specific pod-level search results file
                     String UUIDSpecificPodLevelResults = podLevelSearchResultsPath.concat("/").concat(strUUID.concat(podLevelSearchResultsSuffix));
-                    //System.out.println(UUIDSpecificPodLevelResults);
+
+                    // Now search the pods for the actual files containing results
                     List<String> foundFiles = conductSearch(UUIDSpecificPodIndexPath, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
+                    // Output links to search results listed in a text file
                     String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
                     try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
                         for (String file : foundFiles) {
-                            //https://holiver.hubofallthings.net/api/v2.6/files/
+                            // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
                             String fileToGet = "https://".concat(pod).concat("/api/v2.6/files/").concat(file);
-                            System.out.println(fileToGet);
 
                             writer.write(fileToGet);
                             writer.newLine();
                         }
+                        // close the simple results file
                         writer.close();
                     } catch (IOException ex) {
                             ex.printStackTrace();
@@ -145,30 +193,40 @@ public class Searcher {
         }
     }
 
-    private static List<String> conductSearch(String fullPathToNetworkIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
+    /**
+     * Actually do the search. This is an offline search of the local file system.
+     * @param fullPathToIndex Full path to the index file on which to do the query
+     * @param queryStr The query string
+     * @param initialRetrieve
+     * @param model
+     * @param layer
+     * @param topK
+     * @param strUUID UUID of the search party
+     * @param resultsPath Path to search results output file
+     * @return A List of Strings representing the locations (servers, pods, files) where results were found
+     */
+    private static List<String> conductSearch(String fullPathToIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
         RAMDirectory ramDirectory = new RAMDirectory();
         InputStream zipStream = null;
 
-        File f = new File(fullPathToNetworkIndex);
+        File f = new File(fullPathToIndex);
         // if there isn't an index file for this user, there won't be any query results
         if(!f.exists() || f.isDirectory()) {
             //System.out.println("No results for query " + queryStr + " for UUID " + strUUID);
             return null;
         }
         try {
-           zipStream = new FileInputStream(fullPathToNetworkIndex);
+           zipStream = new FileInputStream(fullPathToIndex);
         } catch(FileNotFoundException e) {
             e.printStackTrace();
         }
-        // HO 26/07/2025 END ********
 
         try (ZipInputStream zis = new ZipInputStream(zipStream)) {
             ZipEntry entry;
-            // HO 26/07/2025 BEGIN ********
-            //while ((entry = zis.getNextEntry()) != null) {
+
             while (true) {
                 if ((entry = zis.getNextEntry()) == null) break;
-                // HO 26/07/2025 END ********
+
                 String entryName = entry.getName();
                 if (entryName.contains("segments") || entryName.endsWith(".index") || entryName.endsWith(".doc") ||
                         entryName.endsWith(".cfe") || entryName.endsWith(".si") || entryName.endsWith(".cfs") || entryName.endsWith("write.lock")) {
@@ -270,7 +328,6 @@ public class Searcher {
                 }
                 docData.put("TermFrequencies", termFrequencies);
 
-
             }
             documents.add(docData);
         }
@@ -284,41 +341,33 @@ public class Searcher {
         }
 
         // Create final JSON response with top K results
-        // HO 28/07/2025 BEGIN ***********
         // don't return any results if the keyword isn't found
-        /*for (int i=0; i<scopeIds.size(); i++) {
-            System.out.println(scopeIds.get(i));
-        }*/
-
         if (results.totalHits.value <= 0) {
             closeOpenSearchStreams(reader, ramDirectory);
             return null;
         }
-        // HO 28/07/2025 END ***********
+
         Map<String, Object> jsonResponse = new HashMap<>();
         jsonResponse.put("totalHits", results.totalHits.value);
         jsonResponse.put("documents", documents.subList(0, Math.min(topK, documents.size())));
         //jsonResponse.put("avgDocLength", avgDocLength); // Include the average document length
 
-        // HO 26/07/2025 BEGIN ********
-        //System.out.println(new ObjectMapper().writeValueAsString(jsonResponse));
         try {
             new ObjectMapper().writeValue(new File(resultsPath), jsonResponse);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        // HO 26/07/2025 END ********
 
-        /*try {
-            reader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        ramDirectory.close();*/
         closeOpenSearchStreams(reader, ramDirectory);
+        // return list of places to look
         return scopeIds;
     }
 
+    /**
+     * Closes the streams we opened to do the search
+     * @param reader The IndexReader we opened earlier
+     * @param ramDirectory The RAMDirectory we opened earlier
+     */
     private static void closeOpenSearchStreams(IndexReader reader, RAMDirectory ramDirectory) {
         if (reader != null) {
             try {
