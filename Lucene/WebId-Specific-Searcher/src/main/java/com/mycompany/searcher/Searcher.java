@@ -101,7 +101,7 @@ public class Searcher {
         File f = new File(fullPathToNetworkIndex);
         // if there isn't an index file for this user, there won't be any query results
         if(!f.exists() || f.isDirectory()) {
-            System.out.println("No results for query " + queryStr + " for UUID " + strUUID);
+            //System.out.println("No results for query " + queryStr + " for UUID " + strUUID);
             return 0;
         }
         try {
@@ -172,6 +172,9 @@ public class Searcher {
         // Precompute query terms once
         String[] queryTerms = queryStr.split("\\s+");
 
+        // DEBUG
+        List<String> scopeIds = new ArrayList<String>();
+
         for (ScoreDoc scoreDoc : results.scoreDocs) {
             int docID = scoreDoc.doc;
             Document doc = null;
@@ -184,6 +187,8 @@ public class Searcher {
 
             Map<String, Object> docData = new HashMap<>();
             docData.put("Id", doc.get("Id"));
+            // DEBUG
+            scopeIds.add(doc.get("Id"));
             if( ("document".equals(layer)))
                 docData.put("content", doc.get("content"));
             docData.put("BM25Score", scoreDoc.score);
@@ -230,6 +235,10 @@ public class Searcher {
         // Create final JSON response with top K results
         // HO 28/07/2025 BEGIN ***********
         // don't return any results if the keyword isn't found
+        for (int i=0; i<scopeIds.size(); i++) {
+            System.out.println(scopeIds.get(i));
+        }
+
         if (results.totalHits.value <= 0) {
             closeOpenSearchStreams(reader, ramDirectory);
             return 0;
