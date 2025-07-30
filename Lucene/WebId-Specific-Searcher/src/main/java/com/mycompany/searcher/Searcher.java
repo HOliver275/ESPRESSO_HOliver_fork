@@ -69,16 +69,22 @@ public class Searcher {
         String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
         String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
         String networkLevelSearchResultsPath = "searchresults/networklevel/";
+        File netresdir = new File(networkLevelSearchResultsPath);
+        if (!netresdir.exists()) {
+            netresdir.mkdirs();
+        }
         String networkLevelSearchResultsSuffix = "-networklevel-searchresults.json";
         String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
 
         // do a network-level search
         List<String> foundServers = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
 
+        // servers and pods containing results
+        HashMap<String, List<String>> podsInServers = new HashMap<>();
         // no point looking if there were no results
         if ((foundServers != null) && (foundServers.size() > 0)) {
+
             // do a server-level search
-            //String[] serversToSearch = new String[]{"server1_", "server2_"};
             int numServers = foundServers.size();
             for (int i = 0; i < numServers; i++) {
                 String serverZipIndexFilePath = testSinkPath.concat(foundServers.get(i).concat("metaindex/"));
@@ -87,16 +93,52 @@ public class Searcher {
                 String serverZipIndexFileName = strUUID.concat(serverZipIndexFileSuffix);
                 String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
                 String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(foundServers.get(i));
-                File resdir = new File(serverLevelSearchResultsPath);
-                if (!resdir.exists()) {
-                    resdir.mkdirs();
+                File servresdir = new File(serverLevelSearchResultsPath);
+                if (!servresdir.exists()) {
+                    servresdir.mkdirs();
                 }
                 String serverLevelSearchResultsSuffix = "-serverlevel-searchresults.json";
                 String UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(serverLevelSearchResultsSuffix));
                 List<String> foundPods = conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
                 if((foundPods != null) && (foundPods.size() > 0)) {
-                    for(int j=0; j<foundPods.size(); j++) {
+                    podsInServers.put(foundServers.get(i), foundPods);
+                    /*for(int j=0; j<foundPods.size(); j++) {
                         System.out.println(foundPods.get(j));
+                    }*/
+                }
+            }
+        }
+        // search the pods now
+        for (Map.Entry<String, List<String>> entry : podsInServers.entrySet()) {
+            if(entry.getValue().size() != 0) {
+                String serverPath = testSinkPath.concat(entry.getKey());
+                List<String> podsOnServer = entry.getValue();
+                for(String pod : podsOnServer) {
+                    String podIndexPath = serverPath.concat(pod.concat("/metaindex/"));
+                    String UUIDSpecificPodIndexPath = podIndexPath.concat(strUUID).concat(".zip");
+                    String podLevelUUIDSpecificResultsPath = "searchresults/podlevel/".concat(strUUID).concat("/");
+                    String podLevelSearchResultsPath = podLevelUUIDSpecificResultsPath.concat(entry.getKey()).concat(pod);
+                    File podresdir = new File(podLevelSearchResultsPath);
+                    if (!podresdir.exists()) {
+                        podresdir.mkdirs();
+                    }
+                    String podLevelSearchResultsSuffix = "-podlevel-searchresults.json";
+                    String UUIDSpecificPodLevelResults = podLevelSearchResultsPath.concat("/").concat(strUUID.concat(podLevelSearchResultsSuffix));
+                    //System.out.println(UUIDSpecificPodLevelResults);
+                    List<String> foundFiles = conductSearch(UUIDSpecificPodIndexPath, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
+                    String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
+                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
+                        for (String file : foundFiles) {
+                            //https://holiver.hubofallthings.net/api/v2.6/files/
+                            String fileToGet = "https://".concat(pod).concat("/api/v2.6/files/").concat(file);
+                            System.out.println(fileToGet);
+
+                            writer.write(fileToGet);
+                            writer.newLine();
+                        }
+                        writer.close();
+                    } catch (IOException ex) {
+                            ex.printStackTrace();
                     }
                 }
             }
