@@ -73,28 +73,37 @@ public class Searcher {
         String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
 
         // do a network-level search
-        long networkHits = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
+        List<String> foundServers = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
 
         // no point looking if there were no results
-        if (networkHits > 0) {
+        if ((foundServers != null) && (foundServers.size() > 0)) {
             // do a server-level search
-            String[] serversToSearch = new String[]{"server1_", "server2_"};
-            int numServers = serversToSearch.length;
+            //String[] serversToSearch = new String[]{"server1_", "server2_"};
+            int numServers = foundServers.size();
             for (int i = 0; i < numServers; i++) {
-                String serverZipIndexFilePath = testSinkPath.concat(serversToSearch[i].concat("/metaindex/"));
+                String serverZipIndexFilePath = testSinkPath.concat(foundServers.get(i).concat("metaindex/"));
                 String UUIDSpecificServerIndexPath = serverZipIndexFilePath.concat(strUUID).concat("/");
                 String serverZipIndexFileSuffix = "-pods.zip";
                 String serverZipIndexFileName = strUUID.concat(serverZipIndexFileSuffix);
                 String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
-                String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(serversToSearch[i].concat("/"));
+                String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(foundServers.get(i));
+                File resdir = new File(serverLevelSearchResultsPath);
+                if (!resdir.exists()) {
+                    resdir.mkdirs();
+                }
                 String serverLevelSearchResultsSuffix = "-serverlevel-searchresults.json";
                 String UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(serverLevelSearchResultsSuffix));
-                conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
+                List<String> foundPods = conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
+                if((foundPods != null) && (foundPods.size() > 0)) {
+                    for(int j=0; j<foundPods.size(); j++) {
+                        System.out.println(foundPods.get(j));
+                    }
+                }
             }
         }
     }
 
-    private static long conductSearch(String fullPathToNetworkIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
+    private static List<String> conductSearch(String fullPathToNetworkIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
         RAMDirectory ramDirectory = new RAMDirectory();
         InputStream zipStream = null;
 
@@ -102,7 +111,7 @@ public class Searcher {
         // if there isn't an index file for this user, there won't be any query results
         if(!f.exists() || f.isDirectory()) {
             //System.out.println("No results for query " + queryStr + " for UUID " + strUUID);
-            return 0;
+            return null;
         }
         try {
            zipStream = new FileInputStream(fullPathToNetworkIndex);
@@ -172,7 +181,7 @@ public class Searcher {
         // Precompute query terms once
         String[] queryTerms = queryStr.split("\\s+");
 
-        // DEBUG
+        // list the locations where results are found
         List<String> scopeIds = new ArrayList<String>();
 
         for (ScoreDoc scoreDoc : results.scoreDocs) {
@@ -187,7 +196,7 @@ public class Searcher {
 
             Map<String, Object> docData = new HashMap<>();
             docData.put("Id", doc.get("Id"));
-            // DEBUG
+            // add the current Id to the list of places to look
             scopeIds.add(doc.get("Id"));
             if( ("document".equals(layer)))
                 docData.put("content", doc.get("content"));
@@ -235,13 +244,13 @@ public class Searcher {
         // Create final JSON response with top K results
         // HO 28/07/2025 BEGIN ***********
         // don't return any results if the keyword isn't found
-        for (int i=0; i<scopeIds.size(); i++) {
+        /*for (int i=0; i<scopeIds.size(); i++) {
             System.out.println(scopeIds.get(i));
-        }
+        }*/
 
         if (results.totalHits.value <= 0) {
             closeOpenSearchStreams(reader, ramDirectory);
-            return 0;
+            return null;
         }
         // HO 28/07/2025 END ***********
         Map<String, Object> jsonResponse = new HashMap<>();
@@ -265,7 +274,7 @@ public class Searcher {
         }
         ramDirectory.close();*/
         closeOpenSearchStreams(reader, ramDirectory);
-        return results.totalHits.value;
+        return scopeIds;
     }
 
     private static void closeOpenSearchStreams(IndexReader reader, RAMDirectory ramDirectory) {
