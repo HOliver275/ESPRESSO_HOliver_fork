@@ -82,16 +82,21 @@ public class Searcher {
      * @param topK
      */
     private static void searchByLevels(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK) {
+        // then GET the everything from espresso/metaindex
+        // then pull out the URLs into a list?
         // Parent folder where index files are kept
-        String testSinkPath = "Dataswyfttestsink/";
+        //String testSinkPath = "Dataswyfttestsink/";
         // Index folder for network index
-        String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
+        //String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
         // Path to UUID-specific network-level index
-        String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
+        //String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
+        // TODO here: log in to the ESPRESSO HAT
+        // TODO here: then set a constant for the endpoint
         // Suffix denoting a network-level index file
         String networkZipIndexFileSuffix = "-servers.zip";
         // Full name of UUID-specific network index file
         String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
+        // TODO here: set the URL to the relevant network index to be GOTten
         // Full path to UUID-specific network index file
         String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
         // Output path for network-level search results
@@ -107,25 +112,19 @@ public class Searcher {
         String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
 
         // do a network-level search
+        // TODO here just do the search
         List<String> foundServers = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
 
         // Now we've pinpointed the servers and pods containing results
-        HashMap<String, List<String>> podsInServers = new HashMap<>();
+        /*HashMap<String, List<String>> podsInServers = new HashMap<>();
         // no point looking if there were no results
         // otherwise look only in the servers where we know there are results
         if ((foundServers != null) && (foundServers.size() > 0)) {
             // do a server-level search
             int numServers = foundServers.size();
             for (int i = 0; i < numServers; i++) {
-                String strFoundServer = foundServers.get(i);
-                if (strFoundServer.startsWith("http://") || strFoundServer.startsWith("https://")) {
-                    int pos = strFoundServer.indexOf("://");
-                    pos +=3;
-                    strFoundServer = strFoundServer.substring(pos, strFoundServer.length());
-                }
                 // Path to folder where server-level index files are kept
-                //String serverZipIndexFilePath = testSinkPath.concat(foundServers.get(i).concat("metaindex/"));
-                String serverZipIndexFilePath = testSinkPath.concat(strFoundServer.concat("metaindex/"));
+                String serverZipIndexFilePath = testSinkPath.concat(foundServers.get(i).concat("metaindex/"));
                 // Path to UUID-specific server-level index
                 String UUIDSpecificServerIndexPath = serverZipIndexFilePath.concat(strUUID).concat("/");
                 // Suffix denoting a server-level index file
@@ -135,8 +134,7 @@ public class Searcher {
                 // Full path to UUID-specific server-level index file
                 String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
                 // Output folder of server-level search results
-                //String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(foundServers.get(i));
-                String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(strFoundServer);
+                String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(foundServers.get(i));
                 // Create the output folders if they don't already exist
                 File servresdir = new File(serverLevelSearchResultsPath);
                 if (!servresdir.exists()) {
@@ -149,21 +147,9 @@ public class Searcher {
                 // List of pods containing search results
                 List<String> foundPods = conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
                 if((foundPods != null) && (foundPods.size() > 0)) {
-                    for(int j=0;j<foundPods.size();j++) {
-                        String strFoundPod = foundPods.get(j);
-                        if (strFoundPod.startsWith("http://") || strFoundPod.startsWith("https://")) {
-                            int pos = strFoundPod.indexOf("://");
-                            pos +=3;
-                            strFoundPod = strFoundPod.substring(pos, strFoundPod.length());
-                            pos = strFoundPod.indexOf("/");
-                            strFoundPod = strFoundPod.substring(0, pos);
-                            foundPods.set(j, strFoundPod);
-                        }
-                    }
-                    //podsInServers.put(foundServers.get(i), foundPods);
-                    podsInServers.put(strFoundServer, foundPods);
+                    podsInServers.put(foundServers.get(i), foundPods);
                 }
-            }
+
         }
         // search the pods now
         for (Map.Entry<String, List<String>> entry : podsInServers.entrySet()) {
@@ -210,7 +196,7 @@ public class Searcher {
                     }
                 }
             }
-        }
+        }*/
     }
 
     /**
