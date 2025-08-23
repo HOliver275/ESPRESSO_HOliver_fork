@@ -18,6 +18,7 @@ import org.apache.lucene.util.BytesRef;
 /**
  * @author Mohammad Bahrani for the ESPRESSO Project 2025
  * @author Helen Oliver for the ESPRESSO Project 2025
+ * Conducts a UUID-specific search of the local file system.
  */
 
 public class Searcher {

@@ -1,5 +1,7 @@
 package com.mycompany.searcher;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.lucene.queryparser.classic.ParseException;
 import org.apache.lucene.store.*;
 import org.apache.lucene.index.*;
@@ -10,6 +12,12 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.ProtocolException;
+import java.net.URL;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.*;
@@ -18,25 +26,121 @@ import org.apache.lucene.util.BytesRef;
 /**
  * @author Mohammad Bahrani for the ESPRESSO Project 2025
  * @author Helen Oliver for the ESPRESSO Project 2025
+ * Conducts a UUID-specific search of the ESPRESSO-indexed HATs.
  */
 
 public class Searcher {
     private static Map<String, Double> backgroundModel = null;
+    private static String espressoAccessToken = "";
+    private static String espressoUserId = "";
+    private static final String ESPRESSO_USERNAME = "espressohubofallthing";
+    private static final String ESPRESSO_PASSWORD = "blorf";
+    private static final String ESPRESSO_URL = "https://espressohubofallthing.hubofallthings.net/";
+    // DEV
+    //private static final String ESPRESSO_USERNAME = "espressohubofallthfjs";
+    //private static final String ESPRESSO_PASSWORD = "blorf";
+    //private static final String ESPRESSO_URL = "https://espressohubofallthfjs.hubat.net/";
+    private static final String AUTHTOKEN_PATH = "users/access_token";
+    private static final String ESPRESSO_IDX_FILE_PREFIX = "espresso_metaindex";
+    private static final String ESPRESSO_PUBLIC_IDX_FILENAME_STEM = "public";
+    private static final String ESPRESSO_IDX_FILE_TYPE = ".zip";
+    private static final String ESPRESSO_FILE_PATH = "api/v2.6/files/";
+    private static final String ESPRESSO_FILE_CONTENT_PATH = "api/v2.6/files/content/";
+    private static final String ESPRESSO_FILE_METADATA_PATH = "api/v2.6/files/file/";
+    private static final String POD_LEVEL_IDX_FILE_SUFFIX = "";
+    private static final String POD_LEVEL_RESULTS_SUFFIX = "-podlevel-searchresults.json";
+    private static final String DIRECT_POD_SEARCH_FOLDER = "direct_to_pod/";
+    private static final String SEARCH_RESULTS_PATH = "searchresults/";
+    private static final String[] HAT_DOMAINS = new String[]{".hubofallthings.net/", ".hubat.net/"};
+
+    private static String searchPartyUsername = "";
+    private static String searchPartyPassword = "";
+    private static String searchPartyUrl = "";
+    private static String searchPartyAccessToken = "";
+    private static String searchPartyUserId = "";
+    private static String searchPartyDomain = "";
+
+
+    public static void setEspressoAccessToken(String strAccessToken) {
+        espressoAccessToken = strAccessToken;
+    }
+
+    public static String getEspressoAccessToken() {
+        return espressoAccessToken;
+    }
+
+    public static void setEspressoUserId(String strUserId) {
+        espressoUserId = strUserId;
+    }
+
+    public static String getEspressoUserId() {
+        return espressoUserId;
+    }
+
+    public static void setSearchPartyUsername(String strSearchPartyUsername) {
+        searchPartyUsername = strSearchPartyUsername;
+    }
+
+    public static String getSearchPartyUsername() {
+        return searchPartyUsername;
+    }
+
+    public static void setSearchPartyPassword(String strSearchPartyPassword) {
+        searchPartyPassword = strSearchPartyPassword;
+    }
+
+    public static String getSearchPartyPassword() {
+        return searchPartyPassword;
+    }
+
+    public static void setSearchPartyUrl(String strSearchPartyUrl) {
+        searchPartyUrl = strSearchPartyUrl;
+    }
+
+    public static String getSearchPartyUrl() {
+        return searchPartyUrl;
+    }
+
+    public static void setSearchPartyAccessToken(String strSearchPartyAccessToken) {
+        searchPartyAccessToken = strSearchPartyAccessToken;
+    }
+
+    public static String getSearchPartyAccessToken() {
+        return searchPartyAccessToken;
+    }
+
+    public static void setSearchPartyUserId(String strSearchPartyUserId) {
+        searchPartyUserId = strSearchPartyUserId;
+    }
+
+    public static String getSearchPartyUserId() {
+        return searchPartyUserId;
+    }
+
+    public static void setSearchPartyDomain(String strSearchPartyDomain) {
+        searchPartyDomain = strSearchPartyDomain;
+    }
+
+    public static String getSearchPartyDomain() {
+        return searchPartyDomain;
+    }
 
     public static void main(String[] args) throws Exception {
-        int minArgs = 3;
+        int minArgs = 5;
         if (args.length < minArgs) {
-            System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <UUID>");
+            System.err.println("Usage: java com.mycompany.searcher.Searcher <query> [k] <username> <domain> <password>");
             System.exit(1);
         }
 
+        // first argument is the query string
         String queryStr = args[0].toLowerCase();
         String model = "LM";
         int topK = 10;
         int initialRetrieve = 50; // Reduce to 5K for performance
-
         String layer = "document";
 
+        // second argument is the top-K
+        // validate the top-K
         if (args.length >= 2) {
             try {
                 topK = Integer.parseInt(args[1]);
@@ -50,29 +154,377 @@ public class Searcher {
             }
         }
 
-        String strUUID = "";
-
+        // third argument is the search party user name, as in blorf.hubofallthings.net
         if (args.length >= 3) {
-            try {
-                strUUID = args[2];
-                if (strUUID.length() == 0) {
-                    System.err.println("You must provide a UUID.");
-                    System.exit(1);
-                }
-            } catch (NullPointerException e) {
-                System.err.println("Invalid value for UUID.");
-                System.exit(1);
+            if(!args[2].isEmpty()) {
+                setSearchPartyUsername(args[2].toString().toLowerCase());
             }
         }
 
-        searchByLevels(strUUID, queryStr, initialRetrieve, model, layer, topK);
-        // search for public results too
-        searchByLevels("public", queryStr, initialRetrieve, model, layer, topK);
+        // fourth argument is the domain, a finite list
+        if (args.length >= 4) {
+            for (int i=0; i< HAT_DOMAINS.length; i++) {
+                String strInputDomain = args[3].toString().toLowerCase();
+                if (HAT_DOMAINS[i].contains(strInputDomain))
+                {
+                    setSearchPartyDomain(HAT_DOMAINS[i]);
+                    // rebuild the search party's HAT URL from the username and domain
+                    setSearchPartyUrl("https://".concat(getSearchPartyUsername().concat(getSearchPartyDomain())));
+                    break;
+                }
+            }
+            if (getSearchPartyDomain().isEmpty()) {
+                // use a default domain if there somehow isn't a value here by now
+                setSearchPartyDomain(HAT_DOMAINS[0]);
+            }
+        }
+
+        // fifth argument is the password
+        if(args.length >= 5) {
+            if (args[4].toString().isEmpty()) {
+                System.err.println("You must enter a password.");
+                System.exit(1);
+            }
+
+            setSearchPartyPassword(args[4].toString());
+        }
+
+        // authenticate the search party
+        String strSearchPartyCreds = authenticateSearchParty();
+        // get the search party's access token and userId out of there
+        extractSearchPartyAccessDetails(strSearchPartyCreds);
+        if (strSearchPartyCreds.isEmpty()) {
+            System.err.println("Invalid search party credentials.");
+            System.exit(1);
+        }
+
+        // the UUID will be the basis for the filenames we search for
+        String strUUID = getSearchPartyUserId();
+
+        // log in to ESPRESSO, as ESPRESSO
+        String strCreds = logIntoEspresso();
+        // get the ESPRESSO access token out of there
+        extractEspressoAccessDetails(strCreds);
+        if (!strCreds.isEmpty()) {
+            // until file permissions are set up, do a direct pod search
+            directPodSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
+            directPodSearch("public", queryStr, initialRetrieve, model, layer, topK);
+            // normally we would search from network level down, but we need to set the file permissions
+            // so the indexing will be accurate
+            //searchByLevels(strUUID, queryStr, initialRetrieve, model, layer, topK);
+            // search for public results too
+            //searchByLevels("public", queryStr, initialRetrieve, model, layer, topK);
+        }
     }
+
+    // searching pods directly, not going through the higher levels
+    private static void directPodSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK) {
+        if (strUUID.isEmpty()) {
+            return;
+        }
+
+        InputStream instr = null;
+
+        List<String> podsToSearch = new ArrayList<String>();
+        // hard coded list of pods
+        podsToSearch.add("https://blorf.hubofallthings.net/");
+
+        String podLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(DIRECT_POD_SEARCH_FOLDER).concat(strUUID).concat("/");
+        String podname = "";
+        // Full path to UUID-specific pod-level results output
+        String podLevelSearchResultsPath = "";
+        String UUIDSpecificPodLevelResults = "";
+
+        for (int i = 0; i < podsToSearch.size(); i++) {
+            instr = fetchZipIndexFile(podsToSearch.get(i), strUUID, POD_LEVEL_IDX_FILE_SUFFIX);
+            if (instr != null) {
+                // DEV output the search results to the local file structure
+                // results of a direct pod search get their owm folder
+                if (podsToSearch.get(i).startsWith("http")) {
+                    int pos = podsToSearch.get(i).indexOf("://");
+                    if (pos != -1) {
+                        podname = podsToSearch.get(i).substring(pos + 3);
+                        podLevelSearchResultsPath = podLevelUUIDSpecificResultsPath.concat(podname);
+                        // if the output folders don't exist, create them.
+                        File podresdir = new File(podLevelSearchResultsPath);
+                        if (!podresdir.exists()) {
+                            podresdir.mkdirs();
+                        }
+                        // Full path of UUID-specific pod-level search results file
+                        UUIDSpecificPodLevelResults = podLevelSearchResultsPath.concat(strUUID.concat(POD_LEVEL_RESULTS_SUFFIX));
+                        List<String> foundFiles = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
+                        // Output links to search results listed in a text file
+                        // which is what the results would look like to the search party
+                        String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
+                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
+                            for (String file : foundFiles) {
+                                // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
+                                String fileToGet = (podsToSearch.get(i)).concat(ESPRESSO_FILE_PATH).concat(file);
+
+                                writer.write(fileToGet);
+                                writer.newLine();
+                            }
+                            // close the simple results file
+                            writer.close();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private static InputStream fetchZipIndexFile(String strHatUrl, String strUUID, String strLevelSuffix) {
+        if (strHatUrl.isEmpty()) {
+            System.err.println("No HAT URL provided.");
+            System.exit(1);
+        }
+
+        //String strSearchUrl = strHatUrl.concat(ESPRESSO_FILE_CONTENT_PATH).concat(ESPRESSO_IDX_FILE_PREFIX).concat(ESPRESSO_PUBLIC_IDX_FILENAME_STEM).concat(strLevelSuffix).concat(ESPRESSO_IDX_FILE_TYPE);
+        // We must search by fileId, which we don't control. The File API strips the hyphens out so we have to do the same
+        // in order to find our target file
+        String cleansedUserId = strUUID.replaceAll("-","");
+        String strFileIdName = ESPRESSO_IDX_FILE_PREFIX.concat(cleansedUserId);
+        String strSearchUrl = strHatUrl.concat(ESPRESSO_FILE_CONTENT_PATH).concat(strFileIdName).concat(strLevelSuffix).concat(ESPRESSO_IDX_FILE_TYPE);
+
+        // search for a public.zip index file
+        URL url = null;
+
+        try {
+            url = new URL(strSearchUrl);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+
+        HttpURLConnection con = null;
+
+        try {
+            con = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            con.setRequestMethod("GET");
+        } catch (ProtocolException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Use the search party's credentials to do the search
+        String strAuthToken = getSearchPartyAccessToken();
+
+        con.setRequestProperty("Content-Type", "application/json");
+        con.setRequestProperty("x-auth-token", strAuthToken);
+
+        int responseCode = 0;
+        try {
+            responseCode = con.getResponseCode();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Response Code: " + responseCode);
+
+        // I'm not OK, you're not OK
+        if(responseCode != 200) {
+            return null;
+        }
+
+        // if we found the file, return it to read as a zip stream
+        try {
+            return con.getInputStream();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // there's no reason this has to have its own function, apart from readability
+    // we get two sets of creds: the search party's, and espresso's
+    private static void extractEspressoAccessDetails(String strAuthResponse) {
+        String strAuth = "";
+        String strUserId = "";
+
+        if (strAuthResponse.isEmpty()) {
+            return;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(strAuthResponse);
+            strAuth = node.get("accessToken").asText();
+            if(strAuth.isEmpty() || strAuth == null) {
+                System.err.println("Failed to get an access token from ESPRESSO.");
+                System.exit(1);
+            }
+            setEspressoAccessToken(strAuth);
+            strUserId = node.get("userId").asText();
+            if(strUserId.isEmpty() || strUserId == null) {
+                System.err.println("Failed to get a user ID from ESPRESSO.");
+                System.exit(1);
+            }
+            setEspressoUserId(strUserId);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static void extractSearchPartyAccessDetails(String strAuthResponse) {
+        String strAuth = "";
+        String strUserId = "";
+
+        if (strAuthResponse.isEmpty()) {
+            return;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(strAuthResponse);
+            strAuth = node.get("accessToken").asText();
+            if(strAuth.isEmpty() || strAuth == null) {
+                System.err.println("User authentication failed.");
+                System.exit(1);
+            }
+            setSearchPartyAccessToken(strAuth);
+            strUserId = node.get("userId").asText();
+            if(strUserId.isEmpty() || strUserId == null) {
+                System.err.println("Failed to get a user ID from ESPRESSO.");
+                System.exit(1);
+            }
+            setSearchPartyUserId(strUserId);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    // there's no reason this has to have its own function, apart from readability
+    // we get two sets of creds: the search party's, and espresso's
+    private static String logIntoEspresso() {
+        String strRet = "";
+
+        URL url = null;
+        try {
+            url = new URL(ESPRESSO_URL.concat(AUTHTOKEN_PATH));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        HttpURLConnection con = null;
+        try {
+            con = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            con.setRequestMethod("GET");
+        } catch (ProtocolException e) {
+            throw new RuntimeException(e);
+        }
+
+        con.setRequestProperty("Accept", "application/json");
+        con.setRequestProperty("username", ESPRESSO_USERNAME);
+        con.setRequestProperty("password", ESPRESSO_PASSWORD);
+
+        int responseCode = 0;
+        try {
+            responseCode = con.getResponseCode();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Response Code: " + responseCode);
+
+        BufferedReader in = null;
+        try {
+            in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        String inputLine;
+        StringBuilder response = new StringBuilder();
+
+        while (true) {
+            try {
+                if (!((inputLine = in.readLine()) != null)) break;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            response.append(inputLine);
+        }
+        try {
+            in.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        strRet = response.toString();
+        System.out.println("Response: " + strRet);
+        return strRet;
+    }
+
+    private static String authenticateSearchParty() {
+        String strRet = "";
+
+        URL url = null;
+        try {
+            url = new URL("https://".concat(getSearchPartyUsername()).concat(getSearchPartyDomain()).concat(AUTHTOKEN_PATH));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        HttpURLConnection con = null;
+        try {
+            con = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            con.setRequestMethod("GET");
+        } catch (ProtocolException e) {
+            throw new RuntimeException(e);
+        }
+
+        con.setRequestProperty("Accept", "application/json");
+        con.setRequestProperty("username", getSearchPartyUsername());
+        con.setRequestProperty("password", getSearchPartyPassword());
+
+        int responseCode = 0;
+        try {
+            responseCode = con.getResponseCode();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Response Code: " + responseCode);
+
+        BufferedReader in = null;
+        try {
+            in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        String inputLine;
+        StringBuilder response = new StringBuilder();
+
+        while (true) {
+            try {
+                if (!((inputLine = in.readLine()) != null)) break;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            response.append(inputLine);
+        }
+        try {
+            in.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        strRet = response.toString();
+        System.out.println("Response: " + strRet);
+        return strRet;
+    }
+
 
     /**
      * Searches the local file system offline, simulating a search first at network level,
      * then server level, then pod level.
+     * TODO adapt this from offline to online search
      *
      * @param strUUID The UUID of the search party.
      * @param queryStr The query string
@@ -85,18 +537,15 @@ public class Searcher {
         // then GET the everything from espresso/metaindex
         // then pull out the URLs into a list?
         // Parent folder where index files are kept
-        //String testSinkPath = "Dataswyfttestsink/";
+        String testSinkPath = "Dataswyfttestsink/";
         // Index folder for network index
-        //String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
+        String networkZipIndexFilePath = testSinkPath.concat("metaindex/");
         // Path to UUID-specific network-level index
-        //String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
-        // TODO here: log in to the ESPRESSO HAT
-        // TODO here: then set a constant for the endpoint
+        String UUIDSpecificNetworkIndexPath = networkZipIndexFilePath.concat(strUUID).concat("/");
         // Suffix denoting a network-level index file
         String networkZipIndexFileSuffix = "-servers.zip";
         // Full name of UUID-specific network index file
         String networkZipIndexFileName = strUUID.concat(networkZipIndexFileSuffix);
-        // TODO here: set the URL to the relevant network index to be GOTten
         // Full path to UUID-specific network index file
         String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
         // Output path for network-level search results
@@ -112,8 +561,8 @@ public class Searcher {
         String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(networkLevelSearchResultsSuffix));
 
         // do a network-level search
-        // TODO here just do the search
-        List<String> foundServers = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
+        // TODO adapt to online search, once the file permissions are set
+        //List<String> foundServers = conductSearch(fullPathToUUIDSpecificNetworkIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResults);
 
         // Now we've pinpointed the servers and pods containing results
         /*HashMap<String, List<String>> podsInServers = new HashMap<>();
@@ -201,7 +650,7 @@ public class Searcher {
 
     /**
      * Actually do the search. This is an offline search of the local file system.
-     * @param fullPathToIndex Full path to the index file on which to do the query
+     * @param zipStream Input stream from the index file from which to create the zip stream
      * @param queryStr The query string
      * @param initialRetrieve
      * @param model
@@ -211,21 +660,10 @@ public class Searcher {
      * @param resultsPath Path to search results output file
      * @return A List of Strings representing the locations (servers, pods, files) where results were found
      */
-    private static List<String> conductSearch(String fullPathToIndex, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
-        RAMDirectory ramDirectory = new RAMDirectory();
-        InputStream zipStream = null;
+    private static List<String> conductSearch(InputStream zipStream, String queryStr, int initialRetrieve, String model, String layer, int topK, String strUUID, String resultsPath) {
+        if(zipStream == null) return null;
 
-        File f = new File(fullPathToIndex);
-        // if there isn't an index file for this user, there won't be any query results
-        if(!f.exists() || f.isDirectory()) {
-            //System.out.println("No results for query " + queryStr + " for UUID " + strUUID);
-            return null;
-        }
-        try {
-           zipStream = new FileInputStream(fullPathToIndex);
-        } catch(FileNotFoundException e) {
-            e.printStackTrace();
-        }
+        RAMDirectory ramDirectory = new RAMDirectory();
 
         try (ZipInputStream zis = new ZipInputStream(zipStream)) {
             ZipEntry entry;
