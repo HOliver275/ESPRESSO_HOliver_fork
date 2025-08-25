@@ -50,7 +50,7 @@ public class Searcher {
     private static final String ESPRESSO_METAINDEX_ENDPOINT = "api/v2.6/data/espresso/metaindex";
     private static final String POD_LEVEL_IDX_FILE_SUFFIX = "";
     private static final String POD_LEVEL_RESULTS_SUFFIX = "-podlevel-searchresults.json";
-    private static final String DIRECT_POD_SEARCH_FOLDER = "direct_to_pod/";
+    private static final String EXHAUSTIVE_SEARCH_RESULTS_FOLDER = "exhaustive_search_results/";
     private static final String SEARCH_RESULTS_PATH = "searchresults/";
     private static final String[] HAT_DOMAINS = new String[]{".hubofallthings.net/", ".hubat.net/"};
 
@@ -62,6 +62,8 @@ public class Searcher {
     private static String searchPartyDomain = "";
 
     private static ArrayList<String> allEspressoServers = null;
+    private static HashMap<String, String> espressoServerCreds = null;
+    private static ArrayList<String> allRegisteredHATs = null;
 
 
     public static void setEspressoAccessToken(String strAccessToken) {
@@ -134,6 +136,22 @@ public class Searcher {
 
     public static ArrayList<String> getAllEspressoServers() {
         return allEspressoServers;
+    }
+
+    public static void setEspressoServerCreds(HashMap<String, String> serverCreds) {
+        espressoServerCreds = serverCreds;
+    }
+
+    public static HashMap<String, String> getEspressoServerCreds() {
+        return espressoServerCreds;
+    }
+
+    public static void setAllRegisteredHATs(ArrayList<String> listRegisteredHATs) {
+        allRegisteredHATs = listRegisteredHATs;
+    }
+
+    public static ArrayList<String> getAllRegisteredHATs() {
+        return allRegisteredHATs;
     }
 
     public static void main(String[] args) throws Exception {
@@ -219,9 +237,12 @@ public class Searcher {
         if (!strCreds.isEmpty()) {
             // get a list of all ESPRESSO servers
             listAllEspressoServers();
+            // map all the ESPRESSO server credentials so we don't have to login repeatedly
+            mapEspressoServerCreds();
+
             // until file permissions are set up, do a direct pod search
-            directPodSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
-            directPodSearch("public", queryStr, initialRetrieve, model, layer, topK);
+            exhaustiveSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
+            exhaustiveSearch("public", queryStr, initialRetrieve, model, layer, topK);
             // normally we would search from network level down, but we need to set the file permissions
             // so the indexing will be accurate
             //searchByLevels(strUUID, queryStr, initialRetrieve, model, layer, topK);
@@ -230,19 +251,28 @@ public class Searcher {
         }
     }
 
-    // searching pods directly, not going through the higher levels
-    private static void directPodSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK) {
+    // exhaustive pod search
+    private static void exhaustiveSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK) {
         if (strUUID.isEmpty()) {
             return;
         }
 
         InputStream instr = null;
 
-        List<String> podsToSearch = new ArrayList<String>();
-        // hard coded list of pods
-        podsToSearch.add("https://blorf.hubofallthings.net/");
+        // Get the list of registered HATs
+        ArrayList<String> podsToSearch = getAllRegisteredHATs();
+        if (podsToSearch == null || podsToSearch.isEmpty()) {
+            // if the list is empty, initialize it
+            listAllRegisteredHATs();
+            podsToSearch = getAllRegisteredHATs();
+            // if the list is still empty, there's nothing to search
+            if (podsToSearch == null || podsToSearch.isEmpty()) {
+                System.err.println("Failed to find any registered HATs.");
+                System.exit(1);
+            }
+        }
 
-        String podLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(DIRECT_POD_SEARCH_FOLDER).concat(strUUID).concat("/");
+        String podLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(EXHAUSTIVE_SEARCH_RESULTS_FOLDER).concat(strUUID).concat("/");
         String podname = "";
         // Full path to UUID-specific pod-level results output
         String podLevelSearchResultsPath = "";
@@ -270,12 +300,14 @@ public class Searcher {
                         // which is what the results would look like to the search party
                         String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
                         try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
-                            for (String file : foundFiles) {
-                                // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
-                                String fileToGet = (podsToSearch.get(i)).concat(ESPRESSO_FILE_PATH).concat(file);
+                            if(foundFiles != null && !foundFiles.isEmpty()) {
+                                for (String file : foundFiles) {
+                                    // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
+                                    String fileToGet = (podsToSearch.get(i)).concat(ESPRESSO_FILE_PATH).concat(file);
 
-                                writer.write(fileToGet);
-                                writer.newLine();
+                                    writer.write(fileToGet);
+                                    writer.newLine();
+                                }
                             }
                             // close the simple results file
                             writer.close();
@@ -346,27 +378,150 @@ public class Searcher {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode node = mapper.readTree(strResp);
             theServers = (ArrayList<String>) node.findValuesAsText("url");
-            //strAuth = node.get("accessToken").asText();
-            if(theServers.isEmpty() || theServers == null) {
+
+            if(theServers == null || theServers.isEmpty()) {
                 System.err.println("Failed to find any server-level ESPRESSO HATs.");
-                //System.exit(1);
             }
-            /*setEspressoAccessToken(strAuth);
-            strUserId = node.get("userId").asText();
-            if(strUserId.isEmpty() || strUserId == null) {
-                System.err.println("Failed to get a user ID from ESPRESSO.");
-                System.exit(1);
-            }*/
             setAllEspressoServers(theServers);
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
     }
 
+    private static void mapEspressoServerCreds() {
+        String strUrl = "";
+
+        // list of ESPRESSO servers
+        ArrayList<String> theServers = getAllEspressoServers();
+        // map of ESPRESSO servers and their credentials
+        HashMap<String, String> serversAndCreds = new HashMap<String, String>();
+
+        // go round all the ESPRESSO servers
+        for(int i=0; i<theServers.size(); i++) {
+            // get all the ESPRESSO server-level HATs registered at network level
+            URL url = null;
+
+            strUrl = theServers.get(i);
+            // extract the username so we can use it to log in
+            String strUsername = getUsernameFromURL(strUrl);
+
+            if (!strUrl.endsWith("/")) {
+                strUrl = strUrl.concat("/");
+            }
+
+            // log into the ESPRESSO server
+            String strAuthResponse = logIntoEspressoServer(strUrl, strUsername);
+            if (strAuthResponse.isEmpty()) {
+                continue;
+            }
+            // save the ESPRESSO server creds while we're at it, as we'll need them again
+            serversAndCreds.put(strUrl, strAuthResponse);
+        }
+
+        // save the server credentials to use again
+        setEspressoServerCreds(serversAndCreds);
+    }
+
+    private static void listAllRegisteredHATs() {
+        String strUrl = "";
+        // list of registered HATs
+        ArrayList<String> theHATs = new ArrayList<String>();
+        // list of ESPRESSO servers
+        ArrayList<String> theServers = getAllEspressoServers();
+
+        // map of ESPRESSO servers and their credentials
+        HashMap<String, String> serversAndCreds = getEspressoServerCreds();
+
+        // go round all the ESPRESSO servers
+        for (Map.Entry<String, String> entry : serversAndCreds.entrySet()) {
+            // get all the ESPRESSO server-level HATs registered at network level
+            URL url = null;
+
+            strUrl = entry.getKey();
+            String strCreds = entry.getValue();
+
+            if (!strUrl.endsWith("/")) {
+                strUrl = strUrl.concat("/");
+            }
+
+            // get the auth token for this ESPRESSO server
+            String strAuthToken = extractAuthToken(strCreds);
+            if (strAuthToken.isEmpty()) {
+                return;
+            }
+
+            // now get the endpoint for the ESPRESSO metaindex
+            String strEndpoint = strUrl.concat(ESPRESSO_METAINDEX_ENDPOINT);
+
+            try {
+                url = new URL(strEndpoint);
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+
+            HttpURLConnection con = null;
+
+            try {
+                con = (HttpURLConnection) url.openConnection();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+            try {
+                con.setRequestMethod("GET");
+            } catch (ProtocolException e) {
+                throw new RuntimeException(e);
+            }
+
+            con.setRequestProperty("Content-Type", "application/json");
+            con.setRequestProperty("x-auth-token", strAuthToken);
+
+            int responseCode = 0;
+            try {
+                responseCode = con.getResponseCode();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("Response Code: " + responseCode);
+
+            // I'm not OK, you're not OK
+            if(responseCode != 200) {
+                return;
+            }
+
+            // get the response
+            String strResp = returnResponseAsString(con);
+            if (strResp.isEmpty()) {
+                return;
+            }
+
+            try {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode node = mapper.readTree(strResp);
+                // get all the HATs registered on tis server
+                ArrayList<String> theseHATs = (ArrayList<String>) node.findValuesAsText("url");
+                if(theseHATs == null || theseHATs.isEmpty()) {
+                    System.err.println("Failed to find any ESPRESSO HATs on this server.");
+                }
+                // add the HATs on this server to the list
+                theHATs.addAll(theseHATs);
+            } catch (JsonProcessingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        // save the list of registered HATs
+        setAllRegisteredHATs(theHATs);
+    }
+
     private static InputStream fetchZipIndexFile(String strHatUrl, String strUUID, String strLevelSuffix) {
         if (strHatUrl.isEmpty()) {
             System.err.println("No HAT URL provided.");
             System.exit(1);
+        }
+
+        if (!strHatUrl.endsWith("/")) {
+            strHatUrl = strHatUrl.concat("/");
         }
 
         //String strSearchUrl = strHatUrl.concat(ESPRESSO_FILE_CONTENT_PATH).concat(ESPRESSO_IDX_FILE_PREFIX).concat(ESPRESSO_PUBLIC_IDX_FILENAME_STEM).concat(strLevelSuffix).concat(ESPRESSO_IDX_FILE_TYPE);
@@ -440,13 +595,13 @@ public class Searcher {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode node = mapper.readTree(strAuthResponse);
             strAuth = node.get("accessToken").asText();
-            if(strAuth.isEmpty() || strAuth == null) {
+            if(strAuth == null || strAuth.isEmpty()) {
                 System.err.println("Failed to get an access token from ESPRESSO.");
                 System.exit(1);
             }
             setEspressoAccessToken(strAuth);
             strUserId = node.get("userId").asText();
-            if(strUserId.isEmpty() || strUserId == null) {
+            if(strUserId == null || strUserId.isEmpty()) {
                 System.err.println("Failed to get a user ID from ESPRESSO.");
                 System.exit(1);
             }
@@ -468,13 +623,13 @@ public class Searcher {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode node = mapper.readTree(strAuthResponse);
             strAuth = node.get("accessToken").asText();
-            if(strAuth.isEmpty() || strAuth == null) {
+            if(strAuth == null || strAuth.isEmpty()) {
                 System.err.println("User authentication failed.");
                 System.exit(1);
             }
             setSearchPartyAccessToken(strAuth);
             strUserId = node.get("userId").asText();
-            if(strUserId.isEmpty() || strUserId == null) {
+            if(strUserId == null || strUserId.isEmpty()) {
                 System.err.println("Failed to get a user ID from ESPRESSO.");
                 System.exit(1);
             }
@@ -482,6 +637,49 @@ public class Searcher {
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static String extractAuthToken(String strAuthResponse) {
+        String strAuth = "";
+
+        if (strAuthResponse.isEmpty()) {
+            return strAuth;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(strAuthResponse);
+            strAuth = node.get("accessToken").asText();
+            if(strAuth == null || strAuth.isEmpty()) {
+                System.err.println("User authentication failed.");
+                System.exit(1);
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
+        return strAuth;
+    }
+
+    private static String extractUserId(String strAuthResponse) {
+        String strUserId = "";
+
+        if (strAuthResponse.isEmpty()) {
+            return strUserId;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(strAuthResponse);
+            strUserId = node.get("userId").asText();
+            if(strUserId == null || strUserId.isEmpty()) {
+                System.err.println("Could not extract userId.");
+                System.exit(1);
+            }
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+        return strUserId;
     }
 
     // there's no reason this has to have its own function, apart from readability
@@ -519,33 +717,68 @@ public class Searcher {
         }
         System.out.println("Response Code: " + responseCode);
 
-        /* BufferedReader in = null;
-        try {
-            in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        String inputLine;
-        StringBuilder response = new StringBuilder();
-
-        while (true) {
-            try {
-                if (!((inputLine = in.readLine()) != null)) break;
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-            response.append(inputLine);
-        }
-        try {
-            in.close();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        strRet = response.toString();
-        System.out.println("Response: " + strRet); */
         strRet = returnResponseAsString(con);
         return strRet;
+    }
+
+    private static String logIntoEspressoServer(String strUrl, String strUsername) {
+        String strRet = "";
+
+        if (strUrl.isEmpty()) {
+            return strRet;
+        }
+
+        URL url = null;
+        try {
+            url = new URL(strUrl.concat(AUTHTOKEN_PATH));
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+        HttpURLConnection con = null;
+        try {
+            con = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        try {
+            con.setRequestMethod("GET");
+        } catch (ProtocolException e) {
+            throw new RuntimeException(e);
+        }
+
+        con.setRequestProperty("Accept", "application/json");
+        con.setRequestProperty("username", strUsername);
+        con.setRequestProperty("password", ESPRESSO_PASSWORD);
+
+        int responseCode = 0;
+        try {
+            responseCode = con.getResponseCode();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Response Code: " + responseCode);
+
+        strRet = returnResponseAsString(con);
+        return strRet;
+    }
+
+    private static String getUsernameFromURL(String strUrl) {
+        String strUsername = "";
+
+        if (strUrl.isEmpty()) return strUsername;
+
+        if (strUrl.startsWith("http")) {
+            int pos = strUrl.indexOf("://");
+            if (pos != -1) {
+                strUsername = strUrl.substring(pos + 3);
+                pos = strUsername.indexOf(".");
+                if (pos != -1) {
+                    strUsername = strUsername.substring(0, pos);
+                }
+            }
+        }
+
+        return strUsername;
     }
 
     private static String returnResponseAsString(HttpURLConnection con) {
