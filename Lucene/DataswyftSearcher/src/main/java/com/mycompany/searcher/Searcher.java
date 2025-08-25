@@ -47,6 +47,7 @@ public class Searcher {
     private static final String ESPRESSO_FILE_PATH = "api/v2.6/files/";
     private static final String ESPRESSO_FILE_CONTENT_PATH = "api/v2.6/files/content/";
     private static final String ESPRESSO_FILE_METADATA_PATH = "api/v2.6/files/file/";
+    private static final String ESPRESSO_METAINDEX_ENDPOINT = "api/v2.6/data/espresso/metaindex";
     private static final String POD_LEVEL_IDX_FILE_SUFFIX = "";
     private static final String POD_LEVEL_RESULTS_SUFFIX = "-podlevel-searchresults.json";
     private static final String DIRECT_POD_SEARCH_FOLDER = "direct_to_pod/";
@@ -59,6 +60,8 @@ public class Searcher {
     private static String searchPartyAccessToken = "";
     private static String searchPartyUserId = "";
     private static String searchPartyDomain = "";
+
+    private static ArrayList<String> allEspressoServers = null;
 
 
     public static void setEspressoAccessToken(String strAccessToken) {
@@ -123,6 +126,14 @@ public class Searcher {
 
     public static String getSearchPartyDomain() {
         return searchPartyDomain;
+    }
+
+    public static void setAllEspressoServers(ArrayList<String> listEspressoServers) {
+        allEspressoServers = listEspressoServers;
+    }
+
+    public static ArrayList<String> getAllEspressoServers() {
+        return allEspressoServers;
     }
 
     public static void main(String[] args) throws Exception {
@@ -206,6 +217,8 @@ public class Searcher {
         // get the ESPRESSO access token out of there
         extractEspressoAccessDetails(strCreds);
         if (!strCreds.isEmpty()) {
+            // get a list of all ESPRESSO servers
+            listAllEspressoServers();
             // until file permissions are set up, do a direct pod search
             directPodSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
             directPodSearch("public", queryStr, initialRetrieve, model, layer, topK);
@@ -272,6 +285,81 @@ public class Searcher {
                     }
                 }
             }
+        }
+    }
+
+    private static void listAllEspressoServers() {
+        String strEndpoint = ESPRESSO_URL.concat(ESPRESSO_METAINDEX_ENDPOINT);
+        ArrayList<String> theServers = null;
+
+        // get all the ESPRESSO server-level HATs registered at network level
+        URL url = null;
+
+        try {
+            url = new URL(strEndpoint);
+        } catch (MalformedURLException e) {
+            throw new RuntimeException(e);
+        }
+
+        HttpURLConnection con = null;
+
+        try {
+            con = (HttpURLConnection) url.openConnection();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        try {
+            con.setRequestMethod("GET");
+        } catch (ProtocolException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Use the search party's credentials to do the search
+        String strAuthToken = getEspressoAccessToken();
+
+        con.setRequestProperty("Content-Type", "application/json");
+        con.setRequestProperty("x-auth-token", strAuthToken);
+
+        int responseCode = 0;
+        try {
+            responseCode = con.getResponseCode();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("Response Code: " + responseCode);
+
+        // I'm not OK, you're not OK
+        if(responseCode != 200) {
+            return;
+        }
+
+        String strResp = returnResponseAsString(con);
+
+        // if we found the file, extract the HATs into an ArrayList
+
+        if (strResp.isEmpty()) {
+            return;
+        }
+
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode node = mapper.readTree(strResp);
+            theServers = (ArrayList<String>) node.findValuesAsText("url");
+            //strAuth = node.get("accessToken").asText();
+            if(theServers.isEmpty() || theServers == null) {
+                System.err.println("Failed to find any server-level ESPRESSO HATs.");
+                //System.exit(1);
+            }
+            /*setEspressoAccessToken(strAuth);
+            strUserId = node.get("userId").asText();
+            if(strUserId.isEmpty() || strUserId == null) {
+                System.err.println("Failed to get a user ID from ESPRESSO.");
+                System.exit(1);
+            }*/
+            setAllEspressoServers(theServers);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -431,7 +519,7 @@ public class Searcher {
         }
         System.out.println("Response Code: " + responseCode);
 
-        BufferedReader in = null;
+        /* BufferedReader in = null;
         try {
             in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         } catch (IOException e) {
@@ -455,6 +543,41 @@ public class Searcher {
         }
 
         strRet = response.toString();
+        System.out.println("Response: " + strRet); */
+        strRet = returnResponseAsString(con);
+        return strRet;
+    }
+
+    private static String returnResponseAsString(HttpURLConnection con) {
+        if (con == null) {
+            System.err.println("No connection from which to return response as string.");
+            return null;
+        }
+
+        BufferedReader in = null;
+        try {
+            in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        String inputLine;
+        StringBuilder response = new StringBuilder();
+
+        while (true) {
+            try {
+                if (!((inputLine = in.readLine()) != null)) break;
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            response.append(inputLine);
+        }
+        try {
+            in.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        String strRet = response.toString();
         System.out.println("Response: " + strRet);
         return strRet;
     }
