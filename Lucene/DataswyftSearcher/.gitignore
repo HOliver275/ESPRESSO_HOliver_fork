@@ -1,6 +1,8 @@
 **/**/.DS_Store
 Dataswyfttestsink/
 Dataswyfttestsource/
+**/WebId-Specific-Indexer/Dataswyfttestsource_full/
+**/WebId-Specific-Indexer/Dataswyfttestsink_full/
 dependency-reduced-pom.xml
 Index.jar.bak
 lucenetestsink/

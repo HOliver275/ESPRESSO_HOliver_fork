@@ -149,7 +149,7 @@ import json
 # Convert dictionary to JSON string
 #dictionary_json = json.dumps(dictionary)
 # Index.jar expects a file path
-dictionary_json = 'testdataswyft.json'
+dictionary_json = 'testdataswyft_limited.json'
 # HO 08/07/2025 END ******
 
 # Specify source and output directories
