@@ -1,0 +1,38 @@
+{
+  "67037c00-ed18-4c60-b261-849109b71697": {
+    "https://espressoserver1.hubofallthings.net/": {
+      "https://fredespresso.hubofallthings.net/api/v2.6/files/": ["file/fred.txt","content/fred.txt"]
+    }
+  },
+  "4bf455c4-0100-4634-a80c-6be19679e4b1": {
+    "https://espressoserver1.hubofallthings.net/": {
+      "https://gemmaespresso.hubofallthings.net/api/v2.6/files/": ["file/gemma.txt","content/gemma.txt"]
+    }
+  },
+  "386f54de-7845-466c-99a6-4df87fb539ad": {
+    "https://espressoserver2.hubofallthings.net/": {
+      "https://harryespresso.hubofallthings.net/api/v2.6/files/": ["file/harry.txt","content/harry.txt"]
+    }
+  },
+  "3cb67db3-d41d-4a0f-a8ac-57359b3cc913": {
+    "https://espressoserver2.hubofallthings.net/": {
+      "https://imogenespresso.hubofallthings.net/api/v2.6/files/": ["file/imogen.txt","content/imogen.txt"]
+    }
+  },
+  "36ea0038-9e62-4cd6-b999-3381cc7551e2": {
+    "https://espressoserver2.hubofallthings.net/": {
+      "https://jimmyespresso.hubofallthings.net/api/v2.6/files/": ["file/jimmy.txt","content/jimmy.txt"]
+    }
+  },
+  "public": {
+    "https://espressoserver1.hubofallthings.net/": {
+      "https://fredespresso.hubofallthings.net/api/v2.6/files/": ["file/stormy.txt","content/stormy.txt"],
+      "https://gemmaespresso.hubofallthings.net/api/v2.6/files/": ["file/stormy.txt","content/stormy.txt"]
+    },
+    "https://espressoserver2.hubofallthings.net/": {
+      "https://harryespresso.hubofallthings.net/api/v2.6/files/": ["file/stormy.txt","content/stormy.txt"],
+      "https://imogenespresso.hubofallthings.net/api/v2.6/files/": ["file/stormy.txt","content/stormy.txt"],
+      "https://jimmyespresso.hubofallthings.net/api/v2.6/files/": ["file/stormy.txt","content/stormy.txt"]
+    }
+  }
+}
