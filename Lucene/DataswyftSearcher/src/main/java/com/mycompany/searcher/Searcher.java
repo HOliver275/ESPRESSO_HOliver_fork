@@ -57,6 +57,7 @@ public class Searcher {
     private static final String SEARCH_RESULTS_PATH = "searchresults/";
     private static final String NETWORK_SEARCH_RESULTS_PATH = "networksearchresults/";
     private static final String SERVER_SEARCH_RESULTS_PATH = "serversearchresults/";
+    private static final String POD_SEARCH_RESULTS_PATH = "podsearchresults/";
     private static final String NETWORK_SEARCH_RESULTS_FILE_SUFFIX = "-networklevel-searchresults.json";
     private static final String SERVER_SEARCH_RESULTS_FILE_SUFFIX = "-serverlevel-searchresults.json";
     private static final String[] HAT_DOMAINS = new String[]{".hubofallthings.net/", ".hubat.net/"};
@@ -329,6 +330,78 @@ public class Searcher {
         }
     }
 
+    // selective pod search
+    private static void selectivePodSearch(String strUUID, String queryStr, int initialRetrieve, String model, String layer, int topK, ArrayList<String> podsToSearch) {
+        if (strUUID.isEmpty()) {
+            return;
+        }
+
+        InputStream instr = null;
+
+        // Get the list of registered HATs
+        //ArrayList<String> podsToSearch = getAllRegisteredHATs();
+        if (podsToSearch == null || podsToSearch.isEmpty()) {
+            // if the list is empty, initialize it
+            listAllRegisteredHATs();
+            podsToSearch = getAllRegisteredHATs();
+            // if the list is still empty, there's nothing to search
+            if (podsToSearch == null || podsToSearch.isEmpty()) {
+                System.err.println("Failed to find any registered HATs.");
+                System.exit(1);
+            }
+        }
+
+        String podLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(POD_SEARCH_RESULTS_PATH).concat(strUUID).concat("/");
+        String podname = "";
+        // Full path to UUID-specific pod-level results output
+        String podLevelSearchResultsPath = "";
+        String UUIDSpecificPodLevelResults = "";
+
+        for (int i = 0; i < podsToSearch.size(); i++) {
+            instr = fetchZipIndexFile(podsToSearch.get(i), strUUID, POD_LEVEL_IDX_FILE_SUFFIX, getSearchPartyAccessToken());
+            if (instr != null) {
+                // DEV output the search results to the local file structure
+                // results of a direct pod search get their owm folder
+                if (podsToSearch.get(i).startsWith("http")) {
+                    int pos = podsToSearch.get(i).indexOf("://");
+                    if (pos != -1) {
+                        podname = podsToSearch.get(i).substring(pos + 3);
+                        pos = podname.indexOf("/");
+                        podname = podname.substring(0, pos);
+                        //podLevelSearchResultsPath = podLevelUUIDSpecificResultsPath.concat(podname);
+                        // if the output folders don't exist, create them.
+                        File podresdir = new File(podLevelUUIDSpecificResultsPath);
+                        if (!podresdir.exists()) {
+                            podresdir.mkdirs();
+                        }
+                        // Full path of UUID-specific pod-level search results file
+                        UUIDSpecificPodLevelResults = podLevelUUIDSpecificResultsPath.concat(strUUID.concat(POD_LEVEL_RESULTS_SUFFIX));
+                        List<String> foundFiles = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
+                        // Output links to search results listed in a text file
+                        // which is what the results would look like to the search party
+                        String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
+                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
+                            if(foundFiles != null && !foundFiles.isEmpty()) {
+                                for (String file : foundFiles) {
+                                    // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
+                                    String fileToGet = (podsToSearch.get(i)).concat(DATASWYFT_FILE_PATH).concat(file);
+
+                                    writer.write(fileToGet);
+                                    writer.newLine();
+                                }
+                            }
+                            // close the simple results file
+                            writer.close();
+                        } catch (IOException ex) {
+                            ex.printStackTrace();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
     private static void listAllEspressoServers() {
         String strEndpoint = ESPRESSO_URL.concat(ESPRESSO_METAINDEX_ENDPOINT);
         ArrayList<String> theServers = null;
@@ -539,7 +612,13 @@ public class Searcher {
         String cleansedUserId = strUUID.replaceAll("-","");
         String strFileIdName = ESPRESSO_IDX_FILE_PREFIX.concat(cleansedUserId);
         String cleansedLevelSuffix = strLevelSuffix.replaceAll("-","");
-        String strSearchUrl = strHatUrl.concat(DATASWYFT_FILE_CONTENT_PATH).concat(strFileIdName).concat(cleansedLevelSuffix).concat(ESPRESSO_IDX_FILE_TYPE);
+        if (strHatUrl.endsWith(DATASWYFT_FILE_PATH)) {
+            strHatUrl = strHatUrl.concat("content/");
+        }
+        if (!strHatUrl.endsWith(DATASWYFT_FILE_CONTENT_PATH)) {
+            strHatUrl = strHatUrl.concat(DATASWYFT_FILE_CONTENT_PATH);
+        }
+        String strSearchUrl = strHatUrl.concat(strFileIdName).concat(cleansedLevelSuffix).concat(ESPRESSO_IDX_FILE_TYPE);
 
         // search for a public.zip index file
         URL url = null;
@@ -909,7 +988,7 @@ public class Searcher {
         // Full name of UUID-specific network index file
         String networkZipIndexFileName = strUUID.concat(NETWORK_LEVEL_IDX_FILE_SUFFIX);
         // hyphens will be stripped from the fileId
-        networkZipIndexFileName = networkZipIndexFileName.replaceAll("-","");
+        networkZipIndexFileName = networkZipIndexFileName.replaceAll("-", "");
         // Full path to UUID-specific network index file
         String fullPathToUUIDSpecificNetworkIndex = UUIDSpecificNetworkIndexPath.concat(networkZipIndexFileName);
         // Output path for network-level search results
@@ -930,162 +1009,63 @@ public class Searcher {
         InputStream instr = null;
 
         instr = fetchZipIndexFile(ESPRESSO_URL, strUUID, NETWORK_LEVEL_IDX_FILE_SUFFIX, getEspressoAccessToken());
-            if (instr != null) {
-                // DEV output the search results to the local file structure
-                networkLevelSearchResultsPath = UUIDSpecificNetworkLevelResults;
-                // if the output folders don't exist, create them.
-                netresdir = new File(networkLevelSearchResultsPath);
-                if (!netresdir.exists()) {
-                    netresdir.mkdirs();
-                }
-                List<String> foundServers = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, networkLevelSearchResultsPath);
+        if (instr != null) {
+            // DEV output the search results to the local file structure
+            networkLevelSearchResultsPath = UUIDSpecificNetworkLevelResults;
+            // if the output folders don't exist, create them.
+            netresdir = new File(networkLevelSearchResultsPath);
+            if (!netresdir.exists()) {
+                netresdir.mkdirs();
+            }
+            List<String> foundServers = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, networkLevelSearchResultsPath);
 
-                // look only in the servers where we know there are results
-                if ((foundServers != null) && (foundServers.size() > 0)) {
-                    // do a server-level search
-                    int numServers = foundServers.size();
-                    for (int i = 0; i < numServers; i++) {
-                        String serverLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(SERVER_SEARCH_RESULTS_PATH).concat(strUUID).concat("/");
-                        String servername = "";
-                        // Full path to UUID-specific server-level results output
-                        String serverLevelSearchResultsPath = "";
-                        String UUIDSpecificServerLevelResults = "";
+            // look only in the servers where we know there are results
+            ArrayList<String> podsToSearch = new ArrayList<String>();
+            if ((foundServers != null) && (foundServers.size() > 0)) {
+                // do a server-level search
+                int numServers = foundServers.size();
+                for (int i = 0; i < numServers; i++) {
+                    String serverLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(SERVER_SEARCH_RESULTS_PATH).concat(strUUID).concat("/");
+                    String servername = "";
+                    // Full path to UUID-specific server-level results output
+                    String serverLevelSearchResultsPath = "";
+                    String UUIDSpecificServerLevelResults = "";
 
-                        //for (int i = 0; i < serversToSearch.size(); i++) {
-                        String nextServer = foundServers.get(i);
-                        String servCreds = getEspressoServerCreds().get(nextServer);
-                        String servAuth = extractAuthToken(servCreds);
+                    //for (int i = 0; i < serversToSearch.size(); i++) {
+                    String nextServer = foundServers.get(i);
+                    String servCreds = getEspressoServerCreds().get(nextServer);
+                    String servAuth = extractAuthToken(servCreds);
 
-                        instr = fetchZipIndexFile(nextServer, strUUID, SERVER_LEVEL_IDX_FILE_SUFFIX, servAuth);
-                        if (instr != null) {
-                            // DEV output the search results to the local file structure
-                            if (foundServers.get(i).startsWith("http")) {
-                                int pos = foundServers.get(i).indexOf("://");
-                                if (pos != -1) {
-                                    servername = foundServers.get(i).substring(pos + 3);
-                                    serverLevelSearchResultsPath = serverLevelUUIDSpecificResultsPath.concat(servername);
-                                    // if the output folders don't exist, create them.
-                                    File servresdir = new File(serverLevelSearchResultsPath);
-                                    if (!servresdir.exists()) {
-                                        servresdir.mkdirs();
-                                    }
-                                    // Full path of UUID-specific server-level search results file
-                                    UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(SERVER_LEVEL_RESULTS_SUFFIX));
-                                    /*List<String> foundFiles = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
-                                    // Output links to search results listed in a text file
-                                    // which is what the results would look like to the search party
-                                    String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
-                                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
-                                        if(foundFiles != null && !foundFiles.isEmpty()) {
-                                            for (String file : foundFiles) {
-                                                // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
-                                                String fileToGet = (podsToSearch.get(i)).concat(DATASWYFT_FILE_PATH).concat(file);
-
-                                                writer.write(fileToGet);
-                                                writer.newLine();
-                                            }
-                                        }
-                                        // close the simple results file
-                                        writer.close();
-                                    } catch (IOException ex) {
-                                        ex.printStackTrace();
-                                    }*/
+                    instr = fetchZipIndexFile(nextServer, strUUID, SERVER_LEVEL_IDX_FILE_SUFFIX, servAuth);
+                    if (instr != null) {
+                        // DEV output the search results to the local file structure
+                        if (foundServers.get(i).startsWith("http")) {
+                            int pos = foundServers.get(i).indexOf("://");
+                            if (pos != -1) {
+                                servername = foundServers.get(i).substring(pos + 3);
+                                serverLevelSearchResultsPath = serverLevelUUIDSpecificResultsPath.concat(servername);
+                                // if the output folders don't exist, create them.
+                                File servresdir = new File(serverLevelSearchResultsPath);
+                                if (!servresdir.exists()) {
+                                    servresdir.mkdirs();
+                                }
+                                // Full path of UUID-specific server-level search results file
+                                UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(SERVER_LEVEL_RESULTS_SUFFIX));
+                                // List of pods containing search results
+                                List<String> foundPods = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
+                                if ((foundPods != null) && (foundPods.size() > 0)) {
+                                    //podsInServers.put(foundServers.get(i), foundPods);
+                                    podsToSearch.addAll(foundPods);
                                 }
                             }
                         }
-                        //}
-
-                    }
-
-                }
-            }
-
-
-
-
-
-        // Now we've pinpointed the servers and pods containing results
-        /*HashMap<String, List<String>> podsInServers = new HashMap<>();
-        // no point looking if there were no results
-        // otherwise look only in the servers where we know there are results
-        if ((foundServers != null) && (foundServers.size() > 0)) {
-            // do a server-level search
-            int numServers = foundServers.size();
-            for (int i = 0; i < numServers; i++) {
-                // Path to folder where server-level index files are kept
-                String serverZipIndexFilePath = testSinkPath.concat(foundServers.get(i).concat("metaindex/"));
-                // Path to UUID-specific server-level index
-                String UUIDSpecificServerIndexPath = serverZipIndexFilePath.concat(strUUID).concat("/");
-                // Suffix denoting a server-level index file
-                String serverZipIndexFileSuffix = "-pods.zip";
-                // Full name of UUID-specific server-level index file
-                String serverZipIndexFileName = strUUID.concat(serverZipIndexFileSuffix);
-                // Full path to UUID-specific server-level index file
-                String fullPathToUUIDSpecificServerIndex = UUIDSpecificServerIndexPath.concat(serverZipIndexFileName);
-                // Output folder of server-level search results
-                String serverLevelSearchResultsPath = "searchresults/serverlevel/".concat(foundServers.get(i));
-                // Create the output folders if they don't already exist
-                File servresdir = new File(serverLevelSearchResultsPath);
-                if (!servresdir.exists()) {
-                    servresdir.mkdirs();
-                }
-                // Suffix denoting server-level search results file
-                String serverLevelSearchResultsSuffix = "-serverlevel-searchresults.json";
-                // Full path to UUID-specific server-level search results
-                String UUIDSpecificServerLevelResults = serverLevelSearchResultsPath.concat(strUUID.concat(serverLevelSearchResultsSuffix));
-                // List of pods containing search results
-                List<String> foundPods = conductSearch(fullPathToUUIDSpecificServerIndex, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificServerLevelResults);
-                if((foundPods != null) && (foundPods.size() > 0)) {
-                    podsInServers.put(foundServers.get(i), foundPods);
-                }
-
-        //}
-        // search the pods now
-        for (Map.Entry<String, List<String>> entry : podsInServers.entrySet()) {
-            if(entry.getValue().size() != 0) {
-                // Path to pod-level index files
-                String serverPath = testSinkPath.concat(entry.getKey());
-                // List of pods that contain results
-                List<String> podsOnServer = entry.getValue();
-                for(String pod : podsOnServer) {
-                    // Path to pod index folder
-                    String podIndexPath = serverPath.concat(pod.concat("/metaindex/"));
-                    // Path to UUID-specific pod index file
-                    String UUIDSpecificPodIndexPath = podIndexPath.concat(strUUID).concat(".zip");
-                    // Path to UUID-specific pod-level results output folder
-                    String podLevelUUIDSpecificResultsPath = "searchresults/podlevel/".concat(strUUID).concat("/");
-                    // Full path to UUID-specific pod-level results output
-                    String podLevelSearchResultsPath = podLevelUUIDSpecificResultsPath.concat(entry.getKey()).concat(pod);
-                    // if the output folders don't exist, create them.
-                    File podresdir = new File(podLevelSearchResultsPath);
-                    if (!podresdir.exists()) {
-                        podresdir.mkdirs();
-                    }
-                    // Suffix denoting a pod-level search results file
-                    String podLevelSearchResultsSuffix = "-podlevel-searchresults.json";
-                    // Full path of UUID-specific pod-level search results file
-                    String UUIDSpecificPodLevelResults = podLevelSearchResultsPath.concat("/").concat(strUUID.concat(podLevelSearchResultsSuffix));
-
-                    // Now search the pods for the actual files containing results
-                    List<String> foundFiles = conductSearch(UUIDSpecificPodIndexPath, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
-                    // Output links to search results listed in a text file
-                    String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
-                    try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
-                        for (String file : foundFiles) {
-                            // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
-                            String fileToGet = "https://".concat(pod).concat("/api/v2.6/files/").concat(file);
-
-                            writer.write(fileToGet);
-                            writer.newLine();
-                        }
-                        // close the simple results file
-                        writer.close();
-                    } catch (IOException ex) {
-                            ex.printStackTrace();
                     }
                 }
             }
-        }*/
+
+            selectivePodSearch(strUUID, queryStr, initialRetrieve, model, layer, topK, podsToSearch);
+        }
+
     }
 
     /**
