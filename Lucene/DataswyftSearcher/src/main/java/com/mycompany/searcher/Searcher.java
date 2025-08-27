@@ -34,7 +34,7 @@ public class Searcher {
     private static String espressoAccessToken = "";
     private static String espressoUserId = "";
     private static final String ESPRESSO_USERNAME = "espressohubofallthing";
-    private static final String ESPRESSO_PASSWORD = "blorf";
+    private static final String ESPRESSO_PASSWORD = "E6pr4661yourself_hTa";
     private static final String ESPRESSO_URL = "https://espressohubofallthing.hubofallthings.net/";
     // DEV
     //private static final String ESPRESSO_USERNAME = "espressohubofallthfjs";
@@ -251,8 +251,8 @@ public class Searcher {
             mapEspressoServerCreds();
 
             // until file permissions are set up, do a direct pod search
-            //exhaustiveSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
-            //exhaustiveSearch("public", queryStr, initialRetrieve, model, layer, topK);
+            exhaustiveSearch(strUUID, queryStr, initialRetrieve, model, layer, topK);
+            exhaustiveSearch("public", queryStr, initialRetrieve, model, layer, topK);
             // normally we would search from network level down, but we need to set the file permissions
             // so the indexing will be accurate
             searchByLevels(strUUID, queryStr, initialRetrieve, model, layer, topK);
@@ -298,19 +298,29 @@ public class Searcher {
                     if (pos != -1) {
                         podname = podsToSearch.get(i).substring(pos + 3);
                         podLevelSearchResultsPath = podLevelUUIDSpecificResultsPath.concat(podname);
-                        // if the output folders don't exist, create them.
-                        File podresdir = new File(podLevelSearchResultsPath);
-                        if (!podresdir.exists()) {
-                            podresdir.mkdirs();
+                        if (!podLevelSearchResultsPath.endsWith("/")) {
+                            podLevelSearchResultsPath = podLevelSearchResultsPath.concat("/");
                         }
+                        // if the output folders don't exist, create them.
+                        /*File podresdir = new File(podLevelSearchResultsPath);
+                       if (!podresdir.exists()) {
+                            podresdir.mkdirs();
+                        }*/
                         // Full path of UUID-specific pod-level search results file
                         UUIDSpecificPodLevelResults = podLevelSearchResultsPath.concat(strUUID.concat(POD_LEVEL_RESULTS_SUFFIX));
                         List<String> foundFiles = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
                         // Output links to search results listed in a text file
                         // which is what the results would look like to the search party
-                        String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
-                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
-                            if(foundFiles != null && !foundFiles.isEmpty()) {
+                        String simpleResultsFile = "";
+                        if (foundFiles != null && !foundFiles.isEmpty()) {
+                            File podresdir = new File(podLevelUUIDSpecificResultsPath);
+                            if (!podresdir.exists()) {
+                                podresdir.mkdirs();
+                            }
+                            try (BufferedWriter writer = new BufferedWriter(new FileWriter(simpleResultsFile, true))) {
+                                simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
+                                // if the output folders don't exist, create them.
+
                                 for (String file : foundFiles) {
                                     // URL format in a HAT's file API: https://blorf.hubofallthings.net/api/v2.6/files/
                                     String fileToGet = (podsToSearch.get(i)).concat(DATASWYFT_FILE_PATH).concat(file);
@@ -318,11 +328,12 @@ public class Searcher {
                                     writer.write(fileToGet);
                                     writer.newLine();
                                 }
+
+                                // close the simple results file
+                                writer.close();
+                            } catch (IOException ex) {
+                                ex.printStackTrace();
                             }
-                            // close the simple results file
-                            writer.close();
-                        } catch (IOException ex) {
-                            ex.printStackTrace();
                         }
                     }
                 }
@@ -349,7 +360,7 @@ public class Searcher {
         String podname = "";
         // Full path to UUID-specific pod-level results output
         String podLevelSearchResultsPath = "";
-        String UUIDSpecificPodLevelResults = "";
+        String UUIDSpecificPodLevelResultsFile = "";
 
         for (int i = 0; i < podsToSearch.size(); i++) {
             instr = fetchZipIndexFile(podsToSearch.get(i), strUUID, POD_LEVEL_IDX_FILE_SUFFIX, getSearchPartyAccessToken());
@@ -369,8 +380,8 @@ public class Searcher {
                             podresdir.mkdirs();
                         }
                         // Full path of UUID-specific pod-level search results file
-                        UUIDSpecificPodLevelResults = podLevelUUIDSpecificResultsPath.concat(strUUID.concat(POD_LEVEL_RESULTS_SUFFIX));
-                        List<String> foundFiles = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResults);
+                        UUIDSpecificPodLevelResultsFile = podLevelUUIDSpecificResultsPath.concat(strUUID.concat(POD_LEVEL_RESULTS_SUFFIX));
+                        List<String> foundFiles = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificPodLevelResultsFile);
                         // Output links to search results listed in a text file
                         // which is what the results would look like to the search party
                         String simpleResultsFile = podLevelUUIDSpecificResultsPath.concat("results.txt");
@@ -993,7 +1004,7 @@ public class Searcher {
             netresdir.mkdirs();
         }
         // Path to UUID-specific network level results output
-        String UUIDSpecificNetworkLevelResults = networkLevelSearchResultsPath.concat(strUUID.concat(NETWORK_SEARCH_RESULTS_FILE_SUFFIX));
+        String UUIDSpecificNetworkLevelResultsPath = networkLevelSearchResultsPath.concat(strUUID).concat("/");
 
         // do a network-level search
         if (strUUID.isEmpty()) {
@@ -1005,13 +1016,14 @@ public class Searcher {
         instr = fetchZipIndexFile(ESPRESSO_URL, strUUID, NETWORK_LEVEL_IDX_FILE_SUFFIX, getEspressoAccessToken());
         if (instr != null) {
             // DEV output the search results to the local file structure
-            networkLevelSearchResultsPath = UUIDSpecificNetworkLevelResults;
+            String UUIDSpecificNetworkLevelResultsFile = UUIDSpecificNetworkLevelResultsPath.concat(strUUID).concat(NETWORK_SEARCH_RESULTS_FILE_SUFFIX);
             // if the output folders don't exist, create them.
-            netresdir = new File(networkLevelSearchResultsPath);
+            netresdir = new File(UUIDSpecificNetworkLevelResultsPath);
             if (!netresdir.exists()) {
                 netresdir.mkdirs();
             }
-            List<String> foundServers = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, networkLevelSearchResultsPath);
+            //List<String> foundServers = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, networkLevelSearchResultsPath);
+            List<String> foundServers = conductSearch(instr, queryStr, initialRetrieve, model, layer, topK, strUUID, UUIDSpecificNetworkLevelResultsFile);
 
             // look only in the servers where we know there are results
             ArrayList<String> podsToSearch = new ArrayList<String>();
@@ -1210,6 +1222,11 @@ public class Searcher {
         //jsonResponse.put("avgDocLength", avgDocLength); // Include the average document length
 
         try {
+            String resultsFolder = resultsPath.lastIndexOf("/") != -1 ? resultsPath.substring(0, resultsPath.lastIndexOf("/")) : resultsPath;
+            File resdir = new File(resultsFolder);
+            if (!resdir.exists()) {
+                resdir.mkdirs();
+            }
             new ObjectMapper().writeValue(new File(resultsPath), jsonResponse);
         } catch (IOException e) {
             e.printStackTrace();
