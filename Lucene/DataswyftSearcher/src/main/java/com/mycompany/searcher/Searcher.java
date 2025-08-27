@@ -34,7 +34,7 @@ public class Searcher {
     private static String espressoAccessToken = "";
     private static String espressoUserId = "";
     private static final String ESPRESSO_USERNAME = "espressohubofallthing";
-    private static final String ESPRESSO_PASSWORD = "E6pr4661yourself_hTa";
+    private static final String ESPRESSO_PASSWORD = "blorf";
     private static final String ESPRESSO_URL = "https://espressohubofallthing.hubofallthings.net/";
     // DEV
     //private static final String ESPRESSO_USERNAME = "espressohubofallthfjs";
@@ -257,7 +257,7 @@ public class Searcher {
             // so the indexing will be accurate
             searchByLevels(strUUID, queryStr, initialRetrieve, model, layer, topK);
             // search for public results too
-            //searchByLevels("public", queryStr, initialRetrieve, model, layer, topK);
+            searchByLevels("public", queryStr, initialRetrieve, model, layer, topK);
         }
     }
 
@@ -342,13 +342,7 @@ public class Searcher {
         //ArrayList<String> podsToSearch = getAllRegisteredHATs();
         if (podsToSearch == null || podsToSearch.isEmpty()) {
             // if the list is empty, initialize it
-            listAllRegisteredHATs();
-            podsToSearch = getAllRegisteredHATs();
-            // if the list is still empty, there's nothing to search
-            if (podsToSearch == null || podsToSearch.isEmpty()) {
-                System.err.println("Failed to find any registered HATs.");
-                System.exit(1);
-            }
+            return;
         }
 
         String podLevelUUIDSpecificResultsPath = SEARCH_RESULTS_PATH.concat(POD_SEARCH_RESULTS_PATH).concat(strUUID).concat("/");
@@ -1061,9 +1055,8 @@ public class Searcher {
                         }
                     }
                 }
+                selectivePodSearch(strUUID, queryStr, initialRetrieve, model, layer, topK, podsToSearch);
             }
-
-            selectivePodSearch(strUUID, queryStr, initialRetrieve, model, layer, topK, podsToSearch);
         }
 
     }
